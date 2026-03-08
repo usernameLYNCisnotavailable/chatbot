@@ -1,0 +1,29 @@
+[33mcommit b510f18547165b6014dbd6413f90732260ef4425[m
+Author: link <linkrodasfox@gmail.com>
+Date:   Fri Mar 6 17:00:58 2026 -0500
+
+    banking system, gambling, monaco editor, memory system
+
+[33mcommit 885fd5ad0d7fd9d2912bad9421c9e1a5ab8cbe26[m
+Author: link <linkrodasfox@gmail.com>
+Date:   Fri Mar 6 02:51:03 2026 -0500
+
+    fix static middleware index, add debug logs
+
+[33mcommit 10c1fafdc1bdf3334011795905fa597f966f4140[m
+Author: link <linkrodasfox@gmail.com>
+Date:   Thu Mar 5 21:05:51 2026 -0500
+
+    add actions system, groups, bot auto-launch, reply listener
+
+[33mcommit 58bdff02fc1f2322fdfc6f4c73c19ba0af72bee2[m
+Author: link <linkrodasfox@gmail.com>
+Date:   Thu Mar 5 17:04:20 2026 -0500
+
+    working bot with fresh token, updated error handling
+
+[33mcommit 692de9b730dc542e0d4688ab98d90d8539e3c5da[m
+Author: link <linkrodasfox@gmail.com>
+Date:   Thu Mar 5 12:51:09 2026 -0500
+
+    clean start

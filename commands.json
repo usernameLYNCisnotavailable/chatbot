@@ -1,0 +1,20 @@
+{
+    "!hello": {
+        "response": "Hey there! Welcome to the stream! 👋"
+    },
+    "!discord": {
+        "response": "Join the Discord! discord.gg/YOURLINK"
+    },
+    "!instagram": {
+        "response": "Follow on Instagram! instagram.com/YOURHANDLE"
+    },
+    "!socials": {
+        "response": "Find me everywhere! Linktree: linktr.ee/YOURLINK"
+    },
+    "!wtf": {
+        "response": "word 2 yes wow oh maa gawd"
+    },
+    "!imhim": {
+        "response": "fax"
+    }
+}

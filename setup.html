@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChatCommander — Setup</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #080808;
+    --surface: rgba(255,255,255,0.03);
+    --border: rgba(255,255,255,0.08);
+    --text: #f0f0f0;
+    --muted: rgba(255,255,255,0.3);
+    --holo-1: #e8e0ff;
+    --holo-2: #ffd6f0;
+    --holo-3: #d0f0ff;
+    --holo-4: #f0ffd6;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    overflow: hidden;
+  }
+
+  /* Holographic background */
+  .holo-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background:
+      radial-gradient(ellipse 70% 50% at 15% 15%, rgba(180,160,255,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 70% at 85% 85%, rgba(255,180,220,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 60% at 70% 10%, rgba(160,220,255,0.05) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 10% 85%, rgba(200,255,180,0.04) 0%, transparent 60%);
+    animation: holo-shift 10s ease-in-out infinite alternate;
+  }
+
+  @keyframes holo-shift {
+    0% { opacity: 0.8; filter: hue-rotate(0deg); }
+    100% { opacity: 1; filter: hue-rotate(40deg); }
+  }
+
+  .grain {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+
+  .holo-lines {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    background: repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 80px,
+      rgba(255,255,255,0.012) 80px,
+      rgba(255,255,255,0.012) 81px
+    );
+    pointer-events: none;
+    animation: lines-move 20s linear infinite;
+  }
+
+  @keyframes lines-move {
+    from { background-position: 0 0; }
+    to { background-position: 200px 200px; }
+  }
+
+  /* Layout */
+  .container {
+    position: relative;
+    z-index: 2;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+  }
+
+  /* Logo */
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.4rem;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.5) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .tagline {
+    font-size: 0.6rem;
+    letter-spacing: 5px;
+    color: rgba(255,255,255,0.2);
+    text-transform: uppercase;
+    margin-bottom: 48px;
+  }
+
+  /* Card */
+  .card {
+    width: 100%;
+    max-width: 420px;
+    background: rgba(12,12,12,0.8);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 36px;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(40px);
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(232,224,255,0.3) 25%,
+      rgba(255,214,240,0.3) 50%,
+      rgba(208,240,255,0.3) 75%,
+      transparent 100%
+    );
+    background-size: 200%;
+    animation: shimmer-line 4s linear infinite;
+  }
+
+  @keyframes shimmer-line {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  .card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg,
+      rgba(232,224,255,0.02) 0%,
+      transparent 50%,
+      rgba(208,240,255,0.02) 100%
+    );
+    border-radius: 16px;
+    pointer-events: none;
+  }
+
+  /* Progress */
+  .progress {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 32px;
+  }
+
+  .progress-dot {
+    height: 2px;
+    flex: 1;
+    background: rgba(255,255,255,0.08);
+    border-radius: 2px;
+    transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .progress-dot.active {
+    background: linear-gradient(90deg, var(--holo-1), var(--holo-3));
+    box-shadow: 0 0 8px rgba(208,240,255,0.4);
+  }
+
+  .progress-dot.done {
+    background: rgba(255,255,255,0.2);
+  }
+
+  /* Steps */
+  .step { display: none; }
+  .step.active {
+    display: block;
+    animation: step-in 0.4s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+  }
+
+  @keyframes step-in {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .step-label {
+    font-size: 0.55rem;
+    letter-spacing: 4px;
+    color: rgba(255,255,255,0.2);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .step-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+    background: linear-gradient(135deg, #fff, rgba(255,255,255,0.6));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .step-desc {
+    font-size: 0.68rem;
+    color: rgba(255,255,255,0.25);
+    line-height: 1.7;
+    margin-bottom: 28px;
+  }
+
+  .step-desc a {
+    color: rgba(208,240,255,0.6);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .step-desc a:hover { color: rgba(208,240,255,0.9); }
+
+  /* Input */
+  .form-label {
+    display: block;
+    font-size: 0.55rem;
+    letter-spacing: 3px;
+    color: rgba(255,255,255,0.2);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .form-input {
+    width: 100%;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.82rem;
+    padding: 13px 16px;
+    outline: none;
+    transition: all 0.25s;
+    margin-bottom: 20px;
+  }
+
+  .form-input::placeholder { color: rgba(255,255,255,0.12); }
+
+  .form-input:focus {
+    border-color: rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.02);
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.03);
+  }
+
+  /* Buttons */
+  .btn-primary {
+    width: 100%;
+    padding: 14px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-primary::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg,
+      rgba(232,224,255,0.08),
+      rgba(255,214,240,0.08),
+      rgba(208,240,255,0.08),
+      rgba(240,255,214,0.08)
+    );
+    background-size: 300%;
+    opacity: 0;
+    transition: opacity 0.3s;
+    animation: holo-btn 3s linear infinite;
+  }
+
+  .btn-primary:hover {
+    border-color: rgba(255,255,255,0.2);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+
+  .btn-primary:hover::before { opacity: 1; }
+
+  @keyframes holo-btn {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 300% 50%; }
+  }
+
+  .btn-twitch {
+    width: 100%;
+    padding: 14px;
+    background: rgba(145,70,255,0.1);
+    border: 1px solid rgba(145,70,255,0.2);
+    border-radius: 8px;
+    color: rgba(200,160,255,0.9);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .btn-twitch:hover {
+    background: rgba(145,70,255,0.18);
+    border-color: rgba(145,70,255,0.4);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 32px rgba(145,70,255,0.1);
+  }
+
+  /* Error */
+  .error-msg {
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    color: rgba(255,100,100,0.7);
+    margin-top: -12px;
+    margin-bottom: 16px;
+    display: none;
+  }
+
+  /* Success */
+  .success-content {
+    text-align: center;
+    padding: 20px 0;
+  }
+
+  .success-icon {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 24px;
+    font-size: 1.8rem;
+    background: rgba(255,255,255,0.03);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .success-icon::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(232,224,255,0.1), rgba(208,240,255,0.1));
+    border-radius: 50%;
+    animation: holo-shift 3s ease-in-out infinite alternate;
+  }
+
+  .success-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+    background: linear-gradient(135deg, var(--holo-1), var(--holo-3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .success-desc {
+    font-size: 0.65rem;
+    color: rgba(255,255,255,0.2);
+    line-height: 1.8;
+    letter-spacing: 1px;
+  }
+
+  /* Footer */
+  .footer {
+    margin-top: 24px;
+    font-size: 0.55rem;
+    letter-spacing: 3px;
+    color: rgba(255,255,255,0.1);
+    text-align: center;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+
+<div class="holo-bg"></div>
+<div class="grain"></div>
+<div class="holo-lines"></div>
+
+<div class="container">
+  <div class="logo">Chat Commander</div>
+  <div class="tagline">First Time Setup</div>
+
+  <div class="card">
+    <!-- Progress bar -->
+    <div class="progress">
+      <div class="progress-dot active" id="dot0"></div>
+      <div class="progress-dot" id="dot1"></div>
+      <div class="progress-dot" id="dot2"></div>
+      <div class="progress-dot" id="dot3"></div>
+    </div>
+
+    <!-- Step 0 — Sign In or First Time -->
+    <div class="step active" id="step0">
+      <div class="step-label">Welcome</div>
+      <div class="step-title">ChatCommander</div>
+      <div class="step-desc">Sign in with your Twitch account to continue. First time here? We'll get you set up after.</div>
+      <button class="btn-twitch" onclick="window.location.href='/auth/streamer'">
+        <span>⬡</span> Sign in with Twitch
+      </button>
+    </div>
+
+    <!-- Step 1 — Bot Account -->
+    <div class="step" id="step1">
+      <div class="step-label">Step 1 of 3</div>
+      <div class="step-title">Bot Account</div>
+      <div class="step-desc">What account will type in chat as the bot? You can use a second account or just use your own.</div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
+        <button class="btn-primary" id="btnSeparateAccount" onclick="chooseBotType('separate')" style="text-align:left;padding:16px;position:relative;">
+          <div style="font-size:0.7rem;letter-spacing:2px;margin-bottom:4px;">Use a separate bot account</div>
+          <div style="font-size:0.58rem;color:rgba(255,255,255,0.3);letter-spacing:1px;text-transform:none;">Recommended — bot has its own username in chat</div>
+        </button>
+        <button class="btn-primary" id="btnMainAccount" onclick="chooseBotType('main')" style="text-align:left;padding:16px;">
+          <div style="font-size:0.7rem;letter-spacing:2px;margin-bottom:4px;">Use my main account</div>
+          <div style="font-size:0.58rem;color:rgba(255,255,255,0.3);letter-spacing:1px;text-transform:none;">Bot will post as you — works fine, no second account needed</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 2 — Authorize Bot (only if separate account) -->
+    <div class="step" id="step2">
+      <div class="step-label">Step 2 of 3</div>
+      <div class="step-title">Authorize Bot</div>
+      <div class="step-desc">Sign in with your <strong>bot account</strong> on Twitch. You'll be redirected and brought back automatically.</div>
+      <button class="btn-twitch" onclick="window.location.href='/auth/bot'">
+        <span>⬡</span> Connect Bot Account
+      </button>
+    </div>
+
+    <!-- Step 3 — Channel -->
+    <div class="step" id="step3">
+      <div class="step-label">Step 3 of 3</div>
+      <div class="step-title">Your Channel</div>
+      <div class="step-desc">Enter your Twitch channel name — this is where the bot will read and respond to chat.</div>
+      <label class="form-label">Channel Name</label>
+      <input class="form-input" type="text" id="channel" placeholder="yourchannelname" />
+      <div class="error-msg" id="errorChannel">Please enter your channel name</div>
+      <button class="btn-primary" onclick="saveConfig()">Finish Setup</button>
+    </div>
+
+    <!-- Success -->
+    <div class="step" id="step4">
+      <div class="success-content">
+        <div class="success-icon">✦</div>
+        <div class="success-title">You're all set</div>
+        <div class="success-desc">ChatCommander is configured<br>and ready to go.<br><br>Taking you to the dashboard...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">ChatCommander — v1.0.0</div>
+</div>
+
+<script>
+  let currentStep = 0;
+  let usingMainAccount = false;
+  const TOTAL_DOTS = 4;
+
+  // On load — check state
+  (async () => {
+    const params = new URLSearchParams(window.location.search);
+    const cfg = await fetch('/api/config').then(r => r.json()).catch(() => ({}));
+
+    // Coming back from streamer OAuth
+    if (params.get('streamer_authed') === 'true') {
+      if (cfg.setupComplete) {
+        // Already set up — just sign in, go to dashboard
+        window.location.href = '/';
+        return;
+      }
+      // First time — continue to bot account step
+      goToStep(1);
+      return;
+    }
+
+    // Coming back from bot OAuth
+    if (params.get('bot_authed') === 'true') {
+      goToStep(3);
+      return;
+    }
+
+    // Already fully set up and logged in
+    if (cfg.setupComplete && cfg.streamerUsername) {
+      window.location.href = '/';
+      return;
+    }
+
+    // Default — show sign in
+    goToStep(0);
+  })();
+
+  function goToStep(step) {
+    document.getElementById(`step${currentStep}`).classList.remove('active');
+    currentStep = step;
+    document.getElementById(`step${currentStep}`).classList.add('active');
+    for (let i = 0; i < TOTAL_DOTS; i++) {
+      const dot = document.getElementById(`dot${i}`);
+      if (!dot) continue;
+      dot.classList.remove('active', 'done');
+      if (i < currentStep) dot.classList.add('done');
+      if (i === currentStep) dot.classList.add('active');
+    }
+  }
+
+  function chooseBotType(type) {
+    if (type === 'main') {
+      usingMainAccount = true;
+      // Use streamer username as channel, skip channel step entirely
+      fetch('/api/setup-bot-main', { method: 'POST' })
+        .then(() => fetch('/api/session').then(r => r.json()))
+        .then(session => {
+          return fetch('/api/setup-channel', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ channel: session.streamerUsername })
+          });
+        })
+        .then(() => { goToStep(4); setTimeout(() => { window.location.replace('/'); }, 2500); })
+        .catch(() => goToStep(3)); // fallback if something fails
+    } else {
+      usingMainAccount = false;
+      goToStep(2);
+    }
+  }
+
+  async function saveConfig() {
+    const channel = document.getElementById('channel').value.trim();
+    if (!channel) {
+      document.getElementById('errorChannel').style.display = 'block';
+      return;
+    }
+    document.getElementById('errorChannel').style.display = 'none';
+
+    await fetch('/api/setup-channel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channel })
+    });
+
+    goToStep(4);
+    setTimeout(() => { window.location.replace('/'); }, 2500);
+  }
+</script>
+</body>
+</html>

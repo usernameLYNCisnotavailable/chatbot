@@ -1,0 +1,2698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChatCommander</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #080808;
+    --surface: rgba(255,255,255,0.03);
+    --border: rgba(255,255,255,0.08);
+    --text: #f0f0f0;
+    --muted: rgba(255,255,255,0.3);
+    --holo-1: #e8e0ff;
+    --holo-2: #ffd6f0;
+    --holo-3: #d0f0ff;
+    --holo-4: #f0ffd6;
+    --accent: #d0f0ff;
+    --accent-glow: rgba(208,240,255,0.15);
+    --green: #4fffb0;
+    --red: rgba(255,80,80,0.8);
+  }
+
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; overflow: hidden; }
+
+  .holo-bg {
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 20% 20%, rgba(180,160,255,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 60% at 80% 80%, rgba(255,180,220,0.05) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 50% at 60% 10%, rgba(160,220,255,0.05) 0%, transparent 60%),
+      radial-gradient(ellipse 70% 30% at 10% 80%, rgba(200,255,180,0.04) 0%, transparent 60%);
+    animation: holo-shift 8s ease-in-out infinite alternate;
+  }
+  @keyframes holo-shift { 0% { opacity:0.8; filter:hue-rotate(0deg); } 100% { opacity:1; filter:hue-rotate(30deg); } }
+
+  .grain {
+    position: fixed; inset: 0; z-index: 1; opacity: 0.035; pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .holo-lines {
+    position: fixed; inset: 0; z-index: 1; pointer-events: none;
+    background: repeating-linear-gradient(-45deg, transparent, transparent 80px, rgba(255,255,255,0.012) 80px, rgba(255,255,255,0.012) 81px);
+    animation: lines-move 20s linear infinite;
+  }
+  @keyframes lines-move { from { background-position: 0 0; } to { background-position: 200px 200px; } }
+
+  .app { position: relative; z-index: 2; display: grid; grid-template-columns: 220px 1fr; grid-template-rows: 56px 1fr; height: 100vh; }
+
+  .header {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(8,8,8,0.9);
+    backdrop-filter: blur(20px);
+  }
+  .logo {
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1rem; letter-spacing: 3px;
+    background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.5) 50%, #fff 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    position: relative;
+  }
+  .logo::after {
+    content: 'CHAT COMMANDER'; position: absolute; inset: 0;
+    background: linear-gradient(135deg, var(--holo-1), var(--holo-2), var(--holo-3), var(--holo-4));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    opacity: 0; transition: opacity 0.4s; background-size: 200%; animation: holo-text 3s linear infinite;
+  }
+  .logo:hover::after { opacity: 1; }
+  @keyframes holo-text { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .bot-pill {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 12px; border-radius: 20px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.03);
+    cursor: pointer; transition: all 0.2s;
+  }
+  .bot-pill:hover { border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.05); }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.2); transition: all 0.3s; }
+  .status-dot.online { background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse-dot 2s ease-in-out infinite; }
+  @keyframes pulse-dot { 0%,100% { box-shadow: 0 0 4px var(--green); } 50% { box-shadow: 0 0 14px var(--green), 0 0 28px rgba(79,255,176,0.3); } }
+  .bot-pill-text { font-size: 0.58rem; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
+  .version { font-size: 0.52rem; letter-spacing: 2px; color: rgba(255,255,255,0.12); }
+
+  .sidebar {
+    border-right: 1px solid var(--border);
+    padding: 20px 12px;
+    display: flex; flex-direction: column; gap: 2px;
+    background: rgba(8,8,8,0.6); backdrop-filter: blur(20px);
+    overflow-y: auto;
+  }
+  .nav-section { font-size: 0.5rem; letter-spacing: 4px; color: rgba(255,255,255,0.18); text-transform: uppercase; padding: 0 10px; margin: 14px 0 6px; }
+  .nav-section:first-child { margin-top: 0; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 10px; border-radius: 6px;
+    font-size: 0.7rem; letter-spacing: 0.5px; color: var(--muted);
+    cursor: pointer; transition: all 0.15s;
+    border: 1px solid transparent;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.04); color: var(--text); }
+  .nav-item.active { background: rgba(255,255,255,0.06); color: var(--text); border-color: rgba(255,255,255,0.1); }
+  .nav-icon { font-size: 0.85rem; width: 18px; text-align: center; opacity: 0.6; }
+
+  .main { overflow-y: auto; display: flex; flex-direction: column; }
+  .main::-webkit-scrollbar { width: 4px; }
+  .main::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+  .page { display: none; flex-direction: column; gap: 0; padding: 0; height: 100%; overflow: hidden; }
+  .page.active { display: flex; }
+
+  .page-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 4px; }
+  .page-title { font-family: 'Syne', sans-serif; font-size: 1.8rem; font-weight: 800; letter-spacing: -0.5px; background: linear-gradient(135deg, #fff 30%, rgba(255,255,255,0.35)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .page-sub { font-size: 0.56rem; letter-spacing: 3px; color: rgba(255,255,255,0.18); text-transform: uppercase; margin-top: 4px; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px; position: relative; overflow: hidden;
+    backdrop-filter: blur(10px);
+  }
+  .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent); }
+  .card-title { font-size: 0.56rem; letter-spacing: 4px; color: rgba(255,255,255,0.25); text-transform: uppercase; margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
+  .card-title::before { content: ''; width: 14px; height: 1px; background: linear-gradient(90deg, var(--holo-1), var(--holo-3)); }
+
+  .form-group { margin-bottom: 14px; }
+  .form-label { display: block; font-size: 0.54rem; letter-spacing: 3px; color: rgba(255,255,255,0.22); text-transform: uppercase; margin-bottom: 7px; }
+  .form-input {
+    width: 100%; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 6px; color: var(--text); font-family: 'DM Mono', monospace;
+    font-size: 0.8rem; padding: 10px 13px; outline: none; transition: all 0.2s;
+  }
+  .form-input::placeholder { color: rgba(255,255,255,0.12); }
+  .form-input:focus { border-color: rgba(255,255,255,0.18); background: rgba(255,255,255,0.02); box-shadow: 0 0 0 3px rgba(255,255,255,0.03); }
+
+  .btn {
+    width: 100%; padding: 11px; background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 6px;
+    color: var(--text); font-family: 'DM Mono', monospace; font-size: 0.68rem;
+    letter-spacing: 3px; text-transform: uppercase; cursor: pointer;
+    transition: all 0.2s; margin-top: 6px; position: relative; overflow: hidden;
+  }
+  .btn:hover { border-color: rgba(255,255,255,0.22); background: rgba(255,255,255,0.08); transform: translateY(-1px); }
+  .btn-sm { width: auto; padding: 7px 14px; font-size: 0.6rem; letter-spacing: 2px; margin-top: 0; }
+  .btn-green { border-color: rgba(79,255,176,0.3); color: var(--green); }
+  .btn-green:hover { border-color: rgba(79,255,176,0.5); background: rgba(79,255,176,0.06); }
+  .btn-red { border-color: rgba(255,80,80,0.25); color: rgba(255,100,100,0.8); }
+  .btn-red:hover { border-color: rgba(255,80,80,0.4); background: rgba(255,80,80,0.05); }
+  .btn-blue { border-color: rgba(208,240,255,0.25); color: var(--accent); }
+  .btn-blue:hover { border-color: rgba(208,240,255,0.4); background: rgba(208,240,255,0.05); }
+
+  /* ---- COMMANDS PAGE NEW DESIGN ---- */
+  .cmd-page-wrap { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+
+  .cmd-topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 28px 0;
+    flex-shrink: 0;
+  }
+  .cmd-title-block { }
+  .cmd-title { font-family: 'Syne', sans-serif; font-size: 1.8rem; font-weight: 800; letter-spacing: -0.5px; background: linear-gradient(135deg, #fff 30%, rgba(255,255,255,0.35)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .cmd-sub { font-size: 0.56rem; letter-spacing: 3px; color: rgba(255,255,255,0.18); text-transform: uppercase; margin-top: 4px; }
+
+  .cmd-add-btn {
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 18px;
+    background: rgba(208,240,255,0.06);
+    border: 1px solid rgba(208,240,255,0.2);
+    border-radius: 8px;
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem; letter-spacing: 2px; text-transform: uppercase;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .cmd-add-btn:hover { background: rgba(208,240,255,0.1); border-color: rgba(208,240,255,0.35); transform: translateY(-1px); }
+
+  .cmd-tabs-bar {
+    display: flex; align-items: center; gap: 0;
+    padding: 16px 28px 0;
+    flex-shrink: 0;
+  }
+  .cmd-tab {
+    padding: 8px 20px;
+    font-size: 0.65rem; letter-spacing: 2px; text-transform: uppercase;
+    color: rgba(255,255,255,0.3);
+    cursor: pointer; transition: all 0.2s;
+    border-bottom: 2px solid transparent;
+    margin-right: 4px;
+  }
+  .cmd-tab.active { color: var(--text); border-bottom-color: var(--accent); }
+  .cmd-tab:hover:not(.active) { color: rgba(255,255,255,0.6); }
+
+  .cmd-toolbar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 28px;
+    flex-shrink: 0;
+  }
+  .cmd-search {
+    flex: 1; max-width: 320px;
+    background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 6px; color: var(--text); font-family: 'DM Mono', monospace;
+    font-size: 0.75rem; padding: 8px 14px; outline: none; transition: all 0.2s;
+  }
+  .cmd-search::placeholder { color: rgba(255,255,255,0.18); }
+  .cmd-search:focus { border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.02); }
+  .cmd-count { font-size: 0.55rem; letter-spacing: 2px; color: rgba(255,255,255,0.2); margin-left: auto; }
+
+  /* Command table */
+  .cmd-table-wrap { flex: 1; overflow-y: auto; padding: 0 28px 28px; }
+  .cmd-table-wrap::-webkit-scrollbar { width: 3px; }
+  .cmd-table-wrap::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.07); border-radius: 2px; }
+
+  .cmd-table { width: 100%; border-collapse: collapse; }
+  .cmd-table thead tr {
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .cmd-table thead th {
+    padding: 10px 14px; font-size: 0.52rem; letter-spacing: 3px;
+    color: rgba(255,255,255,0.2); text-transform: uppercase; text-align: left;
+    font-weight: 400;
+  }
+  .cmd-table thead th:last-child { text-align: right; }
+
+  .cmd-row {
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    cursor: pointer; transition: background 0.15s;
+    user-select: none;
+  }
+  .cmd-row:hover { background: rgba(255,255,255,0.02); }
+  .cmd-row td { padding: 12px 14px; vertical-align: middle; cursor: pointer; }
+
+  .cmd-name { font-size: 0.78rem; color: rgba(255,255,255,0.85); }
+  .cmd-response-text { font-size: 0.62rem; color: rgba(255,255,255,0.25); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 240px; display: block; }
+  .cmd-type-badge {
+    display: inline-block; font-size: 0.48rem; letter-spacing: 2px; text-transform: uppercase;
+    padding: 2px 7px; border-radius: 3px;
+  }
+  .cmd-type-badge.custom { background: rgba(208,240,255,0.08); color: rgba(208,240,255,0.5); border: 1px solid rgba(208,240,255,0.12); }
+  .cmd-type-badge.default { background: rgba(79,255,176,0.06); color: rgba(79,255,176,0.5); border: 1px solid rgba(79,255,176,0.12); }
+  .cmd-type-badge.action { background: rgba(232,224,255,0.06); color: rgba(232,224,255,0.5); border: 1px solid rgba(232,224,255,0.12); }
+
+  .cmd-cd-input {
+    width: 55px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 4px; color: var(--text); font-family: 'DM Mono', monospace;
+    font-size: 0.7rem; padding: 4px 8px; outline: none; text-align: center;
+    transition: all 0.2s; -moz-appearance: textfield;
+  }
+  .cmd-cd-input::-webkit-inner-spin-button,
+  .cmd-cd-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  .cmd-cd-input:focus { border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.04); }
+  .cmd-cd-label { font-size: 0.65rem; color: rgba(255,255,255,0.35); margin-left: 4px; font-weight: 500; }
+
+  .cmd-access {
+    background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 4px; color: rgba(255,255,255,0.55); font-family: 'DM Mono', monospace;
+    font-size: 0.62rem; padding: 4px 22px 4px 8px; outline: none; cursor: pointer;
+    -webkit-appearance: none; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='rgba(255,255,255,0.25)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 7px center;
+    transition: all 0.2s;
+  }
+  .cmd-access:focus { border-color: rgba(255,255,255,0.2); background-color: rgba(255,255,255,0.04); }
+  .cmd-access option { background: #111520; color: rgba(255,255,255,0.8); }
+
+  .cmd-actions-cell { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+
+  .cmd-chevron {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px; flex-shrink: 0;
+    font-size: 0.65rem; color: rgba(255,255,255,0.15);
+    transition: transform 0.2s ease, color 0.2s ease;
+  }
+  .cmd-row.expanded .cmd-chevron { transform: rotate(90deg); color: rgba(208,240,255,0.45); }
+
+  /* Toggle switch */
+  .toggle { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute; inset: 0;
+    background: rgba(255,255,255,0.08); border-radius: 20px;
+    cursor: pointer; transition: all 0.25s;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .toggle-slider::before {
+    content: ''; position: absolute;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+    left: 2px; top: 2px;
+    transition: all 0.25s;
+  }
+  .toggle input:checked + .toggle-slider { background: rgba(79,255,176,0.25); border-color: rgba(79,255,176,0.4); }
+  .toggle input:checked + .toggle-slider::before { transform: translateX(16px); background: var(--green); box-shadow: 0 0 8px rgba(79,255,176,0.6); }
+
+  .cmd-delete-btn {
+    width: 26px; height: 26px;
+    background: transparent; border: 1px solid rgba(255,80,80,0.15);
+    border-radius: 4px; color: rgba(255,80,80,0.4);
+    font-size: 0.75rem; cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .cmd-delete-btn:hover { background: rgba(255,80,80,0.07); border-color: rgba(255,80,80,0.35); color: rgba(255,80,80,0.75); }
+
+  .empty-table { text-align: center; padding: 60px 20px; font-size: 0.6rem; letter-spacing: 3px; color: rgba(255,255,255,0.1); text-transform: uppercase; }
+
+  /* Expand row for sub-cooldowns */
+  .cmd-expand-btn {
+    width: 22px; height: 22px; background: transparent;
+    border: 1px solid rgba(255,255,255,0.08); border-radius: 4px;
+    color: rgba(255,255,255,0.3); font-size: 0.65rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; flex-shrink: 0;
+  }
+  .cmd-expand-btn:hover { border-color: rgba(208,240,255,0.25); color: rgba(208,240,255,0.6); }
+  .cmd-expand-row { display: none; }
+  .cmd-expand-row.open { display: table-row; }
+  .cmd-expand-panel {
+    background: rgba(208,240,255,0.02); border-top: 1px solid rgba(255,255,255,0.04);
+    padding: 14px 20px 18px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .cmd-expand-title { font-size: 0.5rem; letter-spacing: 3px; text-transform: uppercase; color: rgba(255,255,255,0.2); margin-bottom: 4px; }
+
+  .expand-grid { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 14px; }
+  .expand-field { display: flex; flex-direction: column; gap: 6px; }
+  .expand-label { font-size: 0.62rem; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.35); font-weight: 500; }
+  .expand-delete-btn { padding: 6px 14px; background: transparent; border: 1px solid rgba(255,80,80,0.2); border-radius: 5px; color: rgba(255,80,80,0.55); font-family: 'DM Mono', monospace; font-size: 0.62rem; letter-spacing: 2px; cursor: pointer; transition: all 0.2s; }
+  .expand-delete-btn:hover { background: rgba(255,80,80,0.07); border-color: rgba(255,80,80,0.4); color: rgba(255,80,80,0.8); }
+  .subcmd-section { margin-top: 4px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 14px; }
+  .subcmd-title { font-size: 0.58rem; letter-spacing: 3px; text-transform: uppercase; color: rgba(255,255,255,0.25); font-weight: 500; margin-bottom: 10px; }
+  .subcmd-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+  .sub-cd-row { display: flex; align-items: center; gap: 12px; }
+  .sub-cd-name { font-size: 0.72rem; color: rgba(255,255,255,0.6); width: 100px; font-family: 'DM Mono', monospace; font-weight: 500; }
+  .sub-cd-input {
+    width: 65px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 4px; color: var(--text); font-family: 'DM Mono', monospace;
+    font-size: 0.7rem; padding: 4px 8px; outline: none; text-align: center;
+    transition: all 0.2s; -moz-appearance: textfield;
+  }
+  .sub-cd-input::-webkit-inner-spin-button,
+  .sub-cd-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  .sub-cd-input:focus { border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.04); }
+  .sub-cd-label { font-size: 0.65rem; color: rgba(255,255,255,0.35); font-weight: 500; }
+
+  /* Add command modal */
+  .add-cmd-modal {
+    position: fixed; inset: 0; z-index: 500;
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);
+    display: none; align-items: center; justify-content: center;
+  }
+  .add-cmd-modal.open { display: flex; }
+  .add-cmd-box {
+    width: 100%; max-width: 440px;
+    background: #0d0d0d; border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px; padding: 28px;
+    animation: modal-in 0.2s ease;
+  }
+  @keyframes modal-in { from { opacity: 0; transform: scale(0.97) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+  .add-cmd-title { font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 700; margin-bottom: 20px; color: rgba(255,255,255,0.85); }
+  .add-cmd-footer { display: flex; gap: 8px; margin-top: 20px; }
+
+  /* ---- ACTIONS PAGE ---- */
+  .actions-grid { display: grid; grid-template-columns: 280px 1fr; gap: 16px; align-items: start; flex: 1; min-height: 0; padding: 28px; }
+
+  .action-list { display: flex; flex-direction: column; gap: 6px; max-height: 420px; overflow-y: auto; }
+  .action-list::-webkit-scrollbar { width: 3px; }
+  .action-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.07); border-radius: 2px; }
+
+  .action-item {
+    padding: 12px 14px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 7px; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden;
+  }
+  .action-item::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: linear-gradient(180deg, var(--holo-3), var(--holo-1)); opacity: 0; transition: opacity 0.2s; }
+  .action-item:hover, .action-item.selected { background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.1); }
+  .action-item:hover::before, .action-item.selected::before { opacity: 1; }
+  .action-row { display: flex; align-items: center; justify-content: space-between; }
+  .action-name { font-size: 0.76rem; color: rgba(255,255,255,0.82); }
+  .action-trigger { font-size: 0.6rem; color: rgba(208,240,255,0.45); letter-spacing: 1px; }
+  .action-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 0.5rem; letter-spacing: 2px; text-transform: uppercase; margin-top: 5px; }
+  .action-badge-dot { width: 4px; height: 4px; border-radius: 50%; }
+  .badge-ok .action-badge-dot { background: var(--green); box-shadow: 0 0 5px var(--green); }
+  .badge-ok { color: rgba(79,255,176,0.55); }
+  .badge-pending .action-badge-dot { background: rgba(255,200,80,0.7); }
+  .badge-pending { color: rgba(255,200,80,0.5); }
+
+  .editor-panel {
+    background: #1e1e1e; border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px; display: flex; flex-direction: column; overflow: hidden;
+    min-height: 520px;
+  }
+  .editor-topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px; background: #252526; border-bottom: 1px solid #3c3c3c; flex-shrink: 0;
+  }
+  .editor-breadcrumb { font-size: 0.6rem; letter-spacing: 2px; color: rgba(255,255,255,0.4); display: flex; align-items: center; gap: 8px; }
+  .editor-breadcrumb span { color: var(--accent); opacity: 0.7; }
+  .editor-btns { display: flex; gap: 6px; }
+  .includes-bar {
+    padding: 7px 16px; background: #1a1a2e; border-bottom: 1px solid rgba(208,240,255,0.06);
+    font-size: 0.55rem; color: rgba(208,240,255,0.3); letter-spacing: 1px; flex-shrink: 0; line-height: 1.8;
+  }
+  .includes-bar strong { color: rgba(208,240,255,0.5); }
+  .vars-bar {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 7px 16px; background: #1e1e1e; border-bottom: 1px solid #3c3c3c; flex-shrink: 0;
+  }
+  .vars-label { font-size: 0.52rem; letter-spacing: 3px; color: rgba(255,255,255,0.18); text-transform: uppercase; }
+  .var-chip { font-size: 0.6rem; padding: 3px 9px; border: 1px solid rgba(208,240,255,0.14); border-radius: 3px; color: rgba(208,240,255,0.5); }
+  .monaco-container { flex: 1; min-height: 300px; position: relative; }
+  .compile-output {
+    margin: 0; padding: 10px 16px; font-size: 0.65rem; line-height: 1.6;
+    white-space: pre-wrap; word-break: break-all; display: none; flex-shrink: 0; border-top: 1px solid #3c3c3c;
+  }
+  .compile-output.success { display: block; background: rgba(79,255,176,0.05); color: rgba(79,255,176,0.75); }
+  .compile-output.error { display: block; background: rgba(255,80,80,0.05); color: rgba(255,120,120,0.9); }
+  .compile-output.loading { display: block; background: transparent; color: rgba(255,255,255,0.25); }
+  .editor-empty { display: flex; align-items: center; justify-content: center; flex: 1; min-height: 480px; border: 1px solid rgba(255,255,255,0.05); border-radius: 10px; }
+  .editor-empty-inner { text-align: center; }
+  .editor-empty-icon { font-size: 2.5rem; opacity: 0.08; margin-bottom: 12px; }
+  .editor-empty-text { font-size: 0.56rem; letter-spacing: 3px; color: rgba(255,255,255,0.12); text-transform: uppercase; }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
+    display: none; align-items: center; justify-content: center; padding: 24px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    width: 100%; max-width: 1100px; height: 88vh;
+    background: #1e1e1e; border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px; display: flex; flex-direction: column;
+    overflow: hidden; box-shadow: 0 40px 120px rgba(0,0,0,0.8); animation: modal-in 0.2s ease;
+  }
+  .modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 20px; border-bottom: 1px solid #3c3c3c; background: #252526; flex-shrink: 0;
+  }
+  .modal-title { font-family: 'Syne', sans-serif; font-size: 0.9rem; font-weight: 700; letter-spacing: 1px; color: rgba(255,255,255,0.8); }
+  .modal-close { background: none; border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; color: rgba(255,255,255,0.4); font-size: 0.9rem; width: 28px; height: 28px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
+  .modal-close:hover { border-color: rgba(255,80,80,0.4); color: rgba(255,80,80,0.7); background: rgba(255,80,80,0.05); }
+  .modal-includes { padding: 7px 20px; background: #1a1a2e; border-bottom: 1px solid rgba(208,240,255,0.06); font-size: 0.55rem; color: rgba(208,240,255,0.3); letter-spacing: 1px; line-height: 1.8; flex-shrink: 0; }
+  .modal-includes strong { color: rgba(208,240,255,0.5); }
+  .modal-vars { display: flex; align-items: center; gap: 8px; padding: 7px 20px; border-bottom: 1px solid #3c3c3c; background: #1e1e1e; flex-shrink: 0; }
+  .modal-monaco { flex: 1; min-height: 0; position: relative; }
+  .modal-footer { display: flex; align-items: center; justify-content: space-between; padding: 10px 20px; border-top: 1px solid #3c3c3c; background: #252526; flex-shrink: 0; }
+  .modal-output { font-size: 0.62rem; color: rgba(255,255,255,0.25); flex: 1; margin-right: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .modal-output.success { color: rgba(79,255,176,0.7); }
+  .modal-output.error { color: rgba(255,120,120,0.8); }
+  .modal-btns { display: flex; gap: 8px; }
+
+  /* Groups */
+  .groups-page-wrap { padding: 28px; overflow-y: auto; flex: 1; }
+
+  @keyframes obsSceneFlash {
+    0%   { background: rgba(79,255,176,0.35); border-color: var(--green); box-shadow: 0 0 12px rgba(79,255,176,0.4); }
+    100% { background: rgba(79,255,176,0.12); border-color: var(--green); box-shadow: none; }
+  }
+  .obs-scene-flash { animation: obsSceneFlash 0.5s ease-out forwards; }
+
+  /* OBS toggle switch */
+  .obs-toggle { position:relative;display:inline-block;width:36px;height:20px;flex-shrink:0; }
+  .obs-toggle input { opacity:0;width:0;height:0; }
+  .obs-toggle-slider { position:absolute;cursor:pointer;inset:0;background:rgba(255,255,255,0.1);border:1px solid var(--border);border-radius:20px;transition:all 0.2s; }
+  .obs-toggle-slider::before { content:'';position:absolute;width:14px;height:14px;left:2px;top:2px;background:rgba(255,255,255,0.3);border-radius:50%;transition:all 0.2s; }
+  .obs-toggle input:checked + .obs-toggle-slider { background:rgba(79,255,176,0.2);border-color:var(--green); }
+  .obs-toggle input:checked + .obs-toggle-slider::before { background:var(--green);transform:translateX(16px); }
+  .groups-list { display: flex; flex-direction: column; gap: 10px; }
+  .group-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .group-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; cursor: pointer; transition: background 0.2s; }
+  .group-header:hover { background: rgba(255,255,255,0.03); }
+  .group-name-row { display: flex; align-items: center; gap: 10px; font-size: 0.75rem; color: rgba(255,255,255,0.65); }
+  .group-count { font-size: 0.52rem; letter-spacing: 2px; color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); padding: 2px 7px; border-radius: 20px; }
+  .group-chevron { font-size: 0.65rem; color: rgba(255,255,255,0.18); transition: transform 0.2s; }
+  .group-card.open .group-chevron { transform: rotate(90deg); }
+  .group-body { display: none; padding: 0 16px 12px; flex-direction: column; gap: 5px; }
+  .group-card.open .group-body { display: flex; }
+  .group-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 10px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.04); border-radius: 5px; font-size: 0.68rem; color: rgba(255,255,255,0.45); }
+  .group-row-right { display: flex; align-items: center; gap: 8px; }
+  .delete-btn { width: auto; padding: 4px 10px; background: transparent; border: 1px solid rgba(255,80,80,0.18); border-radius: 4px; color: rgba(255,80,80,0.45); font-family: 'DM Mono', monospace; font-size: 0.52rem; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
+  .delete-btn:hover { background: rgba(255,80,80,0.07); border-color: rgba(255,80,80,0.35); color: rgba(255,80,80,0.75); }
+  .content-grid { display: grid; grid-template-columns: 300px 1fr; gap: 16px; align-items: start; }
+  .empty { text-align: center; padding: 36px 20px; font-size: 0.6rem; letter-spacing: 3px; color: rgba(255,255,255,0.1); text-transform: uppercase; }
+
+  .toast { position: fixed; bottom: 24px; right: 24px; background: rgba(16,16,16,0.96); border: 1px solid rgba(255,255,255,0.08); border-radius: 7px; padding: 10px 18px; font-size: 0.62rem; letter-spacing: 2px; color: rgba(255,255,255,0.65); opacity: 0; transform: translateY(8px); transition: all 0.25s; pointer-events: none; backdrop-filter: blur(20px); z-index: 9999; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="holo-bg"></div>
+<div class="grain"></div>
+<div class="holo-lines"></div>
+
+<div class="app">
+  <header class="header">
+    <div class="logo">CHAT COMMANDER</div>
+    <div class="header-right">
+      <div class="bot-pill" onclick="toggleBot()">
+        <div class="status-dot" id="botDot"></div>
+        <div class="bot-pill-text" id="botStatusText">Offline</div>
+      </div>
+      <div class="version">v1.0.1</div>
+    </div>
+  </header>
+
+  <aside class="sidebar">
+    <div class="nav-section">Menu</div>
+    <div class="nav-item active" id="nav-commands" onclick="showPage('commands')">
+      <span class="nav-icon">⌘</span> Commands
+    </div>
+    <div class="nav-item" id="nav-actions" onclick="showPage('actions')">
+      <span class="nav-icon">◈</span> Actions
+    </div>
+    <div class="nav-item" id="nav-groups" onclick="showPage('groups')">
+      <span class="nav-icon">⬡</span> Groups
+    </div>
+    <div style="flex:1;"></div>
+   <div class="nav-item" id="nav-admins" onclick="showPage('admins')">
+  <span class="nav-icon">🛡</span> Admins
+</div>
+   
+    <div class="nav-section">Tools</div>
+    <div class="nav-item" id="nav-obs" onclick="showPage('obs')">
+      <span class="nav-icon">🎬</span> OBS
+      <span id="obsNavDot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.15);display:inline-block;margin-left:auto;transition:all 0.3s;flex-shrink:0;"></span>
+    </div>
+    <div class="nav-item active" id="nav-chat-toggle" onclick="toggleChatVisible()" title="Toggle Live Chat">
+      <span class="nav-icon">💬</span> Live Chat
+      <span id="chatNavDot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.15);display:inline-block;margin-left:auto;transition:all 0.3s;flex-shrink:0;"></span>
+    </div>
+    <div class="nav-item" id="nav-accounts" onclick="showPage('accounts')">
+      <span class="nav-icon">👤</span> Account
+    </div>
+    <div class="nav-item" id="nav-economy" onclick="showPage('economy');loadEconomy();">
+      <span class="nav-icon">💰</span> Economy
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- COMMANDS PAGE -->
+    <div class="page active" id="page-commands">
+      <div class="cmd-page-wrap">
+        <div class="cmd-topbar">
+          <div class="cmd-title-block">
+            <div class="cmd-title">Commands</div>
+            <div class="cmd-sub">Manage your chat commands</div>
+          </div>
+          <div id="addCmdBtnWrap">
+            <button class="cmd-add-btn" onclick="openAddCmd()">+ Add Command</button>
+          </div>
+        </div>
+
+        <div class="cmd-tabs-bar">
+          <div class="cmd-tab active" id="tab-custom" onclick="switchTab('custom')">Custom</div>
+          <div class="cmd-tab" id="tab-default" onclick="switchTab('default')">Default</div>
+        </div>
+
+        <div class="cmd-toolbar">
+          <input class="cmd-search" type="text" id="cmdSearch" placeholder="Search commands..." oninput="filterCommands()" />
+          <span class="cmd-count" id="cmdCount"></span>
+        </div>
+
+        <div class="cmd-table-wrap">
+          <table class="cmd-table">
+            <thead>
+              <tr>
+                <th>Command</th>
+                <th>Response / Description</th>
+                <th></th>
+                <th></th>
+                <th style="text-align:right">Enabled</th>
+              </tr>
+            </thead>
+            <tbody id="cmdTableBody">
+              <tr><td colspan="5"><div class="empty-table">Loading...</div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTIONS PAGE -->
+    <div class="page" id="page-actions">
+      <div class="actions-grid">
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div class="card">
+            <div class="card-title">New Action</div>
+            <div class="form-group">
+              <label class="form-label">Name</label>
+              <input class="form-input" type="text" id="actionNameInput" placeholder="myaction" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Trigger</label>
+              <input class="form-input" type="text" id="actionTriggerInput" placeholder="!command" />
+            </div>
+            <button class="btn" onclick="createAction()">Create Action</button>
+          </div>
+          <div class="card" style="padding:18px;">
+            <div class="card-title">Your Actions</div>
+            <div class="action-list" id="actionList"><div class="empty">No actions yet</div></div>
+          </div>
+        </div>
+
+        <div id="editorPanel" style="display:none;">
+          <div class="editor-panel">
+            <div class="editor-topbar">
+              <div class="editor-breadcrumb">actions <span>/</span> <span id="editorActionName">—</span></div>
+              <div class="editor-btns">
+                <button class="btn btn-sm btn-blue" onclick="openModal()">⤢ Expand</button>
+                <button class="btn btn-sm btn-green" onclick="compileAction()">▶ Compile</button>
+                <button class="btn btn-sm" onclick="testAction()">⚡ Test</button>
+                <button class="btn btn-sm btn-red" onclick="deleteAction()">✕</button>
+              </div>
+            </div>
+            <div class="includes-bar">
+              <strong>Auto-included:</strong>
+              #include &lt;iostream&gt; &nbsp;|&nbsp; #include &lt;string&gt; &nbsp;|&nbsp; #include &lt;fstream&gt; &nbsp;|&nbsp; #include &lt;sstream&gt; &nbsp;|&nbsp; #include &lt;vector&gt; &nbsp;|&nbsp; #include &lt;algorithm&gt; &nbsp;|&nbsp; #include &lt;winsock2.h&gt; &nbsp;|&nbsp; #include &lt;windows.h&gt; &nbsp;|&nbsp; #include &lt;cstdlib&gt; &nbsp;|&nbsp; #include &lt;ctime&gt;
+            </div>
+            <div class="vars-bar">
+              <span class="vars-label">Variables</span>
+              <span class="var-chip">username</span>
+              <span class="var-chip">message</span>
+              <span class="var-chip">args</span>
+              <span class="var-chip">channel</span>
+            </div>
+            <div class="monaco-container" id="monacoInline"></div>
+            <div class="compile-output" id="compileOutput"></div>
+          </div>
+        </div>
+
+        <div class="editor-empty" id="editorEmpty">
+          <div class="editor-empty-inner">
+            <div class="editor-empty-icon">◈</div>
+            <div class="editor-empty-text">Select an action to edit</div>
+          </div>
+        </div>
+      </div>
+    </div>
+<!-- ACCOUNTS PAGE -->
+<div class="page" id="page-accounts">
+  <div class="cmd-page-wrap">
+    <div class="cmd-topbar">
+      <div class="cmd-title-block">
+        <div class="cmd-title">Account</div>
+        <div class="cmd-sub">Manage your connected accounts</div>
+      </div>
+    </div>
+    <div style="padding:20px 28px;display:flex;flex-direction:column;gap:16px;max-width:500px;">
+
+      <!-- Streamer Account -->
+      <div class="card">
+        <div class="card-title">Your Account</div>
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
+          <img id="accountAvatar" src="" style="width:44px;height:44px;border-radius:50%;border:1px solid var(--border);display:none;" />
+          <div id="accountAvatarPlaceholder" style="width:44px;height:44px;border-radius:50%;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:1.2rem;">👤</div>
+          <div>
+            <div id="accountDisplayName" style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.95rem;color:var(--text);">—</div>
+            <div id="accountUsername" style="font-size:0.6rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-top:2px;">Not signed in</div>
+          </div>
+          <div style="margin-left:auto;">
+            <span id="accountStatusDot" style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.15);display:inline-block;transition:all 0.3s;"></span>
+          </div>
+        </div>
+        <button class="btn" style="width:100%;justify-content:center;" onclick="accountLogout()">Sign Out</button>
+      </div>
+
+      <!-- Bot Account -->
+      <div class="card">
+        <div class="card-title">Bot Account</div>
+        <div id="botAccountInfo" style="margin-bottom:16px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);flex-shrink:0;"></div>
+            <div>
+              <div id="botAccountName" style="font-size:0.75rem;color:var(--text);">—</div>
+              <div id="botAccountType" style="font-size:0.58rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-top:2px;">—</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-green" style="flex:1;justify-content:center;" onclick="window.location.href='/auth/bot'">Connect Different Account</button>
+          <button class="btn" id="btnUseMainAccount" style="flex:1;justify-content:center;" onclick="accountUseMain()">Use My Account</button>
+        </div>
+      </div>
+
+      <!-- Channel -->
+      <div class="card">
+        <div class="card-title">Channel</div>
+        <div style="font-size:0.65rem;color:var(--muted);margin-bottom:14px;">The Twitch channel the bot is active in.</div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <input class="form-input" type="text" id="accountChannelInput" placeholder="channelname" style="margin-bottom:0;flex:1;" />
+          <button class="btn btn-green" onclick="accountSaveChannel()">Save</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN ROLE BANNER — shown when logged in as admin -->
+<div id="adminRoleBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:8000;background:rgba(255,180,0,0.08);border-top:1px solid rgba(255,180,0,0.2);padding:8px 24px;display:none;align-items:center;justify-content:space-between;">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span style="font-size:0.55rem;letter-spacing:3px;color:rgba(255,180,0,0.8);text-transform:uppercase;">Admin Mode</span>
+    <span id="adminRoleName" style="font-size:0.65rem;color:rgba(255,255,255,0.5);letter-spacing:1px;"></span>
+  </div>
+  <button class="btn" style="padding:4px 14px;font-size:0.58rem;" onclick="switchToStreamer()">← Back to Streamer</button>
+</div>
+
+<!-- ROLE SWITCHER MODAL -->
+<div id="roleSwitchModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div class="card" style="max-width:360px;width:90%;padding:32px;">
+    <div style="font-size:0.55rem;letter-spacing:4px;color:rgba(255,255,255,0.2);text-transform:uppercase;margin-bottom:8px;">Admin Access</div>
+    <div class="card-title" style="margin-bottom:8px;">Switch User</div>
+    <div style="font-size:0.65rem;color:var(--muted);margin-bottom:24px;">Enter your Twitch username. You must be on the admin list to continue.</div>
+    <label style="display:block;font-size:0.55rem;letter-spacing:3px;color:rgba(255,255,255,0.2);text-transform:uppercase;margin-bottom:8px;">Twitch Username</label>
+    <input class="form-input" type="text" id="roleSwitchInput" placeholder="yourtwitch" style="margin-bottom:8px;" onkeydown="if(event.key==='Enter')submitRoleSwitch()" />
+    <div id="roleSwitchError" style="display:none;font-size:0.6rem;color:var(--red);letter-spacing:1px;margin-bottom:12px;"></div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-green" style="flex:1;" onclick="submitRoleSwitch()">Continue</button>
+      <button class="btn" style="flex:1;" onclick="document.getElementById('roleSwitchModal').style.display='none'">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM MODAL (reusable for destructive actions) -->
+<div id="confirmModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div class="card" style="max-width:360px;width:90%;padding:32px;text-align:center;">
+    <div style="font-size:1.6rem;margin-bottom:12px;">⚠️</div>
+    <div id="confirmModalTitle" class="card-title" style="margin-bottom:8px;">Are you sure?</div>
+    <div id="confirmModalMsg" style="font-size:0.65rem;color:var(--muted);letter-spacing:1px;margin-bottom:24px;line-height:1.7;"></div>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button class="btn" style="background:rgba(255,80,80,0.1);border-color:rgba(255,80,80,0.3);color:rgba(255,120,120,0.9);" id="confirmModalYes">Yes, do it</button>
+      <button class="btn" onclick="document.getElementById('confirmModal').style.display='none'">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADMINS PAGE -->
+<div class="page" id="page-admins">
+  <div class="cmd-page-wrap">
+    <div class="cmd-topbar">
+      <div class="cmd-title-block">
+        <div class="cmd-title">Admins</div>
+        <div class="cmd-sub">Manage bot admin permissions</div>
+      </div>
+      <button class="btn" style="padding:5px 14px;font-size:0.6rem;" onclick="document.getElementById('roleSwitchModal').style.display='flex';document.getElementById('roleSwitchInput').value='';document.getElementById('roleSwitchError').style.display='none';">Switch User</button>
+    </div>
+    <div style="padding:20px 28px;display:flex;flex-direction:column;gap:16px;max-width:500px;">
+      <div class="card" id="addAdminCard">
+        <div class="card-title">Add Admin</div>
+        <div class="form-group">
+          <label class="form-label">Twitch Username</label>
+          <input class="form-input" type="text" id="adminUsernameInput" placeholder="username" />
+        </div>
+        <button class="btn btn-green" onclick="addAdmin()">Add Admin</button>
+      </div>
+      <div class="card">
+        <div class="card-title">Current Admins</div>
+        <div id="adminList"><div class="empty">No admins yet</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ECONOMY PAGE -->
+<div class="page" id="page-economy">
+  <div class="cmd-page-wrap">
+    <div class="cmd-topbar">
+      <div class="cmd-title-block">
+        <div class="cmd-title">Economy</div>
+        <div class="cmd-sub">View and manage viewer balances</div>
+      </div>
+      <button class="btn btn-green" style="padding:5px 14px;font-size:0.6rem;" onclick="loadEconomy()">↻ Refresh</button>
+    </div>
+    <div style="padding:20px 28px;overflow-y:auto;flex:1;">
+      <div class="card" style="max-width:860px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div class="card-title" style="margin-bottom:0;">Viewer Balances</div>
+          <input class="form-input" type="text" id="economySearch" placeholder="Search username..." style="margin-bottom:0;width:200px;padding:6px 12px;font-size:0.65rem;" oninput="filterEconomy(this.value)" />
+        </div>
+        <div id="economyList" style="display:flex;flex-direction:column;gap:8px;">
+          <div class="empty">Loading...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <!-- GROUPS PAGE -->
+    <div class="page" id="page-obs">
+
+  <!-- SETUP SCREEN — shown when not connected and no saved credentials -->
+  <div id="obsSetupScreen" style="display:none;height:100%;align-items:center;justify-content:center;flex-direction:column;">
+    <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;letter-spacing:4px;text-transform:uppercase;margin-bottom:6px;background:linear-gradient(135deg,#fff 0%,rgba(255,255,255,0.5) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">OBS Control</div>
+    <div style="font-size:0.55rem;letter-spacing:5px;color:rgba(255,255,255,0.15);text-transform:uppercase;margin-bottom:40px;">WebSocket Setup</div>
+    <div style="width:100%;max-width:380px;background:rgba(12,12,12,0.8);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:36px;position:relative;overflow:hidden;backdrop-filter:blur(40px);">
+      <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 0%,rgba(232,224,255,0.3) 25%,rgba(255,214,240,0.3) 50%,rgba(208,240,255,0.3) 75%,transparent 100%);background-size:200%;animation:shimmer-line 4s linear infinite;"></div>
+      <div style="font-size:0.55rem;letter-spacing:4px;color:rgba(255,255,255,0.2);text-transform:uppercase;margin-bottom:8px;">One-time setup</div>
+      <div style="font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:8px;background:linear-gradient(135deg,#fff,rgba(255,255,255,0.6));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Connect OBS</div>
+      <div style="font-size:0.65rem;color:rgba(255,255,255,0.25);line-height:1.7;margin-bottom:28px;">In OBS, go to <span style="color:rgba(208,240,255,0.6);">Tools → WebSocket Server Settings</span>, enable it, and copy the password here. You only need to do this once.</div>
+      <label style="display:block;font-size:0.55rem;letter-spacing:3px;color:rgba(255,255,255,0.2);text-transform:uppercase;margin-bottom:8px;">Host</label>
+      <input class="form-input" type="text" id="obsHost" placeholder="localhost" value="localhost" style="margin-bottom:16px;" />
+      <label style="display:block;font-size:0.55rem;letter-spacing:3px;color:rgba(255,255,255,0.2);text-transform:uppercase;margin-bottom:8px;">Port</label>
+      <input class="form-input" type="text" id="obsPort" placeholder="4455" value="4455" style="margin-bottom:16px;" />
+      <label style="display:block;font-size:0.55rem;letter-spacing:3px;color:rgba(255,255,255,0.2);text-transform:uppercase;margin-bottom:8px;">Password</label>
+      <input class="form-input" type="password" id="obsPassword" placeholder="Leave blank if no password set" style="margin-bottom:24px;" />
+      <div id="obsSetupError" style="display:none;font-size:0.6rem;letter-spacing:2px;color:rgba(255,100,100,0.7);margin-bottom:16px;"></div>
+      <button onclick="obsConnect()" style="width:100%;padding:14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:var(--text);font-family:'DM Mono',monospace;font-size:0.72rem;letter-spacing:3px;text-transform:uppercase;cursor:pointer;transition:all 0.3s;" onmouseover="this.style.borderColor='rgba(255,255,255,0.2)';this.style.transform='translateY(-1px)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.12)';this.style.transform=''">Connect to OBS</button>
+    </div>
+  </div>
+
+  <!-- CONNECTED VIEW — shown once connected -->
+  <div id="obsConnectedView" style="display:none;flex-direction:column;height:100%;">
+    <div class="cmd-page-wrap">
+      <div class="cmd-topbar">
+        <div class="cmd-title-block">
+          <div class="cmd-title">OBS Control</div>
+          <div class="cmd-sub">Connected to OBS Studio</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;">
+          <span id="obsStatusDot" style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.15);display:inline-block;transition:all 0.3s;"></span>
+          <span id="obsStatusText" style="font-size:0.6rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;">Disconnected</span>
+          <button class="btn" style="padding:4px 12px;font-size:0.58rem;" onclick="obsShowReconnectForm()">⚙ Settings</button>
+        </div>
+      </div>
+      <div style="padding:20px 28px;overflow-y:auto;flex:1;">
+
+        <!-- Stream & Recording -->
+        <div class="card" id="obsStreamCard" style="max-width:860px;margin-bottom:16px;">
+          <div class="card-title">Stream & Recording</div>
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span id="obsStreamDot" style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.15);display:inline-block;transition:all 0.3s;flex-shrink:0;"></span>
+                <span id="obsStreamStatus" style="font-size:0.65rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;">Stream Off</span>
+              </div>
+              <button class="btn" id="obsStreamBtn" style="padding:5px 14px;font-size:0.6rem;" onclick="obsStreamBtnClick()">Start Stream</button>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;">
+              <span id="obsRecordDot" style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.15);display:inline-block;transition:all 0.3s;flex-shrink:0;"></span>
+              <span id="obsRecordStatus" style="font-size:0.65rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;">Recording Off</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Templates -->
+        <div class="card" id="obsTemplateCard" style="max-width:860px;margin-bottom:16px;">
+          <div class="card-title">Quick Templates</div>
+          <div class="cmd-sub" style="margin-bottom:14px;">Switch to a scene instantly — scene names must match exactly in OBS</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+            <button class="btn" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;" onclick="obsTemplate('Starting Soon')">
+              <span style="font-size:1.2rem;">▶</span>
+              <span style="font-size:0.6rem;letter-spacing:2px;">Starting Soon</span>
+            </button>
+            <button class="btn" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;" onclick="obsConfirmGoLive()">
+              <span style="font-size:1.2rem;">🔴</span>
+              <span style="font-size:0.6rem;letter-spacing:2px;">Go Live</span>
+            </button>
+            <button class="btn" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;" onclick="obsTemplate('BRB')">
+              <span style="font-size:1.2rem;">⏸</span>
+              <span style="font-size:0.6rem;letter-spacing:2px;">BRB</span>
+            </button>
+            <button class="btn" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;" onclick="obsTemplate('Ending')">
+              <span style="font-size:1.2rem;">⏹</span>
+              <span style="font-size:0.6rem;letter-spacing:2px;">Ending</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Scenes -->
+        <div class="card" id="obsSceneCard" style="max-width:860px;">
+          <div class="card-title">Scenes</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <div id="obsCurrentScene" style="font-size:0.65rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;">Current: —</div>
+            <div style="font-size:0.55rem;letter-spacing:1px;color:rgba(255,255,255,0.18);">Left click to switch &nbsp;·&nbsp; Right click to inspect sources</div>
+          </div>
+          <div id="obsSceneList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:0;">
+            <div class="empty">No scenes loaded</div>
+          </div>
+          <div id="obsSourcesPanel" style="display:none;margin-top:18px;padding-top:18px;border-top:1px solid var(--border);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+              <div>
+                <div style="font-size:0.6rem;letter-spacing:3px;color:var(--muted);text-transform:uppercase;">Sources in</div>
+                <div id="obsSourcesTitle" style="font-size:0.85rem;font-family:'Syne',sans-serif;font-weight:700;color:var(--text);margin-top:2px;">—</div>
+              </div>
+              <button class="btn" style="padding:4px 12px;font-size:0.58rem;" onclick="obsCloseSourcesPanel()">✕ Close</button>
+            </div>
+            <div id="obsSourcesList" style="display:flex;flex-direction:column;gap:8px;">
+              <div class="empty">No sources</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ERROR / RECONNECT SCREEN — shown if auto-connect fails with saved creds -->
+  <div id="obsReconnectScreen" style="display:none;height:100%;align-items:center;justify-content:center;flex-direction:column;">
+    <div style="width:100%;max-width:380px;background:rgba(12,12,12,0.8);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:36px;position:relative;overflow:hidden;backdrop-filter:blur(40px);">
+      <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,100,100,0.3),transparent);"></div>
+      <div style="font-size:1.6rem;margin-bottom:12px;">⚠️</div>
+      <div style="font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:700;margin-bottom:8px;color:var(--text);">Connection Failed</div>
+      <div style="font-size:0.65rem;color:rgba(255,255,255,0.25);line-height:1.7;margin-bottom:28px;">Could not connect to OBS. Make sure OBS is open and WebSocket server is enabled.</div>
+      <label style="display:block;font-size:0.55rem;letter-spacing:3px;color:rgba(255,255,255,0.2);text-transform:uppercase;margin-bottom:8px;">Host</label>
+      <input class="form-input" type="text" id="obsHostRetry" placeholder="localhost" value="localhost" style="margin-bottom:16px;" />
+      <label style="display:block;font-size:0.55rem;letter-spacing:3px;color:rgba(255,255,255,0.2);text-transform:uppercase;margin-bottom:8px;">Port</label>
+      <input class="form-input" type="text" id="obsPortRetry" placeholder="4455" value="4455" style="margin-bottom:16px;" />
+      <label style="display:block;font-size:0.55rem;letter-spacing:3px;color:rgba(255,255,255,0.2);text-transform:uppercase;margin-bottom:8px;">Password</label>
+      <input class="form-input" type="password" id="obsPasswordRetry" placeholder="Leave blank if no password set" style="margin-bottom:24px;" />
+      <div id="obsReconnectError" style="display:none;font-size:0.6rem;letter-spacing:2px;color:rgba(255,100,100,0.7);margin-bottom:16px;"></div>
+      <button onclick="obsRetryConnect()" style="width:100%;padding:14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:var(--text);font-family:'DM Mono',monospace;font-size:0.72rem;letter-spacing:3px;text-transform:uppercase;cursor:pointer;transition:all 0.3s;" onmouseover="this.style.borderColor='rgba(255,255,255,0.2)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.12)'">Try Again</button>
+    </div>
+  </div>
+
+  <!-- Go Live Confirm Modal -->
+  <div id="obsGoLiveModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+    <div class="card" style="max-width:380px;width:90%;text-align:center;padding:28px;">
+      <div id="obsGoLiveIcon" style="font-size:1.8rem;margin-bottom:12px;">🔴</div>
+      <div id="obsGoLiveTitle" class="card-title" style="margin-bottom:8px;">Go Live?</div>
+      <div id="obsGoLiveMsg" style="font-size:0.65rem;color:var(--muted);letter-spacing:1px;margin-bottom:24px;">This will switch OBS to your <strong>Live</strong> scene. Make sure everything is ready.</div>
+      <div id="obsGoLiveActions" style="display:flex;gap:10px;justify-content:center;">
+        <button class="btn btn-green" onclick="obsConfirmGoLiveYes()">Yes, Go Live</button>
+        <button class="btn" onclick="obsGoLiveModalClose()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Start Stream Confirm Modal -->
+  <div id="obsStartStreamModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+    <div class="card" style="max-width:380px;width:90%;text-align:center;padding:28px;">
+      <div style="font-size:1.8rem;margin-bottom:12px;">📡</div>
+      <div class="card-title" style="margin-bottom:8px;">Start Streaming?</div>
+      <div style="font-size:0.65rem;color:var(--muted);letter-spacing:1px;margin-bottom:24px;">This will start your stream on Twitch. Make sure OBS is set up and ready.</div>
+      <div style="display:flex;gap:10px;justify-content:center;">
+        <button class="btn btn-green" onclick="obsConfirmStartStreamYes()">Yes, Start Stream</button>
+        <button class="btn" onclick="document.getElementById('obsStartStreamModal').style.display='none'">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="page" id="page-groups">
+      <div class="groups-page-wrap">
+        <div style="margin-bottom:20px;">
+          <div class="cmd-title">Groups</div>
+          <div class="cmd-sub">Organise and chain actions together</div>
+        </div>
+        <div class="content-grid">
+          <div style="display:flex;flex-direction:column;gap:14px;">
+            <div class="card">
+              <div class="card-title">New Group</div>
+              <div class="form-group">
+                <label class="form-label">Group Name</label>
+                <input class="form-input" type="text" id="groupNameInput" placeholder="Sound Effects" />
+              </div>
+              <button class="btn" onclick="createGroup()">Create Group</button>
+            </div>
+            <div class="card">
+              <div class="card-title">Add Action to Group</div>
+              <div class="form-group">
+                <label class="form-label">Group</label>
+                <select class="form-input" id="groupSelectForAction" style="cursor:pointer;"><option value="">Select group...</option></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Action</label>
+                <select class="form-input" id="actionSelectForGroup" style="cursor:pointer;"><option value="">Select action...</option></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">On Fail → Run (optional)</label>
+                <select class="form-input" id="failActionSelect" style="cursor:pointer;"><option value="">None</option></select>
+              </div>
+              <button class="btn" onclick="addActionToGroup()">Add to Group</button>
+            </div>
+          </div>
+          <div class="groups-list" id="groupList"><div class="empty">No groups yet</div></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- FULLSCREEN EDITOR MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Editor</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-includes">
+      <strong>Auto-included:</strong>
+      #include &lt;iostream&gt; &nbsp;|&nbsp; #include &lt;string&gt; &nbsp;|&nbsp; #include &lt;fstream&gt; &nbsp;|&nbsp; #include &lt;sstream&gt; &nbsp;|&nbsp; #include &lt;vector&gt; &nbsp;|&nbsp; #include &lt;algorithm&gt; &nbsp;|&nbsp; #include &lt;winsock2.h&gt; &nbsp;|&nbsp; #include &lt;windows.h&gt; &nbsp;|&nbsp; #include &lt;cstdlib&gt; &nbsp;|&nbsp; #include &lt;ctime&gt;
+    </div>
+    <div class="modal-vars">
+      <span class="vars-label">Variables</span>
+      <span class="var-chip">username</span>
+      <span class="var-chip">message</span>
+      <span class="var-chip">args</span>
+      <span class="var-chip">channel</span>
+    </div>
+    <div class="modal-monaco" id="monacoModal"></div>
+    <div class="modal-footer">
+      <div class="modal-output" id="modalOutput">Ready</div>
+      <div class="modal-btns">
+        <button class="btn btn-sm btn-red" onclick="deleteAction(); closeModal();">✕ Delete</button>
+        <button class="btn btn-sm" onclick="testAction()">⚡ Test</button>
+        <button class="btn btn-sm btn-green" onclick="compileFromModal()">▶ Save &amp; Compile</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD COMMAND MODAL -->
+<div class="add-cmd-modal" id="addCmdModal">
+  <div class="add-cmd-box">
+    <div class="add-cmd-title">Add Command</div>
+    <div class="form-group">
+      <label class="form-label">Command</label>
+      <input class="form-input" type="text" id="commandInput" placeholder="!yourcommand" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Response</label>
+      <input class="form-input" type="text" id="responseInput" placeholder="What the bot says..." />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Cooldown (seconds)</label>
+      <input class="form-input" type="number" id="newCmdCooldown" placeholder="5" value="5" min="0" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Access Level</label>
+      <select class="form-input" id="newCmdAccess">
+        <option value="everyone">Everyone</option>
+        <option value="subscriber">Subscriber</option>
+        <option value="moderator">Moderator</option>
+        <option value="lead mod">Lead Mod</option>
+        <option value="broadcaster">Broadcaster</option>
+      </select>
+    </div>
+    <div class="add-cmd-footer">
+      <button class="btn btn-sm" onclick="closeAddCmd()" style="flex:1;">Cancel</button>
+      <button class="btn btn-sm btn-green" onclick="addCommand()" style="flex:2;">Add Command</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
+<script>
+  // ---- MONACO ----
+  let inlineEditor = null;
+  let modalEditor = null;
+
+  require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' } });
+  require(['vs/editor/editor.main'], function() {
+    monaco.editor.defineTheme('chatcommander', {
+      base: 'vs-dark', inherit: true,
+      rules: [
+        { token: 'comment', foreground: '6A9955', fontStyle: 'italic' },
+        { token: 'keyword', foreground: '569CD6', fontStyle: 'bold' },
+        { token: 'string', foreground: 'CE9178' },
+        { token: 'number', foreground: 'B5CEA8' },
+        { token: 'type', foreground: '4EC9B0' },
+        { token: 'function', foreground: 'DCDCAA' },
+        { token: 'variable', foreground: '9CDCFE' },
+      ],
+      colors: {
+        'editor.background': '#1e1e1e', 'editor.foreground': '#D4D4D4',
+        'editorLineNumber.foreground': '#5A5A5A', 'editorLineNumber.activeForeground': '#C6C6C6',
+        'editor.selectionBackground': '#264F78', 'editor.lineHighlightBackground': '#2A2A2A',
+        'editorCursor.foreground': '#AEAFAD', 'scrollbarSlider.background': '#3E3E3E',
+      }
+    });
+    const editorOpts = {
+      language: 'cpp', theme: 'chatcommander',
+      fontFamily: "'DM Mono', 'Cascadia Code', monospace",
+      lineNumbers: 'on', minimap: { enabled: false }, scrollBeyondLastLine: false,
+      automaticLayout: true, tabSize: 4, cursorBlinking: 'smooth', smoothScrolling: true,
+      bracketPairColorization: { enabled: true },
+    };
+    inlineEditor = monaco.editor.create(document.getElementById('monacoInline'), { ...editorOpts, value: '// Select an action to start editing', fontSize: 13, padding: { top: 12, bottom: 12 } });
+    modalEditor = monaco.editor.create(document.getElementById('monacoModal'), { ...editorOpts, value: '', fontSize: 14, minimap: { enabled: true }, padding: { top: 16, bottom: 16 } });
+  });
+
+  function getInlineCode() { return inlineEditor ? inlineEditor.getValue() : ''; }
+  function setInlineCode(code) { if (inlineEditor) inlineEditor.setValue(code || ''); }
+  function getModalCode() { return modalEditor ? modalEditor.getValue() : ''; }
+  function setModalCode(code) { if (modalEditor) modalEditor.setValue(code || ''); }
+
+  // ---- NAV ----
+  function showPage(name) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('page-' + name).classList.add('active');
+    document.getElementById('nav-' + name).classList.add('active');
+    if (name === 'groups') refreshGroupSelects();
+    if (name === 'actions' && inlineEditor) setTimeout(() => inlineEditor.layout(), 50);
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  // ---- BOT STATUS ----
+  let botRunning = false;
+  async function checkBotStatus() {
+    try {
+      const res = await fetch('/api/bot-status');
+      const data = await res.json();
+      botRunning = data.running;
+      const dot = document.getElementById('botDot');
+      const txt = document.getElementById('botStatusText');
+      if (botRunning) { dot.classList.add('online'); txt.textContent = 'Online'; }
+      else { dot.classList.remove('online'); txt.textContent = 'Offline'; }
+    } catch(e) {}
+  }
+  async function toggleBot() {
+    if (botRunning) { await fetch('/api/bot-stop', { method: 'POST' }); showToast('Bot stopped'); }
+    else { await fetch('/api/bot-start', { method: 'POST' }); showToast('Bot starting...'); }
+    setTimeout(checkBotStatus, 1000);
+  }
+
+  // ---- COMMANDS ----
+  let commandsCache = {};
+  let actionsCache = {};
+  let defaultsCache = {};
+  let currentTab = 'custom';
+
+  const DEFAULT_COMMANDS = [
+    { cmd: '!bank', desc: 'Banking — balance, deposit, withdraw, give, daily, rob, leaderboard', type: 'default', actionKey: 'bank' },
+    { cmd: '!gamble', desc: 'Gambling — coinflip, slots, roulette', type: 'default', actionKey: 'gamble' },
+    { cmd: '!so', desc: 'Shoutout a user — !so @username', type: 'default', actionKey: null },
+    { cmd: '!commands', desc: 'List all active commands', type: 'default', actionKey: null },
+  ];
+
+  async function loadCommands() {
+    const res = await fetch('/api/commands');
+    commandsCache = await res.json();
+    const dRes = await fetch('/api/defaults');
+    defaultsCache = await dRes.json();
+    await loadActions();
+  }
+
+  function switchTab(tab) {
+    currentTab = tab;
+    document.getElementById('tab-custom').classList.toggle('active', tab === 'custom');
+    document.getElementById('tab-default').classList.toggle('active', tab === 'default');
+    document.getElementById('cmdSearch').value = '';
+    document.getElementById('addCmdBtnWrap').style.display = tab === 'custom' ? '' : 'none';
+    renderCommandTable();
+  }
+
+  function filterCommands() { renderCommandTable(); }
+
+  function renderCommandTable() {
+    const search = document.getElementById('cmdSearch').value.toLowerCase();
+    const tbody = document.getElementById('cmdTableBody');
+    let rows = [];
+
+    if (currentTab === 'custom') {
+      // Custom text commands + action commands
+      const textCmds = Object.entries(commandsCache).filter(([k]) => k.toLowerCase().includes(search));
+      const actionCmds = Object.entries(actionsCache).filter(([k, v]) => ('!' + k).toLowerCase().includes(search));
+
+      textCmds.forEach(([cmd, data]) => {
+        rows.push(renderRow(cmd, data.response || '', 'custom', data.cooldown || 5, data.access || 'everyone', data.enabled !== false));
+      });
+      actionCmds.forEach(([name, data]) => {
+        rows.push(renderRow(data.trigger || '!' + name, data.compiled ? 'C++ Action' : 'C++ Action (not compiled)', 'action', data.cooldown || 5, data.access || 'everyone', data.enabled !== false, name));
+      });
+
+      if (rows.length === 0) rows.push(`<tr><td colspan="5"><div class="empty-table">No custom commands yet — click + Add Command</div></td></tr>`);
+      document.getElementById('cmdCount').textContent = rows.length + ' command' + (rows.length !== 1 ? 's' : '');
+    } else {
+      // Default built-in commands
+      DEFAULT_COMMANDS.filter(d => d.cmd.toLowerCase().includes(search)).forEach(d => {
+        rows.push(renderDefaultRow(d));
+      });
+      if (rows.length === 0) rows.push(`<tr><td colspan="5"><div class="empty-table">No default commands found</div></td></tr>`);
+      document.getElementById('cmdCount').textContent = DEFAULT_COMMANDS.length + ' default commands';
+    }
+
+    tbody.innerHTML = rows.join('');
+  }
+
+  // Sub-commands for expandable cooldown panel
+  const ACTION_SUBCOMMANDS = {
+    'bank': ['balance', 'deposit', 'withdraw', 'give', 'daily', 'rob', 'leaderboard', 'admin'],
+    'gamble': ['coinflip', 'slots', 'roulette'],
+  };
+
+  function renderRow(cmd, response, type, cooldown, access, enabled, actionKey = null) {
+    const key = actionKey ? encodeURIComponent(actionKey) : encodeURIComponent(cmd);
+    const isAction = type === 'action';
+    const rowId = 'row-' + (actionKey || cmd).replace(/[^a-z0-9]/gi, '_');
+    const subCmds = isAction && ACTION_SUBCOMMANDS[actionKey] ? ACTION_SUBCOMMANDS[actionKey] : null;
+
+    const subCooldownsSection = subCmds ? `
+      <div class="subcmd-section">
+        <div class="subcmd-title">Sub-command cooldowns</div>
+        <div class="subcmd-grid">
+          ${subCmds.map(s => {
+            const savedCd = (actionsCache[actionKey]?.subCooldowns?.[s]) ?? 5;
+            return `<div class="sub-cd-row">
+              <span class="sub-cd-name">${s}</span>
+              <input class="sub-cd-input" type="number" min="0" value="${savedCd}"
+                onblur="saveSubCooldown('${actionKey}', '${s}', this.value)" />
+              <span class="sub-cd-label">sec</span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>` : '';
+
+    const expandRow = `
+      <tr class="cmd-expand-row" id="${rowId}-expand">
+        <td colspan="5">
+          <div class="cmd-expand-panel">
+            <div class="expand-grid">
+              <div class="expand-field">
+                <div class="expand-label">Cooldown</div>
+                <div style="display:flex;align-items:center;gap:6px">
+                  <input class="cmd-cd-input" type="number" value="${cooldown}" min="0"
+                    onblur="${isAction ? `saveActionCooldown('${key}', this.value)` : `saveCommandCooldown('${encodeURIComponent(cmd)}', this.value)`}" />
+                  <span style="font-size:0.65rem;color:rgba(255,255,255,0.35);font-weight:500">sec</span>
+                </div>
+              </div>
+              <div class="expand-field">
+                <div class="expand-label">Access</div>
+                <select class="cmd-access" onchange="${isAction ? `saveActionAccess('${key}', this.value)` : `saveCommandAccess('${encodeURIComponent(cmd)}', this.value)`}">
+                  ${['everyone','subscriber','moderator','lead mod','broadcaster'].map(a => `<option value="${a}" ${access===a?'selected':''}>${a.charAt(0).toUpperCase()+a.slice(1)}</option>`).join('')}
+                </select>
+              </div>
+              ${!isAction ? `
+              <div class="expand-field">
+                <div class="expand-label">Response</div>
+                <input class="cmd-cd-input" type="text" value="${response.replace(/"/g, '&quot;')}"
+                  style="width:100%;text-align:left;"
+                  onchange="saveCommandResponse('${encodeURIComponent(cmd)}', this.value)" />
+              </div>
+              <div class="expand-field" style="display:flex;align-items:flex-end;">
+                <button class="expand-delete-btn" onclick="deleteCommand('${encodeURIComponent(cmd)}')">Delete command</button>
+              </div>` : ''}
+            </div>
+            ${subCooldownsSection}
+          </div>
+        </td>
+      </tr>`;
+
+    return `
+      <tr class="cmd-row" onclick="toggleExpand('${rowId}')">
+        <td>
+          <div class="cmd-name">${cmd}</div>
+          <span class="cmd-type-badge ${type}">${type === 'action' ? 'C++ action' : type}</span>
+        </td>
+        <td><span class="cmd-response-text">${response}</span></td>
+        <td></td>
+        <td></td>
+        <td>
+          <div class="cmd-actions-cell">
+            <span class="cmd-chevron">›</span>
+            <label class="toggle" onclick="event.stopPropagation()">
+              <input type="checkbox" ${enabled?'checked':''} onchange="${isAction ? `toggleAction('${key}', this.checked)` : `toggleCommand('${encodeURIComponent(cmd)}', this.checked)`}" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </td>
+      </tr>
+      ${expandRow}
+    `;
+  }
+
+  function toggleExpand(rowId) {
+    const row = document.getElementById(rowId + '-expand');
+    const mainRow = row ? row.previousElementSibling : null;
+    if (row) {
+      row.classList.toggle('open');
+      if (mainRow) mainRow.classList.toggle('expanded');
+    }
+  }
+
+  async function saveSubCooldown(action, sub, val) {
+    const a = actionsCache[action];
+    if (!a) return;
+    if (!a.subCooldowns) a.subCooldowns = {};
+    a.subCooldowns[sub] = parseInt(val);
+    await fetch(`/api/actions/${encodeURIComponent(action)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subCooldowns: a.subCooldowns })
+    });
+    showToast('Cooldown saved');
+  }
+
+  function renderDefaultRow(d) {
+    const enabled = defaultsCache[d.cmd] !== false;
+    const rowId = 'row-default-' + d.cmd.replace(/[^a-z0-9]/gi, '_');
+    const subCmds = d.actionKey && ACTION_SUBCOMMANDS[d.actionKey] ? ACTION_SUBCOMMANDS[d.actionKey] : null;
+
+    const subCooldownsSection = subCmds ? `
+      <div class="subcmd-section">
+        <div class="subcmd-title">Sub-command cooldowns</div>
+        <div class="subcmd-grid">
+          ${subCmds.map(s => {
+            const saved = (defaultsCache[d.cmd + '_sub_' + s]) ?? 5;
+            return `<div class="sub-cd-row">
+              <span class="sub-cd-name">${s}</span>
+              <input class="sub-cd-input" type="number" min="0" value="${saved}"
+                onblur="saveDefaultSubCooldown('${d.cmd}', '${s}', this.value)" />
+              <span class="sub-cd-label">sec</span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>` : '';
+
+    const expandRow = `
+      <tr class="cmd-expand-row" id="${rowId}-expand">
+        <td colspan="5">
+          <div class="cmd-expand-panel">
+            <div class="expand-grid">
+              <div class="expand-field">
+                <div class="expand-label">Cooldown</div>
+                <div style="display:flex;align-items:center;gap:6px">
+                  <input class="cmd-cd-input" type="number" min="0"
+                    value="${defaultsCache[d.cmd + '_cd'] ?? 5}"
+                    onblur="saveDefaultCooldown('${d.cmd}', this.value)" />
+                  <span style="font-size:0.65rem;color:rgba(255,255,255,0.35);font-weight:500">sec</span>
+                </div>
+              </div>
+              <div class="expand-field">
+                <div class="expand-label">Access</div>
+                <select class="cmd-access" onchange="saveDefaultAccess('${d.cmd}', this.value)">
+                  ${['everyone','subscriber','moderator','lead mod','broadcaster'].map(a =>
+                    `<option value="${a}" ${(defaultsCache[d.cmd + '_access'] || 'everyone') === a ? 'selected' : ''}>${a.charAt(0).toUpperCase()+a.slice(1)}</option>`
+                  ).join('')}
+                </select>
+              </div>
+            </div>
+            ${subCooldownsSection}
+          </div>
+        </td>
+      </tr>`;
+
+    return `
+      <tr class="cmd-row" onclick="toggleExpand('${rowId}')">
+        <td>
+          <div class="cmd-name">${d.cmd}</div>
+          <span class="cmd-type-badge default">built-in</span>
+        </td>
+        <td><span class="cmd-response-text">${d.desc}</span></td>
+        <td></td>
+        <td></td>
+        <td>
+          <div class="cmd-actions-cell">
+            <span class="cmd-chevron">›</span>
+            <label class="toggle" onclick="event.stopPropagation()">
+              <input type="checkbox" ${enabled ? 'checked' : ''} onchange="toggleDefault('${d.cmd}', this.checked)" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </td>
+      </tr>
+      ${expandRow}
+    `;
+  }
+
+  async function saveDefaultCooldown(cmd, val) {
+    defaultsCache[cmd + '_cd'] = parseInt(val);
+    await fetch('/api/defaults', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(defaultsCache) });
+    showToast('Cooldown saved');
+  }
+  async function saveDefaultAccess(cmd, val) {
+    defaultsCache[cmd + '_access'] = val;
+    await fetch('/api/defaults', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(defaultsCache) });
+    showToast('Access saved');
+  }
+  async function saveDefaultSubCooldown(cmd, sub, val) {
+    defaultsCache[cmd + '_sub_' + sub] = parseInt(val);
+    await fetch('/api/defaults', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(defaultsCache) });
+    showToast('Cooldown saved');
+  }
+
+  async function saveCommandCooldown(cmd, val) {
+    const c = commandsCache[decodeURIComponent(cmd)];
+    if (c) { c.cooldown = parseInt(val); await fetch(`/api/commands`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ command: decodeURIComponent(cmd), response: c.response, cooldown: c.cooldown, access: c.access, enabled: c.enabled }) }); showToast('Cooldown saved'); }
+  }
+  async function saveCommandResponse(cmd, val) {
+    const c = commandsCache[decodeURIComponent(cmd)];
+    if (c) { c.response = val; await fetch(`/api/commands`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ command: decodeURIComponent(cmd), response: val, cooldown: c.cooldown, access: c.access, enabled: c.enabled }) }); showToast('Response saved'); }
+  }
+  async function saveCommandAccess(cmd, val) {
+    const c = commandsCache[decodeURIComponent(cmd)];
+    if (c) { c.access = val; await fetch(`/api/commands`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ command: decodeURIComponent(cmd), response: c.response, cooldown: c.cooldown, access: val, enabled: c.enabled }) }); }
+  }
+  async function toggleCommand(cmd, enabled) {
+    const c = commandsCache[decodeURIComponent(cmd)];
+    if (c) { c.enabled = enabled; await fetch(`/api/commands`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ command: decodeURIComponent(cmd), response: c.response, cooldown: c.cooldown, access: c.access, enabled }) }); showToast(enabled ? 'Command enabled' : 'Command disabled'); }
+  }
+  async function saveActionCooldown(name, val) {
+    const a = actionsCache[decodeURIComponent(name)];
+    if (a) { a.cooldown = parseInt(val); await fetch(`/api/actions/${name}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ cooldown: a.cooldown }) }); showToast('Cooldown saved'); }
+  }
+  async function saveActionAccess(name, val) {
+    const a = actionsCache[decodeURIComponent(name)];
+    if (a) { a.access = val; await fetch(`/api/actions/${name}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ access: val }) }); showToast('Access saved'); }
+  }
+  async function toggleAction(name, enabled) {
+    const a = actionsCache[decodeURIComponent(name)];
+    if (a) { a.enabled = enabled; await fetch(`/api/actions/${name}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ enabled }) }); showToast(enabled ? 'Action enabled' : 'Action disabled'); }
+  }
+  async function toggleDefault(cmd, enabled) {
+    defaultsCache[cmd] = enabled;
+    await fetch('/api/defaults', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(defaultsCache) });
+    showToast(enabled ? cmd + ' enabled' : cmd + ' disabled');
+  }
+  // Add command modal
+  function openAddCmd() { document.getElementById('addCmdModal').classList.add('open'); }
+  function closeAddCmd() { document.getElementById('addCmdModal').classList.remove('open'); }
+  document.getElementById('addCmdModal').addEventListener('click', (e) => { if (e.target === document.getElementById('addCmdModal')) closeAddCmd(); });
+
+  async function addCommand() {
+    const command = document.getElementById('commandInput').value.trim();
+    const response = document.getElementById('responseInput').value.trim();
+    const cooldown = parseInt(document.getElementById('newCmdCooldown').value) || 5;
+    const access = document.getElementById('newCmdAccess').value;
+    if (!command || !response) { showToast('Fill in both fields'); return; }
+    if (!command.startsWith('!')) { showToast('Command must start with !'); return; }
+    await fetch('/api/commands', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ command, response, cooldown, access, enabled: true }) });
+    document.getElementById('commandInput').value = '';
+    document.getElementById('responseInput').value = '';
+    showToast('Command added');
+    closeAddCmd();
+    loadCommands();
+  }
+
+  async function deleteCommand(cmd) {
+    await fetch(`/api/commands/${cmd}`, { method: 'DELETE' });
+    showToast('Command deleted');
+    loadCommands();
+  }
+
+  // ---- ACTIONS ----
+  let currentAction = null;
+
+  async function loadActions() {
+    const res = await fetch('/api/actions');
+    actionsCache = await res.json();
+    renderActionList();
+    renderCommandTable();
+  }
+
+  function renderActionList() {
+    const list = document.getElementById('actionList');
+    const keys = Object.keys(actionsCache);
+    if (keys.length === 0) { list.innerHTML = '<div class="empty">No actions yet</div>'; return; }
+    list.innerHTML = keys.map(name => {
+      const a = actionsCache[name];
+      const badge = a.compiled
+        ? '<div class="action-badge badge-ok"><div class="action-badge-dot"></div>Compiled</div>'
+        : '<div class="action-badge badge-pending"><div class="action-badge-dot"></div>Not compiled</div>';
+      return `<div class="action-item ${currentAction === name ? 'selected' : ''}" onclick="selectAction('${name}')">
+        <div class="action-row"><span class="action-name">${name}</span><span class="action-trigger">${a.trigger || ''}</span></div>
+        ${badge}
+      </div>`;
+    }).join('');
+  }
+
+  function selectAction(name) {
+    currentAction = name;
+    const a = actionsCache[name];
+    document.getElementById('editorPanel').style.display = 'block';
+    document.getElementById('editorEmpty').style.display = 'none';
+    document.getElementById('editorActionName').textContent = name;
+    setInlineCode(a.code || '');
+    document.getElementById('compileOutput').className = 'compile-output';
+    document.getElementById('compileOutput').textContent = '';
+    renderActionList();
+    if (inlineEditor) setTimeout(() => inlineEditor.layout(), 50);
+  }
+
+  async function createAction() {
+    const name = document.getElementById('actionNameInput').value.trim().replace(/\s+/g, '_');
+    const trigger = document.getElementById('actionTriggerInput').value.trim();
+    if (!name) { showToast('Enter an action name'); return; }
+    if (!trigger.startsWith('!')) { showToast('Trigger must start with !'); return; }
+    await fetch('/api/actions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, trigger, code: '', compiled: false }) });
+    document.getElementById('actionNameInput').value = '';
+    document.getElementById('actionTriggerInput').value = '';
+    showToast('Action created');
+    await loadActions();
+    selectAction(name);
+  }
+
+  async function compileAction() {
+    if (!currentAction) return;
+    const code = getInlineCode();
+    setCompileOutput('loading', 'Compiling...');
+    await fetch(`/api/actions/${encodeURIComponent(currentAction)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
+    const res = await fetch('/api/actions/compile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: currentAction, code }) });
+    const data = await res.json();
+    if (data.success) {
+      setCompileOutput('success', '✓ Compiled successfully');
+      actionsCache[currentAction].compiled = true;
+      actionsCache[currentAction].code = code;
+      renderActionList(); showToast('Compiled!');
+    } else {
+      setCompileOutput('error', data.error || 'Compile failed');
+      showToast('Compile error');
+    }
+  }
+
+  function setCompileOutput(type, msg) {
+    const el = document.getElementById('compileOutput');
+    el.className = 'compile-output ' + type;
+    el.textContent = msg;
+  }
+
+  async function testAction() {
+    if (!currentAction) return;
+    await fetch('/api/actions/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: currentAction, username: 'TestUser', message: 'test', args: '' }) });
+    showToast('Action fired');
+  }
+
+  async function deleteAction() {
+    if (!currentAction) return;
+    await fetch(`/api/actions/${encodeURIComponent(currentAction)}`, { method: 'DELETE' });
+    currentAction = null;
+    document.getElementById('editorPanel').style.display = 'none';
+    document.getElementById('editorEmpty').style.display = 'flex';
+    setInlineCode(''); showToast('Action deleted');
+    loadActions();
+  }
+
+  // ---- MODAL ----
+  function openModal() {
+    if (!currentAction) return;
+    const a = actionsCache[currentAction];
+    document.getElementById('modalTitle').textContent = currentAction + ' — ' + (a.trigger || '');
+    setModalCode(getInlineCode());
+    document.getElementById('modalOutput').textContent = 'Ready';
+    document.getElementById('modalOutput').className = 'modal-output';
+    document.getElementById('modalOverlay').classList.add('open');
+    if (modalEditor) setTimeout(() => modalEditor.layout(), 50);
+  }
+  function closeModal() {
+    setInlineCode(getModalCode());
+    document.getElementById('modalOverlay').classList.remove('open');
+  }
+  async function compileFromModal() {
+    if (!currentAction) return;
+    const code = getModalCode();
+    setInlineCode(code);
+    const outputEl = document.getElementById('modalOutput');
+    outputEl.textContent = 'Compiling...';
+    outputEl.className = 'modal-output';
+    await fetch(`/api/actions/${encodeURIComponent(currentAction)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
+    const res = await fetch('/api/actions/compile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: currentAction, code }) });
+    const data = await res.json();
+    if (data.success) {
+      outputEl.textContent = '✓ Compiled successfully';
+      outputEl.className = 'modal-output success';
+      actionsCache[currentAction].compiled = true;
+      actionsCache[currentAction].code = code;
+      setCompileOutput('success', '✓ Compiled successfully');
+      renderActionList(); showToast('Compiled!');
+    } else {
+      outputEl.textContent = data.error || 'Compile failed';
+      outputEl.className = 'modal-output error';
+      showToast('Compile error');
+    }
+  }
+  document.getElementById('modalOverlay').addEventListener('click', (e) => { if (e.target === document.getElementById('modalOverlay')) closeModal(); });
+
+  // ---- GROUPS ----
+  let groupsCache = {};
+  async function loadGroups() {
+    const res = await fetch('/api/groups');
+    groupsCache = await res.json();
+    renderGroups();
+  }
+  function renderGroups() {
+    const list = document.getElementById('groupList');
+    const keys = Object.keys(groupsCache);
+    if (keys.length === 0) { list.innerHTML = '<div class="empty">No groups yet</div>'; return; }
+    list.innerHTML = keys.map(gname => {
+      const g = groupsCache[gname];
+      const actions = g.actions || [];
+      return `<div class="group-card" id="group-${gname}">
+        <div class="group-header" onclick="toggleGroup('${gname}')">
+          <div class="group-name-row">⬡ ${gname}<span class="group-count">${actions.length}</span></div>
+          <span class="group-chevron">›</span>
+        </div>
+        <div class="group-body">
+          ${actions.length === 0 ? '<div style="font-size:0.6rem;color:rgba(255,255,255,0.15);padding:6px 0;">No actions</div>' : ''}
+          ${actions.map(a => `<div class="group-row"><span>${a.name}</span>
+            <div class="group-row-right">
+              <span style="color:rgba(208,240,255,0.35);font-size:0.6rem;">${a.trigger || ''}</span>
+              ${a.onFail ? `<span style="font-size:0.55rem;color:rgba(255,200,80,0.4);">→ ${a.onFail}</span>` : ''}
+              <button class="delete-btn" onclick="removeFromGroup('${gname}','${a.name}')">×</button>
+            </div>
+          </div>`).join('')}
+          <button class="delete-btn" style="margin-top:6px;" onclick="deleteGroup('${gname}')">Delete Group</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  function toggleGroup(name) { document.getElementById('group-' + name).classList.toggle('open'); }
+  function refreshGroupSelects() {
+    const gSel = document.getElementById('groupSelectForAction');
+    const aSel = document.getElementById('actionSelectForGroup');
+    const fSel = document.getElementById('failActionSelect');
+    gSel.innerHTML = '<option value="">Select group...</option>' + Object.keys(groupsCache).map(g => `<option value="${g}">${g}</option>`).join('');
+    aSel.innerHTML = '<option value="">Select action...</option>' + Object.keys(actionsCache).map(a => `<option value="${a}">${a} (${actionsCache[a].trigger || ''})</option>`).join('');
+    fSel.innerHTML = '<option value="">None</option>' + Object.keys(actionsCache).map(a => `<option value="${a}">${a}</option>`).join('');
+  }
+  async function createGroup() {
+    const name = document.getElementById('groupNameInput').value.trim();
+    if (!name) { showToast('Enter a group name'); return; }
+    await fetch('/api/groups', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, actions: [] }) });
+    document.getElementById('groupNameInput').value = '';
+    showToast('Group created');
+    await loadGroups(); refreshGroupSelects();
+  }
+  async function addActionToGroup() {
+    const group = document.getElementById('groupSelectForAction').value;
+    const action = document.getElementById('actionSelectForGroup').value;
+    const onFail = document.getElementById('failActionSelect').value;
+    if (!group || !action) { showToast('Select a group and action'); return; }
+    const g = groupsCache[group];
+    g.actions = g.actions || [];
+    if (g.actions.find(a => a.name === action)) { showToast('Already in group'); return; }
+    g.actions.push({ name: action, trigger: actionsCache[action]?.trigger || '', onFail });
+    await fetch(`/api/groups/${encodeURIComponent(group)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(g) });
+    showToast('Added to group'); await loadGroups();
+  }
+  async function removeFromGroup(group, actionName) {
+    const g = groupsCache[group];
+    g.actions = g.actions.filter(a => a.name !== actionName);
+    await fetch(`/api/groups/${encodeURIComponent(group)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(g) });
+    showToast('Removed'); await loadGroups();
+  }
+  async function deleteGroup(name) {
+    await fetch(`/api/groups/${encodeURIComponent(name)}`, { method: 'DELETE' });
+    showToast('Group deleted'); await loadGroups();
+  }
+// ---- ADMINS ----
+  // ---- ROLE SYSTEM ----
+  let currentRole = 'streamer';
+
+  function applyRole(role, activeUsername) {
+    currentRole = role;
+    const banner = document.getElementById('adminRoleBanner');
+    const addAdminCard = document.getElementById('addAdminCard');
+    const accountsNav = document.getElementById('nav-accounts');
+    if (role === 'admin') {
+      banner.style.display = 'flex';
+      document.getElementById('adminRoleName').textContent = '@' + activeUsername;
+      if (addAdminCard) addAdminCard.style.display = 'none';
+      if (accountsNav) accountsNav.style.display = 'none';
+    } else {
+      banner.style.display = 'none';
+      if (addAdminCard) addAdminCard.style.display = '';
+      if (accountsNav) accountsNav.style.display = '';
+    }
+    renderAdminList();
+  }
+
+  async function submitRoleSwitch() {
+    const username = document.getElementById('roleSwitchInput').value.trim().toLowerCase();
+    const errEl = document.getElementById('roleSwitchError');
+    errEl.style.display = 'none';
+    if (!username) { errEl.textContent = 'Enter a username'; errEl.style.display = 'block'; return; }
+    const res = await fetch('/api/session/switch', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ username })
+    }).then(r => r.json());
+    if (!res.success) { errEl.textContent = res.error || 'Not on the admin list'; errEl.style.display = 'block'; return; }
+    document.getElementById('roleSwitchModal').style.display = 'none';
+    applyRole(res.role, username);
+    showToast(res.role === 'admin' ? `Admin: ${username}` : 'Back to streamer');
+  }
+
+  async function switchToStreamer() {
+    await fetch('/api/session/streamer', { method: 'POST' });
+    applyRole('streamer', null);
+    showToast('Back to streamer view');
+  }
+
+  // ---- CONFIRM MODAL ----
+  function showConfirm(title, msg, onConfirm) {
+    document.getElementById('confirmModalTitle').textContent = title;
+    document.getElementById('confirmModalMsg').innerHTML = msg;
+    const modal = document.getElementById('confirmModal');
+    modal.style.display = 'flex';
+    const btn = document.getElementById('confirmModalYes');
+    btn.textContent = 'Yes, do it';
+    btn.onclick = () => { modal.style.display = 'none'; onConfirm(); };
+  }
+
+  // ---- ADMINS ----
+  let adminsCache = [];
+
+  async function loadAdmins() {
+    const res = await fetch('/api/admins');
+    adminsCache = await res.json();
+    renderAdminList();
+  }
+
+  function renderAdminList() {
+    const list = document.getElementById('adminList');
+    if (!list) return;
+    if (adminsCache.length === 0) { list.innerHTML = '<div class="empty">No admins yet</div>'; return; }
+    list.innerHTML = adminsCache.map(u => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.05);border-radius:6px;margin-bottom:6px;">
+        <span style="font-size:0.78rem;color:rgba(255,255,255,0.75);">@${u}</span>
+        ${currentRole === 'streamer' ? `<button class="delete-btn" onclick="removeAdmin('${u}')">Remove</button>` : ''}
+      </div>`).join('');
+  }
+
+  async function addAdmin() {
+    const input = document.getElementById('adminUsernameInput');
+    const username = input.value.trim().toLowerCase().replace('@', '');
+    if (!username) { showToast('Enter a username'); return; }
+    if (adminsCache.includes(username)) { showToast('Already an admin'); return; }
+    adminsCache.push(username);
+    await fetch('/api/admins', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ admins: adminsCache }) });
+    input.value = '';
+    showToast('Admin added');
+    renderAdminList();
+  }
+
+  async function removeAdmin(username) {
+    adminsCache = adminsCache.filter(u => u !== username);
+    await fetch('/api/admins', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ admins: adminsCache }) });
+    showToast('Admin removed');
+    renderAdminList();
+  }
+
+  // ---- ECONOMY ----
+  let economyCache = [];
+
+  async function loadEconomy() {
+    const list = document.getElementById('economyList');
+    if (!list) return;
+    list.innerHTML = '<div class="empty">Loading...</div>';
+    const mem = await fetch('/api/memory').then(r => r.json()).catch(() => ({}));
+    const users = {};
+    Object.entries(mem).forEach(([key, val]) => {
+      const under = key.indexOf('_');
+      if (under === -1) return;
+      const type = key.slice(0, under);
+      const username = key.slice(under + 1);
+      if (!users[username]) users[username] = { username, bank: 0, cash: 0, jailed: false };
+      if (type === 'bank') users[username].bank = parseInt(val) || 0;
+      if (type === 'cash') users[username].cash = parseInt(val) || 0;
+      if (type === 'jail') users[username].jailed = val === '1' || val === 'true';
+    });
+    economyCache = Object.values(users).sort((a, b) => (b.bank + b.cash) - (a.bank + a.cash));
+    renderEconomy(economyCache);
+  }
+
+  function renderEconomy(users) {
+    const list = document.getElementById('economyList');
+    if (!list) return;
+    if (users.length === 0) { list.innerHTML = '<div class="empty">No economy data yet</div>'; return; }
+    list.innerHTML = users.map(u => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;gap:12px;">
+        <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+          ${u.jailed ? '<span title="Jailed" style="font-size:0.8rem;">🔒</span>' : '<span style="width:16px;display:inline-block;"></span>'}
+          <span style="font-size:0.72rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@${u.username}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;flex-shrink:0;">
+          <div style="text-align:right;">
+            <div style="font-size:0.55rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;">Bank</div>
+            <div style="font-size:0.72rem;color:var(--green);">$${u.bank.toLocaleString()}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:0.55rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;">Cash</div>
+            <div style="font-size:0.72rem;color:var(--text);">$${u.cash.toLocaleString()}</div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            ${u.jailed ? `<button class="btn" style="padding:4px 10px;font-size:0.55rem;" onclick="economyUnjail('${u.username}')">Unjail</button>` : ''}
+            <button class="btn" style="padding:4px 10px;font-size:0.55rem;" onclick="economyEdit('${u.username}',${u.bank},${u.cash})">Edit</button>
+            <button class="btn" style="padding:4px 10px;font-size:0.55rem;color:rgba(255,100,100,0.8);border-color:rgba(255,80,80,0.2);" onclick="economyReset('${u.username}')">Reset</button>
+          </div>
+        </div>
+      </div>`).join('');
+  }
+
+  function filterEconomy(query) {
+    const filtered = query ? economyCache.filter(u => u.username.includes(query.toLowerCase())) : economyCache;
+    renderEconomy(filtered);
+  }
+
+  function economyUnjail(username) {
+    showConfirm('Unjail @' + username + '?', `This will release @${username} from jail.`, async () => {
+      await fetch('/api/memory/unjail', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username }) });
+      showToast(`@${username} unjailed`); loadEconomy();
+    });
+  }
+
+  function economyReset(username) {
+    showConfirm('Reset @' + username + '?',
+      `This will permanently delete ALL economy data for @${username} — bank balance, cash, jail status, everything. This cannot be undone.`,
+      async () => {
+        await fetch('/api/memory/reset-user', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username }) });
+        showToast(`@${username} reset`); loadEconomy();
+      }
+    );
+  }
+
+  function economyEdit(username, bank, cash) {
+    document.getElementById('confirmModalTitle').textContent = 'Edit @' + username;
+    document.getElementById('confirmModalMsg').innerHTML = `
+      <div style="text-align:left;margin-top:8px;">
+        <label style="display:block;font-size:0.55rem;letter-spacing:3px;color:rgba(255,255,255,0.2);text-transform:uppercase;margin-bottom:6px;">Bank</label>
+        <input class="form-input" type="number" id="editBank" value="${bank}" style="margin-bottom:12px;" />
+        <label style="display:block;font-size:0.55rem;letter-spacing:3px;color:rgba(255,255,255,0.2);text-transform:uppercase;margin-bottom:6px;">Cash</label>
+        <input class="form-input" type="number" id="editCash" value="${cash}" style="margin-bottom:0;" />
+      </div>`;
+    const modal = document.getElementById('confirmModal');
+    modal.style.display = 'flex';
+    const btn = document.getElementById('confirmModalYes');
+    btn.textContent = 'Save';
+    btn.onclick = async () => {
+      const newBank = parseInt(document.getElementById('editBank').value) || 0;
+      const newCash = parseInt(document.getElementById('editCash').value) || 0;
+      modal.style.display = 'none';
+      await fetch('/api/memory/set-balance', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username, bank: newBank, cash: newCash }) });
+      showToast(`@${username} updated`); loadEconomy();
+    };
+  }
+
+  // ============================================================
+  // OBS WEBSOCKET
+  // ============================================================
+  let obsWs = null;
+  let obsConnected = false;
+  let obsStreamActive = false;
+  let obsRecordActive = false;
+  let obsMessageId = 1;
+  const obsPendingRequests = {};
+  let obsAutoReconnect = false;
+  let obsReconnectTimer = null;
+  let obsSavedHost = 'localhost';
+  let obsSavedPort = '4455';
+  let obsSavedPassword = '';
+
+  // Save OBS connection settings to config via API
+  function obsSaveSettings(host, port, password) {
+    obsSavedHost = host;
+    obsSavedPort = port;
+    obsSavedPassword = password;
+    fetch('/api/obs-settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ obsHost: host, obsPort: port, obsPassword: password })
+    }).catch(() => {});
+  }
+
+  // Which screen to show
+  function obsShowScreen(screen) {
+    // screen: 'setup' | 'connected' | 'reconnect'
+    const setup = document.getElementById('obsSetupScreen');
+    const connected = document.getElementById('obsConnectedView');
+    const reconnect = document.getElementById('obsReconnectScreen');
+    setup.style.display = 'none';
+    connected.style.display = 'none';
+    reconnect.style.display = 'none';
+    if (screen === 'setup') { setup.style.display = 'flex'; }
+    if (screen === 'connected') { connected.style.display = 'flex'; }
+    if (screen === 'reconnect') { reconnect.style.display = 'flex'; }
+  }
+
+  // Show reconnect/settings form (from the ⚙ Settings button or on failure)
+  function obsShowReconnectForm() {
+    document.getElementById('obsHostRetry').value = obsSavedHost;
+    document.getElementById('obsPortRetry').value = obsSavedPort;
+    document.getElementById('obsPasswordRetry').value = obsSavedPassword;
+    document.getElementById('obsReconnectError').style.display = 'none';
+    obsShowScreen('reconnect');
+  }
+
+  async function obsRetryConnect() {
+    const host = document.getElementById('obsHostRetry').value.trim() || 'localhost';
+    const port = document.getElementById('obsPortRetry').value.trim() || '4455';
+    const password = document.getElementById('obsPasswordRetry').value.trim();
+    const errEl = document.getElementById('obsReconnectError');
+    errEl.style.display = 'none';
+    obsSavedHost = host; obsSavedPort = port; obsSavedPassword = password;
+    obsAutoReconnect = true;
+    obsSaveSettings(host, port, password);
+    // Sync main form fields too
+    if (document.getElementById('obsHost')) document.getElementById('obsHost').value = host;
+    if (document.getElementById('obsPort')) document.getElementById('obsPort').value = port;
+    if (document.getElementById('obsPassword')) document.getElementById('obsPassword').value = password;
+    obsConnectWithErrorEl(host, port, password, errEl);
+  }
+
+  // Load saved OBS settings and decide which screen to show
+  function obsLoadSettings() {
+    fetch('/api/obs-settings').then(r => r.json()).then(cfg => {
+      const host = cfg.obsHost || 'localhost';
+      const port = cfg.obsPort || '4455';
+      const password = cfg.obsPassword || '';
+      obsSavedHost = host; obsSavedPort = port; obsSavedPassword = password;
+      if (document.getElementById('obsHost')) document.getElementById('obsHost').value = host;
+      if (document.getElementById('obsPort')) document.getElementById('obsPort').value = port;
+      if (document.getElementById('obsPassword')) document.getElementById('obsPassword').value = password;
+      if (cfg.obsAutoConnect) {
+        // Has saved creds — try silently. On failure show reconnect screen.
+        obsConnectSilentWithFallback(host, port, password);
+      } else {
+        // First time — show setup screen
+        obsShowScreen('setup');
+      }
+    }).catch(() => {
+      obsShowScreen('setup');
+    });
+  }
+
+  function obsSetStatus(connected) {
+    obsConnected = connected;
+    const dot = document.getElementById('obsStatusDot');
+    const txt = document.getElementById('obsStatusText');
+    const navDot = document.getElementById('obsNavDot');
+    if (connected) {
+      if (dot) { dot.style.background = 'var(--green)'; dot.style.boxShadow = '0 0 8px var(--green)'; }
+      if (txt) { txt.textContent = 'Connected'; txt.style.color = 'var(--green)'; }
+      if (navDot) { navDot.style.background = 'var(--green)'; navDot.style.boxShadow = '0 0 8px var(--green)'; }
+      obsShowScreen('connected');
+      if (obsReconnectTimer) { clearTimeout(obsReconnectTimer); obsReconnectTimer = null; }
+    } else {
+      if (dot) { dot.style.background = 'rgba(255,255,255,0.15)'; dot.style.boxShadow = ''; }
+      if (txt) { txt.textContent = obsAutoReconnect ? 'Reconnecting...' : 'Disconnected'; txt.style.color = 'var(--muted)'; }
+      if (navDot) { navDot.style.background = 'rgba(255,255,255,0.15)'; navDot.style.boxShadow = ''; }
+      if (obsAutoReconnect && !obsReconnectTimer) {
+        obsReconnectTimer = setTimeout(() => {
+          obsReconnectTimer = null;
+          if (!obsConnected) obsConnectSilent(obsSavedHost, obsSavedPort, obsSavedPassword);
+        }, 5000);
+      }
+    }
+  }
+
+  // Silent connect with fallback to reconnect screen on failure (used on startup)
+  function obsConnectSilentWithFallback(host, port, password) {
+    if (obsWs) { obsWs.close(); obsWs = null; }
+    let succeeded = false;
+    try { obsWs = new WebSocket(`ws://${host}:${port}`); } catch(e) { obsShowScreen('reconnect'); return; }
+    // Timeout: if no response in 4s, show reconnect screen
+    const failTimer = setTimeout(() => {
+      if (!succeeded) { obsWs && obsWs.close(); obsWs = null; obsShowReconnectForm(); }
+    }, 4000);
+    obsWs.onopen = () => {};
+    obsWs.onmessage = async (event) => {
+      const msg = JSON.parse(event.data);
+      if (msg.op === 2) { succeeded = true; clearTimeout(failTimer); }
+      obsHandleMessage(event, password);
+    };
+    obsWs.onerror = () => { clearTimeout(failTimer); if (!succeeded) obsShowReconnectForm(); };
+    obsWs.onclose = () => { if (succeeded) { obsSetStatus(false); } };
+  }
+
+  function obsSend(requestType, requestData = {}) {
+    return new Promise((resolve, reject) => {
+      if (!obsWs || obsWs.readyState !== WebSocket.OPEN) return reject('Not connected');
+      const id = String(obsMessageId++);
+      obsPendingRequests[id] = { resolve, reject };
+      obsWs.send(JSON.stringify({
+        op: 6,
+        d: { requestType, requestId: id, requestData }
+      }));
+      setTimeout(() => {
+        if (obsPendingRequests[id]) {
+          delete obsPendingRequests[id];
+          reject('Timeout');
+        }
+      }, 5000);
+    });
+  }
+
+  // Shared message handler used by both manual and silent connect
+  async function obsHandleMessage(event, password, errEl) {
+    const msg = JSON.parse(event.data);
+    // op 0 = Hello
+    if (msg.op === 0) {
+      const helloData = msg.d;
+      let authData = {};
+      if (helloData.authentication && password) {
+        const salt = helloData.authentication.salt;
+        const challenge = helloData.authentication.challenge;
+        // OBS auth: base64(sha256(base64(sha256(password + salt)) + challenge))
+        const enc = new TextEncoder();
+        const hash1 = await crypto.subtle.digest("SHA-256", enc.encode(password + salt));
+        const b64_1 = btoa(String.fromCharCode(...new Uint8Array(hash1)));
+        const hash2 = await crypto.subtle.digest("SHA-256", enc.encode(b64_1 + challenge));
+        const b64_2 = btoa(String.fromCharCode(...new Uint8Array(hash2)));
+        authData = { authentication: b64_2 };
+      }
+      obsWs.send(JSON.stringify({ op: 1, d: { rpcVersion: 1, ...authData, eventSubscriptions: 33 } }));
+    }
+    // op 2 = Identified (connected!)
+    if (msg.op === 2) {
+      obsSetStatus(true);
+      obsLoadScenes();
+      obsLoadStreamStatus();
+    }
+    // op 5 = Event
+    if (msg.op === 5) {
+      const ev = msg.d;
+      if (ev.eventType === 'CurrentProgramSceneChanged') {
+        document.getElementById('obsCurrentScene').textContent = 'Current: ' + ev.eventData.sceneName;
+        obsHighlightActiveScene(ev.eventData.sceneName);
+      }
+      if (ev.eventType === 'StreamStateChanged') obsUpdateStreamStatus(ev.eventData.outputActive, obsRecordActive);
+      if (ev.eventType === 'RecordStateChanged') obsUpdateStreamStatus(obsStreamActive, ev.eventData.outputActive);
+    }
+    // op 7 = RequestResponse
+    if (msg.op === 7) {
+      const id = msg.d.requestId;
+      if (obsPendingRequests[id]) {
+        obsPendingRequests[id].resolve(msg.d);
+        delete obsPendingRequests[id];
+      }
+    }
+  }
+
+  // Silent connect — auto-connect on startup / auto-reconnect (no error UI)
+  function obsConnectSilent(host, port, password) {
+    if (obsWs) { obsWs.close(); obsWs = null; }
+    try { obsWs = new WebSocket(`ws://${host}:${port}`); } catch(e) { return; }
+    obsWs.onopen = () => {};
+    obsWs.onmessage = (event) => obsHandleMessage(event, password);
+    obsWs.onerror = () => { obsSetStatus(false); };
+    obsWs.onclose = () => { obsSetStatus(false); };
+  }
+
+  // Shared connect logic with a specific error element
+  function obsConnectWithErrorEl(host, port, password, errEl) {
+    if (obsWs) { obsWs.close(); obsWs = null; }
+    try { obsWs = new WebSocket(`ws://${host}:${port}`); } catch(e) {
+      if (errEl) { errEl.textContent = 'Invalid host/port'; errEl.style.display = 'block'; }
+      return;
+    }
+    obsWs.onopen = () => {};
+    obsWs.onmessage = (event) => obsHandleMessage(event, password, errEl);
+    obsWs.onerror = () => {
+      if (errEl) { errEl.textContent = 'Could not connect — is OBS running with WebSocket enabled?'; errEl.style.display = 'block'; }
+      obsSetStatus(false);
+    };
+    obsWs.onclose = () => { obsSetStatus(false); };
+  }
+
+  async function obsConnect() {
+    const host = document.getElementById('obsHost').value.trim() || 'localhost';
+    const port = document.getElementById('obsPort').value.trim() || '4455';
+    const password = document.getElementById('obsPassword').value.trim();
+    const errEl = document.getElementById('obsSetupError');
+    if (errEl) errEl.style.display = 'none';
+    obsSavedHost = host; obsSavedPort = port; obsSavedPassword = password;
+    obsAutoReconnect = true;
+    obsSaveSettings(host, port, password);
+    obsConnectWithErrorEl(host, port, password, errEl);
+  }
+
+  function obsDisconnect() {
+    obsAutoReconnect = false;
+    if (obsReconnectTimer) { clearTimeout(obsReconnectTimer); obsReconnectTimer = null; }
+    if (obsWs) { obsWs.close(); obsWs = null; }
+    obsConnected = false;
+    const navDot = document.getElementById('obsNavDot');
+    if (navDot) { navDot.style.background = 'rgba(255,255,255,0.15)'; navDot.style.boxShadow = ''; }
+    obsShowReconnectForm();
+  }
+
+  async function obsLoadScenes() {
+    try {
+      const res = await obsSend('GetSceneList');
+      const scenes = res.responseData.scenes.reverse();
+      const current = res.responseData.currentProgramSceneName;
+      document.getElementById('obsCurrentScene').textContent = 'Current: ' + current;
+      const list = document.getElementById('obsSceneList');
+      list.innerHTML = '';
+      scenes.forEach(s => {
+        const btn = document.createElement('button');
+        btn.style.cssText = 'display:flex;align-items:center;padding:10px 14px;text-align:left;';
+        btn.className = 'btn' + (s.sceneName === current ? ' btn-green' : '');
+        btn.dataset.scene = s.sceneName;
+        btn.innerHTML = `<span style="font-size:0.65rem;letter-spacing:1px;">${s.sceneName}</span>`;
+        btn.onclick = () => obsSwitchScene(s.sceneName);
+        btn.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          obsLoadSources(s.sceneName);
+        });
+        list.appendChild(btn);
+      });
+    } catch(e) {}
+  }
+
+  async function obsLoadSources(sceneName) {
+    document.getElementById('obsSourcesPanel').style.display = 'block';
+    document.getElementById('obsSourcesTitle').textContent = sceneName;
+    const list = document.getElementById('obsSourcesList');
+    list.innerHTML = '<div class="empty">Loading...</div>';
+    try {
+      const res = await obsSend('GetSceneItemList', { sceneName });
+      const items = res.responseData.sceneItems;
+      if (!items || items.length === 0) {
+        list.innerHTML = '<div class="empty">No sources in this scene</div>';
+        return;
+      }
+      list.innerHTML = '';
+      // Sort: enabled first
+      items.sort((a, b) => b.sceneItemEnabled - a.sceneItemEnabled);
+      items.forEach(item => {
+        const isEnabled = item.sceneItemEnabled;
+        const isNestedScene = item.sourceType === 'OBS_SOURCE_TYPE_SCENE';
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;gap:12px;';
+        row.innerHTML = `
+          <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+            <span style="font-size:0.9rem;flex-shrink:0;">${isNestedScene ? '🎬' : obsSourceIcon(item.inputKind)}</span>
+            <div style="min-width:0;">
+              <div style="font-size:0.65rem;letter-spacing:1px;color:${isEnabled ? 'var(--text)' : 'var(--muted)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.sourceName}</div>
+              <div style="font-size:0.52rem;letter-spacing:2px;color:rgba(255,255,255,0.2);text-transform:uppercase;margin-top:2px;">${isNestedScene ? 'nested scene' : (item.inputKind || 'source').replace(/_/g,' ')}</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+            ${isNestedScene ? `<button class="btn" style="padding:4px 10px;font-size:0.55rem;" onclick="obsLoadSources('${item.sourceName.replace(/'/g,"\\'")}')">Inspect</button>` : ''}
+            <label class="obs-toggle">
+              <input type="checkbox" ${isEnabled ? 'checked' : ''} onchange="obsToggleSource('${sceneName.replace(/'/g,"\\'")}', ${item.sceneItemId}, this.checked)">
+              <span class="obs-toggle-slider"></span>
+            </label>
+          </div>
+        `;
+        list.appendChild(row);
+      });
+    } catch(e) {
+      list.innerHTML = '<div class="empty">Failed to load sources</div>';
+    }
+  }
+
+  function obsSourceIcon(inputKind) {
+    if (!inputKind) return '◻';
+    if (inputKind.includes('game')) return '🎮';
+    if (inputKind.includes('monitor') || inputKind.includes('display')) return '🖥';
+    if (inputKind.includes('camera') || inputKind.includes('video') || inputKind.includes('dshow')) return '📷';
+    if (inputKind.includes('image')) return '🖼';
+    if (inputKind.includes('browser')) return '🌐';
+    if (inputKind.includes('text')) return '📝';
+    if (inputKind.includes('audio') || inputKind.includes('wasapi') || inputKind.includes('pulse')) return '🔊';
+    if (inputKind.includes('media') || inputKind.includes('vlc')) return '🎵';
+    if (inputKind.includes('color')) return '🎨';
+    return '◻';
+  }
+
+  async function obsToggleSource(sceneName, sceneItemId, enabled) {
+    try {
+      await obsSend('SetSceneItemEnabled', { sceneName, sceneItemId, sceneItemEnabled: enabled });
+    } catch(e) {}
+  }
+
+  function obsCloseSourcesPanel() {
+    document.getElementById('obsSourcesPanel').style.display = 'none';
+  }
+
+  async function obsSwitchScene(name) {
+    try {
+      await obsSend('SetCurrentProgramScene', { sceneName: name });
+      obsHighlightActiveScene(name);
+      document.getElementById('obsCurrentScene').textContent = 'Current: ' + name;
+      // If sources panel is open, reload it for the new scene
+      const panel = document.getElementById('obsSourcesPanel');
+      if (panel.style.display !== 'none') {
+        obsLoadSources(name);
+      }
+    } catch(e) {}
+  }
+
+  function obsHighlightActiveScene(name) {
+    document.querySelectorAll('#obsSceneList .btn').forEach(btn => {
+      const isActive = btn.dataset.scene === name;
+      btn.classList.remove('btn-green', 'obs-scene-flash');
+      if (isActive) {
+        btn.classList.add('btn-green');
+        void btn.offsetWidth;
+        btn.classList.add('obs-scene-flash');
+      }
+    });
+  }
+
+  async function obsLoadStreamStatus() {
+    try {
+      const s = await obsSend('GetStreamStatus');
+      const r = await obsSend('GetRecordStatus');
+      obsUpdateStreamStatus(s.responseData.outputActive, r.responseData.outputActive);
+    } catch(e) {}
+  }
+
+  function obsUpdateStreamStatus(streaming, recording) {
+    obsStreamActive = streaming;
+    obsRecordActive = recording;
+    const sDot = document.getElementById('obsStreamDot');
+    const sTxt = document.getElementById('obsStreamStatus');
+    const rDot = document.getElementById('obsRecordDot');
+    const rTxt = document.getElementById('obsRecordStatus');
+    const sBtn = document.getElementById('obsStreamBtn');
+    if (streaming) {
+      sDot.style.background = 'var(--red)'; sDot.style.boxShadow = '0 0 8px var(--red)';
+      sTxt.textContent = 'Streaming Live';
+      sTxt.style.color = 'var(--red)';
+      if (sBtn) sBtn.textContent = 'Stop Stream';
+    } else {
+      sDot.style.background = 'rgba(255,255,255,0.15)'; sDot.style.boxShadow = '';
+      sTxt.textContent = 'Stream Off';
+      sTxt.style.color = 'var(--muted)';
+      if (sBtn) sBtn.textContent = 'Start Stream';
+    }
+    if (recording) {
+      rDot.style.background = 'var(--red)'; rDot.style.boxShadow = '0 0 8px var(--red)';
+      rTxt.textContent = 'Recording';
+      rBtn.textContent = 'Stop Recording';
+    } else {
+      rDot.style.background = 'rgba(255,255,255,0.15)'; rDot.style.boxShadow = '';
+      rTxt.textContent = 'Recording Off';
+      rBtn.textContent = 'Start Recording';
+    }
+  }
+
+  async function obsToggleStream() {
+    try { await obsSend('ToggleStream'); } catch(e) {}
+  }
+
+  async function obsToggleRecord() {
+    try { await obsSend('ToggleRecord'); } catch(e) {}
+  }
+
+  async function obsTemplate(sceneName) {
+    try { await obsSwitchScene(sceneName); } catch(e) {}
+  }
+
+  async function obsConfirmGoLive() {
+    const modal = document.getElementById('obsGoLiveModal');
+    const icon = document.getElementById('obsGoLiveIcon');
+    const title = document.getElementById('obsGoLiveTitle');
+    const msg = document.getElementById('obsGoLiveMsg');
+    const actions = document.getElementById('obsGoLiveActions');
+    // Check if a "Live" scene exists
+    try {
+      const res = await obsSend('GetSceneList');
+      const scenes = res.responseData.scenes.map(s => s.sceneName);
+      if (!scenes.includes('Live')) {
+        icon.textContent = '⚠️';
+        title.textContent = 'No Live Scene Found';
+        msg.innerHTML = 'To use Go Live, create a scene in OBS named exactly <strong>Live</strong>. Alternatively, use the Start Stream button in Stream & Recording to go live on your current scene.';
+        actions.innerHTML = '<button class="btn" onclick="obsGoLiveModalClose()">Got it</button>';
+        modal.style.display = 'flex';
+        return;
+      }
+    } catch(e) {}
+    // Reset modal to normal state
+    icon.textContent = '🔴';
+    title.textContent = 'Go Live?';
+    msg.innerHTML = 'This will switch OBS to your <strong>Live</strong> scene. Make sure everything is ready.';
+    actions.innerHTML = '<button class="btn btn-green" onclick="obsConfirmGoLiveYes()">Yes, Go Live</button><button class="btn" onclick="obsGoLiveModalClose()">Cancel</button>';
+    modal.style.display = 'flex';
+  }
+
+  function obsGoLiveModalClose() {
+    document.getElementById('obsGoLiveModal').style.display = 'none';
+  }
+
+  async function obsConfirmGoLiveYes() {
+    obsGoLiveModalClose();
+    await obsTemplate('Live');
+  }
+
+  function obsStreamBtnClick() {
+    document.getElementById('obsStartStreamModal').style.display = 'flex';
+  }
+
+  async function obsConfirmStartStreamYes() {
+    document.getElementById('obsStartStreamModal').style.display = 'none';
+    try { await obsSend('ToggleStream'); } catch(e) {}
+  }
+
+  // ---- ACCOUNTS ----
+  async function loadSession() {
+    const session = await fetch('/api/session').then(r => r.json()).catch(() => ({}));
+    if (!session.loggedIn) return;
+    const avatar = document.getElementById('accountAvatar');
+    const avatarPlaceholder = document.getElementById('accountAvatarPlaceholder');
+    const dot = document.getElementById('accountStatusDot');
+    if (session.streamerAvatar) {
+      avatar.src = session.streamerAvatar;
+      avatar.style.display = 'block';
+      avatarPlaceholder.style.display = 'none';
+    }
+    document.getElementById('accountDisplayName').textContent = session.streamerDisplayName || session.streamerUsername || '—';
+    document.getElementById('accountUsername').textContent = session.streamerUsername ? '@' + session.streamerUsername : 'Not signed in';
+    dot.style.background = 'var(--green)';
+    dot.style.boxShadow = '0 0 6px var(--green)';
+    document.getElementById('botAccountName').textContent = session.botUsername || '—';
+    document.getElementById('botAccountType').textContent = session.usingMainAccount ? 'Same as your account' : 'Separate bot account';
+    if (session.usingMainAccount) document.getElementById('btnUseMainAccount').style.display = 'none';
+    if (session.channel) document.getElementById('accountChannelInput').value = session.channel;
+    applyRole(session.role || 'streamer', session.activeUsername);
+  }
+
+  async function accountLogout() {
+    await fetch('/api/logout', { method: 'POST' });
+    window.location.href = '/setup';
+  }
+
+  async function accountUseMain() {
+    await fetch('/api/setup-bot-main', { method: 'POST' });
+    showToast('Bot set to your main account');
+    loadSession();
+  }
+
+  async function accountSaveChannel() {
+    const channel = document.getElementById('accountChannelInput').value.trim();
+    if (!channel) return;
+    await fetch('/api/setup-channel', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channel })
+    });
+    showToast('Channel saved — restart bot to apply');
+  }
+
+  // ---- INIT ----
+  loadCommands();
+loadGroups();
+loadAdmins();
+checkBotStatus();
+  setInterval(checkBotStatus, 4000);
+  obsLoadSettings();
+  loadSession();
+</script>
+
+<!-- ============================================================ -->
+<!-- DRAGGABLE CHAT WINDOW -->
+<!-- ============================================================ -->
+<style>
+  .chat-window {
+    position: fixed;
+    bottom: 28px; right: 28px;
+    width: 560px; height: 680px;
+    min-width: 260px; min-height: 180px;
+    background: rgba(8,8,8,0.96);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    display: flex; flex-direction: column;
+    z-index: 1000;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(79,255,176,0.05);
+    backdrop-filter: blur(20px);
+    overflow: hidden;
+    transition: box-shadow 0.2s, opacity 0.2s;
+    user-select: none;
+  }
+  .chat-window.dragging {
+    box-shadow: 0 16px 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(79,255,176,0.15);
+    opacity: 0.95;
+  }
+  .chat-window.minimized {
+    height: 44px !important;
+    width: 220px !important;
+    border-radius: 22px;
+  }
+  .chat-window.minimized .chat-body,
+  .chat-window.minimized .chat-input-row,
+  .chat-window.minimized .chat-resize-handle,
+  .chat-window.minimized .chat-resize-n,
+  .chat-window.minimized .chat-resize-e,
+  .chat-window.minimized .chat-resize-w,
+  .chat-window.minimized .chat-resize-ne,
+  .chat-window.minimized .chat-resize-nw { display: none; }
+
+  /* ── Resize handles ── */
+  .chat-resize-handle { position: absolute; bottom: 0; right: 0; width: 16px; height: 16px; cursor: se-resize; z-index: 10; }
+  .chat-resize-handle::after { content: ''; position: absolute; bottom: 4px; right: 4px; width: 6px; height: 6px; border-right: 2px solid rgba(255,255,255,0.15); border-bottom: 2px solid rgba(255,255,255,0.15); border-radius: 1px; }
+  .chat-resize-n  { position: absolute; top: 0; left: 12px; right: 12px; height: 6px; cursor: n-resize; z-index: 10; }
+  .chat-resize-s  { position: absolute; bottom: 0; left: 12px; right: 12px; height: 6px; cursor: s-resize; z-index: 10; }
+  .chat-resize-e  { position: absolute; top: 12px; right: 0; bottom: 12px; width: 6px; cursor: e-resize; z-index: 10; }
+  .chat-resize-w  { position: absolute; top: 12px; left: 0; bottom: 12px; width: 6px; cursor: w-resize; z-index: 10; }
+  .chat-resize-ne { position: absolute; top: 0; right: 0; width: 12px; height: 12px; cursor: ne-resize; z-index: 10; }
+  .chat-resize-nw { position: absolute; top: 0; left: 0; width: 12px; height: 12px; cursor: nw-resize; z-index: 10; }
+  .chat-resize-sw { position: absolute; bottom: 0; left: 0; width: 12px; height: 12px; cursor: sw-resize; z-index: 10; }
+
+  .chat-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 14px;
+    height: 44px; flex-shrink: 0;
+    cursor: grab;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    background: rgba(255,255,255,0.02);
+  }
+  .chat-header:active { cursor: grabbing; }
+  .chat-window.minimized .chat-header { border-bottom: none; cursor: grab; }
+
+  .chat-header-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px rgba(79,255,176,0.6);
+    flex-shrink: 0;
+  }
+  .chat-header-dot.offline { background: rgba(255,255,255,0.15); box-shadow: none; }
+
+  .chat-header-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.72rem; font-weight: 600;
+    color: rgba(255,255,255,0.7);
+    letter-spacing: 0.5px;
+    flex: 1;
+  }
+  .chat-header-channel {
+    font-size: 0.55rem; color: rgba(79,255,176,0.5);
+    font-family: 'DM Mono', monospace; letter-spacing: 1px;
+  }
+  .chat-header-btns { display: flex; gap: 4px; margin-left: 6px; }
+  .chat-hbtn {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.3); font-size: 0.6rem;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .chat-hbtn:hover { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); }
+
+  .chat-body {
+    flex: 1; overflow-y: auto;
+    padding: 10px 0; display: flex; flex-direction: column; gap: 0;
+  }
+  .chat-body::-webkit-scrollbar { width: 3px; }
+  .chat-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 2px; }
+
+  .chat-msg {
+    padding: 5px 14px;
+    font-size: 0.72rem; line-height: 1.45;
+    font-family: 'DM Mono', monospace;
+    transition: background 0.1s;
+    word-break: break-word;
+  }
+  .chat-msg:hover { background: rgba(255,255,255,0.02); }
+  .chat-msg-bot { background: rgba(79,255,176,0.03); border-left: 2px solid rgba(79,255,176,0.2); }
+  .chat-msg-bot:hover { background: rgba(79,255,176,0.05); }
+  .chat-msg-user { font-weight: 600; margin-right: 4px; cursor: default; }
+  .chat-msg-text { color: rgba(255,255,255,0.65); }
+  .chat-msg-badges { margin-right: 4px; font-size: 0.65rem; }
+  .chat-msg-ts { font-size: 0.48rem; color: rgba(255,255,255,0.15); margin-left: 6px; vertical-align: middle; }
+
+  .chat-input-row {
+    display: flex; gap: 0;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    padding: 10px 12px; flex-shrink: 0;
+    background: rgba(255,255,255,0.01);
+  }
+  .chat-input {
+    flex: 1; background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07); border-right: none;
+    border-radius: 8px 0 0 8px;
+    color: rgba(255,255,255,0.8); font-family: 'DM Mono', monospace;
+    font-size: 0.7rem; padding: 7px 12px; outline: none;
+    transition: border-color 0.2s;
+  }
+  .chat-input:focus { border-color: rgba(79,255,176,0.25); }
+  .chat-input::placeholder { color: rgba(255,255,255,0.18); }
+  .chat-send-btn {
+    background: rgba(79,255,176,0.1); border: 1px solid rgba(79,255,176,0.2);
+    border-radius: 0 8px 8px 0;
+    color: rgba(79,255,176,0.7); font-size: 0.75rem;
+    padding: 7px 14px; cursor: pointer; transition: all 0.2s;
+    font-family: 'DM Mono', monospace;
+  }
+  .chat-send-btn:hover { background: rgba(79,255,176,0.18); color: var(--green); }
+
+  .chat-empty {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 8px;
+    color: rgba(255,255,255,0.1); font-size: 0.58rem;
+    letter-spacing: 2px; text-transform: uppercase;
+    font-family: 'DM Mono', monospace;
+  }
+
+  #chatNavDot.online { background: var(--green); box-shadow: 0 0 6px rgba(79,255,176,0.5); }
+</style>
+
+<!-- Chat Window -->
+<div class="chat-window" id="chatWindow" style="display:none;">
+  <!-- Resize handles -->
+  <div class="chat-resize-n"  data-dir="n"></div>
+  <div class="chat-resize-s chat-resize-handle" data-dir="s"></div>
+  <div class="chat-resize-e"  data-dir="e"></div>
+  <div class="chat-resize-w"  data-dir="w"></div>
+  <div class="chat-resize-ne" data-dir="ne"></div>
+  <div class="chat-resize-nw" data-dir="nw"></div>
+  <div class="chat-resize-sw" data-dir="sw"></div>
+  <div class="chat-header" id="chatDragHandle">
+    <div class="chat-header-dot offline" id="chatDot"></div>
+    <div class="chat-header-title">Live Chat</div>
+    <div class="chat-header-channel" id="chatChannel">—</div>
+    <div class="chat-header-btns">
+      <button class="chat-hbtn" onclick="toggleChatMinimize()" title="Minimize">—</button>
+      <button class="chat-hbtn" onclick="toggleChatVisible()" title="Close">✕</button>
+    </div>
+  </div>
+  <div class="chat-body" id="chatBody">
+    <div class="chat-empty" id="chatEmpty">
+      <span>Waiting for chat...</span>
+    </div>
+  </div>
+  <div class="chat-input-row">
+    <input class="chat-input" id="chatInput" placeholder="Send a message..." maxlength="500"
+      onkeydown="if(event.key==='Enter') sendChatMessage()" />
+    <button class="chat-send-btn" onclick="sendChatMessage()">↑</button>
+  </div>
+</div>
+
+<script>
+  // ── SECTION: CHAT_WINDOW ─────────────────────────────────────────────────
+
+  let chatVisible = false;
+  let chatMinimized = false;
+  let chatMessages = [];
+  const MAX_MSGS = 150;
+
+  const chatWindow   = document.getElementById('chatWindow');
+  const chatBody     = document.getElementById('chatBody');
+  const chatEmpty    = document.getElementById('chatEmpty');
+  const chatDot      = document.getElementById('chatDot');
+  const chatNavDot   = document.getElementById('chatNavDot');
+  const chatNavItem  = document.getElementById('nav-chat-toggle');
+  const chatChannel  = document.getElementById('chatChannel');
+
+  fetch('/api/config').then(r => r.json()).then(cfg => {
+    if (cfg.channel) chatChannel.textContent = '#' + cfg.channel.replace('#','');
+  });
+
+  // ── SECTION: CHAT_SSE ────────────────────────────────────────────────────
+  let chatSource = null;
+
+  function connectChatStream() {
+    if (chatSource) { chatSource.close(); chatSource = null; }
+    chatSource = new EventSource('/api/chat/stream');
+
+    chatSource.onopen = () => {
+      chatDot.classList.remove('offline');
+      if (chatNavDot) { chatNavDot.style.background = 'var(--green)'; chatNavDot.style.boxShadow = '0 0 6px rgba(79,255,176,0.5)'; }
+    };
+
+    chatSource.onmessage = (e) => {
+      try { appendChatMessage(JSON.parse(e.data)); } catch (err) {}
+    };
+
+    chatSource.onerror = () => {
+      chatDot.classList.add('offline');
+      if (chatNavDot) { chatNavDot.style.background = 'rgba(255,255,255,0.15)'; chatNavDot.style.boxShadow = 'none'; }
+      chatSource.close(); chatSource = null;
+      setTimeout(connectChatStream, 3000);
+    };
+  }
+
+  // ── SECTION: CHAT_APPEND ─────────────────────────────────────────────────
+  function appendChatMessage(msg) {
+    chatMessages.push(msg);
+    if (chatMessages.length > MAX_MSGS) { chatMessages.shift(); chatBody.firstChild && chatBody.removeChild(chatBody.firstChild); }
+    if (chatEmpty && chatEmpty.parentNode) chatEmpty.remove();
+
+    const time = new Date(msg.ts).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    const color = msg.isBot ? '#4fffb0' : (msg.color || '#d0f0ff');
+    const badgeStr = msg.isBot ? '🤖 ' : (msg.isMod ? '🛡️ ' : (msg.isSub ? '⭐ ' : ''));
+
+    const el = document.createElement('div');
+    el.className = 'chat-msg' + (msg.isBot ? ' chat-msg-bot' : '');
+    el.innerHTML = `<span class="chat-msg-badges">${badgeStr}</span><span class="chat-msg-user" style="color:${color}">${escapeHtml(msg.username)}</span><span style="color:rgba(255,255,255,0.3)">: </span><span class="chat-msg-text">${escapeHtml(msg.message)}</span><span class="chat-msg-ts">${time}</span>`;
+    chatBody.appendChild(el);
+    chatBody.scrollTop = chatBody.scrollHeight;
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── SECTION: CHAT_SEND ───────────────────────────────────────────────────
+  async function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const msg = input.value.trim();
+    if (!msg) return;
+    input.value = '';
+    await fetch('/api/chat/send', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ message: msg })
+    });
+  }
+
+  // ── SECTION: CHAT_TOGGLE ─────────────────────────────────────────────────
+  function toggleChatVisible() {
+    chatVisible = !chatVisible;
+    chatWindow.style.display = chatVisible ? 'flex' : 'none';
+    if (chatNavItem) chatNavItem.classList.toggle('active', chatVisible);
+  }
+
+  function toggleChatMinimize() {
+    chatMinimized = !chatMinimized;
+    chatWindow.classList.toggle('minimized', chatMinimized);
+  }
+
+  // ── SECTION: CHAT_DRAG ───────────────────────────────────────────────────
+  const dragHandle = document.getElementById('chatDragHandle');
+  let isDragging = false, dragOffsetX = 0, dragOffsetY = 0;
+
+  dragHandle.addEventListener('mousedown', (e) => {
+    if (e.target.classList.contains('chat-hbtn')) return;
+    isDragging = true;
+    const rect = chatWindow.getBoundingClientRect();
+    dragOffsetX = e.clientX - rect.left;
+    dragOffsetY = e.clientY - rect.top;
+    chatWindow.classList.add('dragging');
+    chatWindow.style.right = 'auto';
+    chatWindow.style.bottom = 'auto';
+    e.preventDefault();
+  });
+
+  // ── SECTION: CHAT_RESIZE ─────────────────────────────────────────────────
+  let isResizing = false, resizeDir = '', resizeStartX = 0, resizeStartY = 0;
+  let resizeStartW = 0, resizeStartH = 0, resizeStartL = 0, resizeStartT = 0;
+
+  document.querySelectorAll('[data-dir]').forEach(handle => {
+    handle.addEventListener('mousedown', (e) => {
+      isResizing = true;
+      resizeDir = handle.dataset.dir;
+      resizeStartX = e.clientX;
+      resizeStartY = e.clientY;
+      const rect = chatWindow.getBoundingClientRect();
+      resizeStartW = rect.width;
+      resizeStartH = rect.height;
+      resizeStartL = rect.left;
+      resizeStartT = rect.top;
+      chatWindow.style.right = 'auto';
+      chatWindow.style.bottom = 'auto';
+      chatWindow.style.left = resizeStartL + 'px';
+      chatWindow.style.top = resizeStartT + 'px';
+      e.preventDefault();
+      e.stopPropagation();
+    });
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (isDragging) {
+      let x = Math.max(0, Math.min(window.innerWidth  - chatWindow.offsetWidth,  e.clientX - dragOffsetX));
+      let y = Math.max(0, Math.min(window.innerHeight - chatWindow.offsetHeight, e.clientY - dragOffsetY));
+      chatWindow.style.left = x + 'px';
+      chatWindow.style.top  = y + 'px';
+      return;
+    }
+    if (!isResizing) return;
+    const dx = e.clientX - resizeStartX;
+    const dy = e.clientY - resizeStartY;
+    const minW = 260, minH = 180;
+
+    if (resizeDir.includes('e')) {
+      chatWindow.style.width = Math.max(minW, resizeStartW + dx) + 'px';
+    }
+    if (resizeDir.includes('s')) {
+      chatWindow.style.height = Math.max(minH, resizeStartH + dy) + 'px';
+    }
+    if (resizeDir.includes('w')) {
+      const newW = Math.max(minW, resizeStartW - dx);
+      chatWindow.style.width = newW + 'px';
+      chatWindow.style.left = (resizeStartL + resizeStartW - newW) + 'px';
+    }
+    if (resizeDir.includes('n')) {
+      const newH = Math.max(minH, resizeStartH - dy);
+      chatWindow.style.height = newH + 'px';
+      chatWindow.style.top = (resizeStartT + resizeStartH - newH) + 'px';
+    }
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (isDragging) { isDragging = false; chatWindow.classList.remove('dragging'); }
+    isResizing = false;
+  });
+
+  // Init
+  connectChatStream();
+</script>
+</body>
+</html>
