@@ -523,6 +523,10 @@
    <div class="nav-item" id="nav-admins" onclick="showPage('admins')">
   <span class="nav-icon">🛡</span> Admins
 </div>
+   <div class="nav-item" id="nav-mods" onclick="showPage('mods');loadMods();">
+  <span class="nav-icon">🎭</span> Mod Bots
+  <span id="modPendingDot" style="display:none;width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent);margin-left:auto;flex-shrink:0;"></span>
+</div>
    
     <div class="nav-section">Tools</div>
     <div class="nav-item" id="nav-obs" onclick="showPage('obs')">
@@ -766,6 +770,45 @@
     </div>
   </div>
 </div>
+
+<!-- MODS PAGE -->
+<div class="page" id="page-mods">
+  <div class="cmd-page-wrap">
+    <div class="cmd-topbar">
+      <div class="cmd-title-block">
+        <div class="cmd-title">Mod Bots</div>
+        <div class="cmd-sub">Mods who have authorized their account to be used as a bot</div>
+      </div>
+    </div>
+    <div style="padding:20px 28px;display:flex;flex-direction:column;gap:16px;max-width:600px;">
+
+      <!-- Request link card -->
+      <div class="card">
+        <div class="card-title">Request Mod</div>
+        <div class="cmd-sub" style="margin-bottom:14px;">Share this link with a mod. They open it, authorize with Twitch, and their account gets added as a pending request.</div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <input class="form-input" id="modRequestLink" style="margin-bottom:0;font-size:0.6rem;color:var(--muted);" readonly value="http://localhost:3000/auth/mod" />
+          <button class="btn" style="padding:6px 14px;font-size:0.6rem;flex-shrink:0;" onclick="copyModLink()">Copy</button>
+        </div>
+      </div>
+
+      <!-- Pending requests -->
+      <div class="card" id="modPendingCard" style="display:none;">
+        <div class="card-title">Pending Requests</div>
+        <div id="modPendingList" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+
+      <!-- Approved mods -->
+      <div class="card">
+        <div class="card-title">Active Mod Bots</div>
+        <div id="modApprovedList"><div class="empty">No mod bots yet</div></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
 
 <!-- ECONOMY PAGE -->
 <div class="page" id="page-economy">
@@ -1744,6 +1787,82 @@
     renderAdminList();
   }
 
+  // ---- MODS ----
+  let modsCache = [];
+
+  function copyModLink() {
+    navigator.clipboard.writeText('http://localhost:3000/auth/mod');
+    showToast('Link copied');
+  }
+
+  async function loadMods() {
+    const res = await fetch('/api/mods');
+    modsCache = await res.json();
+    renderMods();
+  }
+
+  function renderMods() {
+    const pending = modsCache.filter(m => !m.approved);
+    const approved = modsCache.filter(m => m.approved);
+
+    const pendingCard = document.getElementById('modPendingCard');
+    const pendingList = document.getElementById('modPendingList');
+    const approvedList = document.getElementById('modApprovedList');
+    const dot = document.getElementById('modPendingDot');
+
+    // Pending dot in nav
+    if (dot) dot.style.display = pending.length > 0 ? 'block' : 'none';
+
+    // Pending section
+    if (pending.length > 0) {
+      pendingCard.style.display = '';
+      pendingList.innerHTML = pending.map(m => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,100,0.15);border-radius:6px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <img src="${m.avatar}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none'" />
+            <span style="font-size:0.78rem;color:rgba(255,255,255,0.75);">@${m.username}</span>
+            <span style="font-size:0.55rem;letter-spacing:2px;color:rgba(255,200,0,0.6);text-transform:uppercase;">Pending</span>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-green" style="padding:4px 12px;font-size:0.6rem;" onclick="approveMod('${m.username}')">Approve</button>
+            <button class="delete-btn" onclick="removeMod('${m.username}')">Deny</button>
+          </div>
+        </div>`).join('');
+    } else {
+      pendingCard.style.display = 'none';
+    }
+
+    // Approved section
+    if (approved.length === 0) {
+      approvedList.innerHTML = '<div class="empty">No mod bots yet</div>';
+    } else {
+      approvedList.innerHTML = approved.map(m => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.05);border-radius:6px;margin-bottom:6px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <img src="${m.avatar}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none'" />
+            <span style="font-size:0.78rem;color:rgba(255,255,255,0.75);">@${m.username}</span>
+          </div>
+          <button class="delete-btn" onclick="removeMod('${m.username}')">Remove</button>
+        </div>`).join('');
+    }
+  }
+
+  async function approveMod(username) {
+    await fetch('/api/mods/approve', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ username }) });
+    showToast(`${username} approved`);
+    loadMods();
+  }
+
+  async function removeMod(username) {
+    showConfirm('Remove Mod Bot', `Remove @${username} as a mod bot? They will need to re-authorize to be added again.`, async () => {
+      await fetch('/api/mods/remove', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ username }) });
+      showToast('Mod removed');
+      loadMods();
+    });
+  }
+
+
+
   // ---- ECONOMY ----
   let economyCache = [];
 
@@ -2341,6 +2460,7 @@
   loadCommands();
 loadGroups();
 loadAdmins();
+loadMods();
 checkBotStatus();
   setInterval(checkBotStatus, 4000);
   obsLoadSettings();

@@ -154,13 +154,21 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
     // ---- AUTH ----
     // Streamer signs in with their main Twitch account
     server.get('/auth/streamer', (req, res) => {
-        const url = `https://id.twitch.tv/oauth2/authorize?client_id=${TWITCH_CLIENT_ID}&redirect_uri=${encodeURIComponent(TWITCH_REDIRECT_URI)}&response_type=code&scope=chat:read+chat:edit+user:read:email&state=streamer`;
-        res.redirect(url);
+        const url = `https://id.twitch.tv/oauth2/authorize?client_id=${TWITCH_CLIENT_ID}&redirect_uri=${encodeURIComponent(TWITCH_REDIRECT_URI)}&response_type=code&scope=chat:read+chat:edit+user:read:email+moderation:read&state=streamer&force_verify=true`;
+        shell.openExternal(url);
+        res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{background:#0a0a0a;color:#f0f0f0;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column;gap:12px;}h2{margin:0;font-size:1.1rem;}p{margin:0;color:rgba(255,255,255,0.4);font-size:0.75rem;text-align:center;}</style></head><body><h2>🌐 Opening in your browser...</h2><p>Sign in with Twitch in the browser window that just opened.<br>This page will update automatically when done.</p><script>const check=setInterval(async()=>{const cfg=await fetch('/api/config').then(r=>r.json()).catch(()=>({}));if(cfg.streamerUsername){clearInterval(check);window.location.replace('/setup?streamer_authed=true');}},1500);</script></body></html>`);
     });
 
-    // Bot account OAuth (separate account flow)
+    // Bot account OAuth — external browser, user must click 'Not you?' to switch accounts
     server.get('/auth/bot', (req, res) => {
-        const url = `https://id.twitch.tv/oauth2/authorize?client_id=${TWITCH_CLIENT_ID}&redirect_uri=${encodeURIComponent(TWITCH_REDIRECT_URI)}&response_type=code&scope=chat:read+chat:edit&state=bot`;
+        const url = `https://id.twitch.tv/oauth2/authorize?client_id=${TWITCH_CLIENT_ID}&redirect_uri=${encodeURIComponent(TWITCH_REDIRECT_URI)}&response_type=code&scope=chat:read+chat:edit&state=bot&force_verify=true`;
+        shell.openExternal(url);
+        res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{background:#0a0a0a;color:#f0f0f0;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column;gap:12px;}h2{margin:0;font-size:1.1rem;}p{margin:0;color:rgba(255,255,255,0.4);font-size:0.75rem;text-align:center;}</style></head><body><h2>🌐 Waiting for bot authorization...</h2><p>Log in as your bot account in the browser.<br>This page will redirect automatically when done.</p><script>const t=setInterval(async()=>{const c=await fetch('/api/config').then(r=>r.json()).catch(()=>({}));if(c.botUsername&&c.botUsername!==c.streamerUsername){clearInterval(t);window.location.replace('/setup?bot_authed=true');}},1500);</script></body></html>`);
+    });
+
+    // Mod account OAuth
+    server.get('/auth/mod', (req, res) => {
+        const url = `https://id.twitch.tv/oauth2/authorize?client_id=${TWITCH_CLIENT_ID}&redirect_uri=${encodeURIComponent(TWITCH_REDIRECT_URI)}&response_type=code&scope=chat:read+chat:edit&state=mod`;
         res.redirect(url);
     });
 
@@ -171,7 +179,7 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
 
     server.get('/auth/callback', async (req, res) => {
         const code = req.query.code;
-        const state = req.query.state || 'bot'; // 'streamer' or 'bot'
+        const state = req.query.state || 'bot'; // 'streamer', 'bot', or 'mod'
         fs.appendFileSync(path.join(app.getPath('userData'), 'debug.log'),
             `AUTH CALLBACK: state=${state} code=${code}\n`);
         try {
@@ -216,17 +224,68 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
                 fs.writeFileSync(getDataPath('config.json'), JSON.stringify(config, null, 4));
 
                 if (config.setupComplete) {
-                    res.redirect('/');
+                    if (mainWindow) mainWindow.loadURL('http://localhost:3000/');
                 } else {
-                    res.redirect('/setup?streamer_authed=true');
+                    if (mainWindow) mainWindow.loadURL('http://localhost:3000/setup?streamer_authed=true');
                 }
+                res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{background:#0a0a0a;color:#f0f0f0;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column;gap:12px;}h2{margin:0;font-size:1.1rem;}p{margin:0;color:rgba(255,255,255,0.4);font-size:0.75rem;text-align:center;}</style></head><body><h2>✅ Signed in!</h2><p>You can close this tab and go back to the app.</p></body></html>`);
+            } else if (state === 'mod') {
+                // Verify they are actually a mod in the streamer's channel
+                const notModPage = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Not a Mod</title><style>body{background:#0a0a0a;color:#f0f0f0;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column;gap:12px;}h2{margin:0;font-size:1.2rem;}p{margin:0;color:rgba(255,255,255,0.4);font-size:0.8rem;text-align:center;}</style></head><body><h2>❌ Not a mod</h2><p>You need to be a mod in ${config.channel || 'the streamer'}'s channel<br>to request bot access.</p></body></html>`;
+
+                try {
+                    // Get streamer's broadcaster ID
+                    const streamerRes = await axios.get(`https://api.twitch.tv/helix/users?login=${config.channel || config.streamerUsername}`, {
+                        headers: { 'Authorization': `Bearer ${accessToken}`, 'Client-Id': TWITCH_CLIENT_ID }
+                    });
+                    const broadcasterId = streamerRes.data.data[0]?.id;
+                    const modUserId = twitchUser.id;
+
+                    if (!broadcasterId) { res.send(notModPage); return; }
+
+                    // Check if this user is a mod in that channel
+                    // Use the streamer's token for this check as it requires broadcaster scope
+                    const streamerToken = (config.streamerToken || '').replace('oauth:', '');
+                    const modCheckRes = await axios.get(`https://api.twitch.tv/helix/moderation/moderators?broadcaster_id=${broadcasterId}&user_id=${modUserId}`, {
+                        headers: { 'Authorization': `Bearer ${streamerToken}`, 'Client-Id': TWITCH_CLIENT_ID }
+                    });
+
+                    const isMod = modCheckRes.data.data.length > 0;
+                    if (!isMod) { res.send(notModPage); return; }
+                } catch (modCheckErr) {
+                    // If check fails, deny by default
+                    res.send(notModPage); return;
+                }
+
+                if (!config.mods) config.mods = [];
+                const existing = config.mods.find(m => m.username === username);
+                if (existing) {
+                    existing.token = `oauth:${accessToken}`;
+                    existing.displayName = displayName;
+                    existing.avatar = avatar;
+                } else {
+                    config.mods.push({
+                        username,
+                        displayName,
+                        avatar,
+                        token: `oauth:${accessToken}`,
+                        approved: false,
+                        commands: []
+                    });
+                }
+                fs.writeFileSync(getDataPath('config.json'), JSON.stringify(config, null, 4));
+                res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Request Sent</title><style>body{background:#0a0a0a;color:#f0f0f0;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column;gap:12px;}h2{margin:0;font-size:1.2rem;}p{margin:0;color:rgba(255,255,255,0.4);font-size:0.8rem;}</style></head><body><h2>✅ Request sent!</h2><p>The streamer will approve your request. You can close this tab.</p></body></html>`);
             } else {
                 // This is the bot account being authorized
                 config.botUsername = username;
                 config.token = `oauth:${accessToken}`;
                 config.usingMainAccount = false;
                 fs.writeFileSync(getDataPath('config.json'), JSON.stringify(config, null, 4));
-                res.redirect('/setup?bot_authed=true');
+                // Push the Electron app window to the next setup step
+                if (mainWindow) mainWindow.loadURL('http://localhost:3000/setup?bot_authed=true');
+                // Show a done page in the browser
+                res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{background:#0a0a0a;color:#f0f0f0;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column;gap:12px;}h2{margin:0;font-size:1.1rem;}p{margin:0;color:rgba(255,255,255,0.4);font-size:0.75rem;text-align:center;}</style></head><body><h2>✅ Bot account connected!</h2><p>You can close this tab and go back to the app.</p></body></html>`);
+
             }
         } catch (err) {
             fs.appendFileSync(path.join(app.getPath('userData'), 'debug.log'),
@@ -378,7 +437,68 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
         res.json({ success: true });
     });
 
-    // ---- SETUP ----
+    server.get('/api/admins', (req, res) => {
+        const config = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
+        res.json(config.admins || []);
+    });
+
+    server.post('/api/admins', (req, res) => {
+        const config = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
+        config.admins = req.body.admins || [];
+        fs.writeFileSync(getDataPath('config.json'), JSON.stringify(config, null, 4));
+        res.json({ success: true });
+    });
+
+    // ---- MODS ----
+    server.get('/api/mods', (req, res) => {
+        const config = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
+        // Never send tokens to the frontend
+        const mods = (config.mods || []).map(m => ({
+            username: m.username,
+            displayName: m.displayName,
+            avatar: m.avatar,
+            approved: m.approved,
+            commands: m.commands || []
+        }));
+        res.json(mods);
+    });
+
+    server.post('/api/mods/approve', (req, res) => {
+        const { username } = req.body;
+        const config = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
+        const mod = (config.mods || []).find(m => m.username === username);
+        if (!mod) return res.status(404).json({ error: 'Mod not found' });
+        mod.approved = true;
+        fs.writeFileSync(getDataPath('config.json'), JSON.stringify(config, null, 4));
+        res.json({ success: true });
+    });
+
+    server.post('/api/mods/remove', (req, res) => {
+        const { username } = req.body;
+        const config = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
+        const mod = (config.mods || []).find(m => m.username === username);
+        // Revoke their token on Twitch
+        if (mod && mod.token) {
+            const rawToken = mod.token.replace('oauth:', '');
+            axios.post(`https://id.twitch.tv/oauth2/revoke?client_id=${TWITCH_CLIENT_ID}&token=${rawToken}`)
+                .catch(() => {}); // fire and forget, don't block on failure
+        }
+        config.mods = (config.mods || []).filter(m => m.username !== username);
+        fs.writeFileSync(getDataPath('config.json'), JSON.stringify(config, null, 4));
+        res.json({ success: true });
+    });
+
+    server.post('/api/mods/commands', (req, res) => {
+        const { username, commands } = req.body;
+        const config = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
+        const mod = (config.mods || []).find(m => m.username === username);
+        if (!mod) return res.status(404).json({ error: 'Mod not found' });
+        mod.commands = commands || [];
+        fs.writeFileSync(getDataPath('config.json'), JSON.stringify(config, null, 4));
+        res.json({ success: true });
+    });
+
+
     server.post('/api/setup', (req, res) => {
         const { botUsername, token, channel, setupComplete } = req.body;
         const config = { botUsername, token, channel, setupComplete };

@@ -417,56 +417,53 @@
       <div class="progress-dot" id="dot3"></div>
     </div>
 
-    <!-- Step 0 — Sign In or First Time -->
+    <!-- Step 0 — Sign In -->
     <div class="step active" id="step0">
       <div class="step-label">Welcome</div>
       <div class="step-title">ChatCommander</div>
-      <div class="step-desc">Sign in with your Twitch account to continue. First time here? We'll get you set up after.</div>
+      <div class="step-desc">Sign in with your Twitch account to get started.</div>
       <button class="btn-twitch" onclick="window.location.href='/auth/streamer'">
         <span>⬡</span> Sign in with Twitch
       </button>
     </div>
 
-    <!-- Step 1 — Bot Account -->
+    <!-- Step 1 — Bot Account Choice -->
     <div class="step" id="step1">
-      <div class="step-label">Step 1 of 3</div>
+      <div class="step-label">Step 1 of 2</div>
       <div class="step-title">Bot Account</div>
-      <div class="step-desc">What account will type in chat as the bot? You can use a second account or just use your own.</div>
+      <div class="step-desc">What account will post in chat as the bot?</div>
       <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
-        <button class="btn-primary" id="btnSeparateAccount" onclick="chooseBotType('separate')" style="text-align:left;padding:16px;position:relative;">
+        <button class="btn-primary" onclick="chooseBotType('main')" style="text-align:left;padding:16px;">
+          <div style="font-size:0.7rem;letter-spacing:2px;margin-bottom:4px;">Use my account</div>
+          <div style="font-size:0.58rem;color:rgba(255,255,255,0.3);letter-spacing:1px;text-transform:none;">Bot posts as you — no second account needed</div>
+        </button>
+        <button class="btn-primary" onclick="chooseBotType('separate')" style="text-align:left;padding:16px;">
           <div style="font-size:0.7rem;letter-spacing:2px;margin-bottom:4px;">Use a separate bot account</div>
           <div style="font-size:0.58rem;color:rgba(255,255,255,0.3);letter-spacing:1px;text-transform:none;">Recommended — bot has its own username in chat</div>
-        </button>
-        <button class="btn-primary" id="btnMainAccount" onclick="chooseBotType('main')" style="text-align:left;padding:16px;">
-          <div style="font-size:0.7rem;letter-spacing:2px;margin-bottom:4px;">Use my main account</div>
-          <div style="font-size:0.58rem;color:rgba(255,255,255,0.3);letter-spacing:1px;text-transform:none;">Bot will post as you — works fine, no second account needed</div>
         </button>
       </div>
     </div>
 
-    <!-- Step 2 — Authorize Bot (only if separate account) -->
-    <div class="step" id="step2">
-      <div class="step-label">Step 2 of 3</div>
-      <div class="step-title">Authorize Bot</div>
-      <div class="step-desc">Sign in with your <strong>bot account</strong> on Twitch. You'll be redirected and brought back automatically.</div>
-      <button class="btn-twitch" onclick="window.location.href='/auth/bot'">
+    <!-- Step 1.5 — Bot Warning (not a numbered step) -->
+    <div class="step" id="stepBotWarning">
+      <div class="step-label">Step 2 of 2</div>
+      <div class="step-title">Before you continue</div>
+      <div class="step-desc" style="margin-bottom:20px;">
+        Twitch will open in your browser. Since you're already signed in as yourself,
+        make sure to click <strong>"Not you?"</strong> on the Twitch page and log in with your bot account instead.
+        <br><br>
+        Once you've logged in as the bot and authorized the app, come back here — it'll finish automatically.
+      </div>
+      <div style="background:rgba(255,200,0,0.07);border:1px solid rgba(255,200,0,0.2);border-radius:8px;padding:14px 16px;margin-bottom:20px;font-size:0.65rem;color:rgba(255,220,80,0.8);letter-spacing:0.5px;">
+        ⚠ If you skip this and authorize as yourself, your main account will be set as the bot.
+      </div>
+      <button class="btn-twitch" onclick="openBotAuth()">
         <span>⬡</span> Connect Bot Account
       </button>
     </div>
 
-    <!-- Step 3 — Channel -->
-    <div class="step" id="step3">
-      <div class="step-label">Step 3 of 3</div>
-      <div class="step-title">Your Channel</div>
-      <div class="step-desc">Enter your Twitch channel name — this is where the bot will read and respond to chat.</div>
-      <label class="form-label">Channel Name</label>
-      <input class="form-input" type="text" id="channel" placeholder="yourchannelname" />
-      <div class="error-msg" id="errorChannel">Please enter your channel name</div>
-      <button class="btn-primary" onclick="saveConfig()">Finish Setup</button>
-    </div>
-
     <!-- Success -->
-    <div class="step" id="step4">
+    <div class="step" id="step2">
       <div class="success-content">
         <div class="success-icon">✦</div>
         <div class="success-title">You're all set</div>
@@ -480,92 +477,69 @@
 
 <script>
   let currentStep = 0;
-  let usingMainAccount = false;
-  const TOTAL_DOTS = 4;
+  const VALID_STEPS = ['step0', 'step1', 'stepBotWarning', 'step2'];
+  const TOTAL_DOTS = 2;
 
-  // On load — check state
-  (async () => {
-    const params = new URLSearchParams(window.location.search);
-    const cfg = await fetch('/api/config').then(r => r.json()).catch(() => ({}));
+  function getStepEl(id) { return document.getElementById(id); }
 
-    // Coming back from streamer OAuth
-    if (params.get('streamer_authed') === 'true') {
-      if (cfg.setupComplete) {
-        // Already set up — just sign in, go to dashboard
-        window.location.href = '/';
-        return;
-      }
-      // First time — continue to bot account step
-      goToStep(1);
-      return;
-    }
-
-    // Coming back from bot OAuth
-    if (params.get('bot_authed') === 'true') {
-      goToStep(3);
-      return;
-    }
-
-    // Already fully set up and logged in
-    if (cfg.setupComplete && cfg.streamerUsername) {
-      window.location.href = '/';
-      return;
-    }
-
-    // Default — show sign in
-    goToStep(0);
-  })();
-
-  function goToStep(step) {
-    document.getElementById(`step${currentStep}`).classList.remove('active');
-    currentStep = step;
-    document.getElementById(`step${currentStep}`).classList.add('active');
+  function goToStep(id) {
+    VALID_STEPS.forEach(s => getStepEl(s).classList.remove('active'));
+    getStepEl(id).classList.add('active');
+    currentStep = id;
+    // Update dots — map step ids to dot indices
+    const dotMap = { step0: 0, step1: 1, stepBotWarning: 1, step2: 2 };
+    const idx = dotMap[id] ?? 0;
     for (let i = 0; i < TOTAL_DOTS; i++) {
       const dot = document.getElementById(`dot${i}`);
       if (!dot) continue;
       dot.classList.remove('active', 'done');
-      if (i < currentStep) dot.classList.add('done');
-      if (i === currentStep) dot.classList.add('active');
+      if (i < idx) dot.classList.add('done');
+      if (i === idx) dot.classList.add('active');
     }
   }
 
-  function chooseBotType(type) {
-    if (type === 'main') {
-      usingMainAccount = true;
-      // Use streamer username as channel, skip channel step entirely
-      fetch('/api/setup-bot-main', { method: 'POST' })
-        .then(() => fetch('/api/session').then(r => r.json()))
-        .then(session => {
-          return fetch('/api/setup-channel', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ channel: session.streamerUsername })
-          });
-        })
-        .then(() => { goToStep(4); setTimeout(() => { window.location.replace('/'); }, 2500); })
-        .catch(() => goToStep(3)); // fallback if something fails
-    } else {
-      usingMainAccount = false;
-      goToStep(2);
-    }
-  }
+  (async () => {
+    const params = new URLSearchParams(window.location.search);
+    const cfg = await fetch('/api/config').then(r => r.json()).catch(() => ({}));
 
-  async function saveConfig() {
-    const channel = document.getElementById('channel').value.trim();
-    if (!channel) {
-      document.getElementById('errorChannel').style.display = 'block';
+    if (params.get('streamer_authed') === 'true') {
+      if (cfg.setupComplete) { window.location.href = '/'; return; }
+      goToStep('step1');
       return;
     }
-    document.getElementById('errorChannel').style.display = 'none';
 
+    if (params.get('bot_authed') === 'true') {
+      await finalize();
+      return;
+    }
+
+    if (cfg.setupComplete && cfg.streamerUsername) { window.location.href = '/'; return; }
+
+    goToStep('step0');
+  })();
+
+  async function finalize() {
+    const session = await fetch('/api/session').then(r => r.json());
     await fetch('/api/setup-channel', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ channel })
+      body: JSON.stringify({ channel: session.streamerUsername })
     });
-
-    goToStep(4);
+    goToStep('step2');
     setTimeout(() => { window.location.replace('/'); }, 2500);
+  }
+
+  async function chooseBotType(type) {
+    if (type === 'main') {
+      await fetch('/api/setup-bot-main', { method: 'POST' });
+      await finalize();
+    } else {
+      goToStep('stepBotWarning');
+    }
+  }
+
+  function openBotAuth() {
+    window.location.href = '/auth/bot';
   }
 </script>
 </body>
