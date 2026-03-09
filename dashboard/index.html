@@ -514,23 +514,23 @@
       <span class="nav-icon">⌘</span> Commands
     </div>
     <div class="nav-item" id="nav-actions" onclick="showPage('actions')">
-      <span class="nav-icon">◈</span> Actions
+      <span class="nav-icon">⚙</span> Actions
     </div>
     <div class="nav-item" id="nav-groups" onclick="showPage('groups')">
-      <span class="nav-icon">⬡</span> Groups
+      <span class="nav-icon">📁</span> Groups
     </div>
     <div style="flex:1;"></div>
    <div class="nav-item" id="nav-admins" onclick="showPage('admins')">
   <span class="nav-icon">🛡</span> Admins
 </div>
    <div class="nav-item" id="nav-mods" onclick="showPage('mods');loadMods();">
-  <span class="nav-icon">🎭</span> Mod Bots
+  <span class="nav-icon">👥</span> Mod Bots
   <span id="modPendingDot" style="display:none;width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent);margin-left:auto;flex-shrink:0;"></span>
 </div>
    
     <div class="nav-section">Tools</div>
     <div class="nav-item" id="nav-obs" onclick="showPage('obs')">
-      <span class="nav-icon">🎬</span> OBS
+      <span class="nav-icon">📺</span> OBS
       <span id="obsNavDot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.15);display:inline-block;margin-left:auto;transition:all 0.3s;flex-shrink:0;"></span>
     </div>
     <div class="nav-item active" id="nav-chat-toggle" onclick="toggleChatVisible()" title="Toggle Live Chat">
@@ -563,6 +563,7 @@
         <div class="cmd-tabs-bar">
           <div class="cmd-tab active" id="tab-custom" onclick="switchTab('custom')">Custom</div>
           <div class="cmd-tab" id="tab-default" onclick="switchTab('default')">Default</div>
+          <div class="cmd-tab" id="tab-alerts" onclick="switchTab('alerts')">Alerts</div>
         </div>
 
         <div class="cmd-toolbar">
@@ -616,7 +617,7 @@
             <div class="editor-topbar">
               <div class="editor-breadcrumb">actions <span>/</span> <span id="editorActionName">—</span></div>
               <div class="editor-btns">
-                <button class="btn btn-sm btn-blue" onclick="openModal()">⤢ Expand</button>
+                <button class="btn btn-sm btn-blue" onclick="openModal()">⊞ Expand</button>
                 <button class="btn btn-sm btn-green" onclick="compileAction()">▶ Compile</button>
                 <button class="btn btn-sm" onclick="testAction()">⚡ Test</button>
                 <button class="btn btn-sm btn-red" onclick="deleteAction()">✕</button>
@@ -640,7 +641,7 @@
 
         <div class="editor-empty" id="editorEmpty">
           <div class="editor-empty-inner">
-            <div class="editor-empty-icon">◈</div>
+            <div class="editor-empty-icon">⚙</div>
             <div class="editor-empty-text">Select an action to edit</div>
           </div>
         </div>
@@ -867,7 +868,7 @@
         <div style="display:flex;align-items:center;gap:14px;">
           <span id="obsStatusDot" style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.15);display:inline-block;transition:all 0.3s;"></span>
           <span id="obsStatusText" style="font-size:0.6rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;">Disconnected</span>
-          <button class="btn" style="padding:4px 12px;font-size:0.58rem;" onclick="obsShowReconnectForm()">⚙ Settings</button>
+          <button class="btn" style="padding:4px 12px;font-size:0.58rem;" onclick="obsShowReconnectForm()">ΓÜÖ Settings</button>
         </div>
       </div>
       <div style="padding:20px 28px;overflow-y:auto;flex:1;">
@@ -938,6 +939,24 @@
           </div>
         </div>
 
+
+        <!-- Alerts -->
+        <div class="card" id="obsAlertsCard" style="max-width:860px;margin-top:16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+            <div class="card-title" style="margin-bottom:0;">Media Alerts</div>
+            <button class="cmd-add-btn" style="padding:7px 14px;font-size:0.62rem;" onclick="openAddAlert()">+ New Alert</button>
+          </div>
+          <div style="font-size:0.6rem;color:rgba(255,255,255,0.2);margin-bottom:16px;line-height:1.7;">
+            Add OBS browser source →
+            <span style="color:rgba(208,240,255,0.5);">http://localhost:3000/alert-overlay</span>
+            <button class="btn" onclick="navigator.clipboard.writeText('http://localhost:3000/alert-overlay').then(()=>showToast('URL copied'))" style="padding:2px 10px;font-size:0.55rem;margin-left:6px;">Copy URL</button>
+            — trigger with <span style="color:rgba(208,240,255,0.5);">!alertname</span> in chat.
+          </div>
+          <div id="alertsList" style="display:flex;flex-direction:column;gap:8px;">
+            <div class="empty">No alerts yet</div>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -987,6 +1006,7 @@
   </div>
 
 </div>
+
 
 <div class="page" id="page-groups">
       <div class="groups-page-wrap">
@@ -1062,7 +1082,7 @@
 <!-- ADD COMMAND MODAL -->
 <div class="add-cmd-modal" id="addCmdModal">
   <div class="add-cmd-box">
-    <div class="add-cmd-title">Add Command</div>
+    <div class="add-cmd-title" id="addCmdTitle">Add Command</div>
     <div class="form-group">
       <label class="form-label">Command</label>
       <input class="form-input" type="text" id="commandInput" placeholder="!yourcommand" />
@@ -1085,10 +1105,54 @@
         <option value="broadcaster">Broadcaster</option>
       </select>
     </div>
+    <input type="hidden" id="editingCmdName" value="" />
     <div class="add-cmd-footer">
       <button class="btn btn-sm" onclick="closeAddCmd()" style="flex:1;">Cancel</button>
-      <button class="btn btn-sm btn-green" onclick="addCommand()" style="flex:2;">Add Command</button>
+      <button class="btn btn-sm btn-green" id="addCmdSaveBtn" onclick="addCommand()" style="flex:2;">Add Command</button>
     </div>
+  </div>
+</div>
+
+
+<!-- ADD ALERT MODAL -->
+<div id="addAlertModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);align-items:center;justify-content:center;">
+  <div class="card" style="max-width:440px;width:90%;padding:28px;">
+    <div id="alertModalTitle" style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;margin-bottom:20px;color:rgba(255,255,255,0.85);">New Alert</div>
+    <div class="form-group">
+      <label class="form-label">Command name (chat trigger)</label>
+      <input class="form-input" type="text" id="alertNameInput" placeholder="hydrate" />
+      <div style="font-size:0.55rem;color:rgba(255,255,255,0.2);margin-top:5px;letter-spacing:1px;">Users type !hydrate in chat to trigger this</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Image (optional)</label>
+      <input class="form-input" type="file" id="alertImageInput" accept="image/*" style="padding:8px;" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Sound (optional)</label>
+      <input class="form-input" type="file" id="alertSoundInput" accept="audio/*" style="padding:8px;" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Duration (seconds)</label>
+      <input class="form-input" type="number" id="alertDurationInput" value="5" min="1" max="60" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Access Level</label>
+      <select class="form-input" id="alertAccessInput">
+        <option value="everyone">Everyone</option>
+        <option value="subscriber">Subscriber</option>
+        <option value="moderator" selected>Moderator</option>
+        <option value="broadcaster">Broadcaster</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Volume (0.0 – 1.0)</label>
+      <input class="form-input" type="number" id="alertVolumeInput" value="1.0" min="0" max="1" step="0.1" />
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px;">
+      <button class="btn" style="flex:1;" onclick="closeAddAlert()">Cancel</button>
+      <button class="btn btn-green" id="alertSaveBtn" style="flex:2;" onclick="saveNewAlert()">Create Alert</button>
+    </div>
+    <input type="hidden" id="alertEditingName" value="" />
   </div>
 </div>
 
@@ -1198,14 +1262,25 @@
     currentTab = tab;
     document.getElementById('tab-custom').classList.toggle('active', tab === 'custom');
     document.getElementById('tab-default').classList.toggle('active', tab === 'default');
+    document.getElementById('tab-alerts').classList.toggle('active', tab === 'alerts');
     document.getElementById('cmdSearch').value = '';
     document.getElementById('addCmdBtnWrap').style.display = tab === 'custom' ? '' : 'none';
-    renderCommandTable();
+    if (tab === 'alerts') {
+      // Show a New Alert button in the topbar area
+      document.getElementById('addCmdBtnWrap').innerHTML = '<button class="cmd-add-btn" onclick="openAddAlert()">+ New Alert</button>';
+      document.getElementById('addCmdBtnWrap').style.display = '';
+      renderAlertsTab();
+    } else {
+      document.getElementById('addCmdBtnWrap').innerHTML = '<button class="cmd-add-btn" onclick="openAddCmd()">+ Add Command</button>';
+      document.getElementById('addCmdBtnWrap').style.display = tab === 'custom' ? '' : 'none';
+      renderCommandTable();
+    }
   }
 
   function filterCommands() { renderCommandTable(); }
 
   function renderCommandTable() {
+    if (currentTab === 'alerts') { renderAlertsTab(); return; }
     const search = document.getElementById('cmdSearch').value.toLowerCase();
     const tbody = document.getElementById('cmdTableBody');
     let rows = [];
@@ -1291,7 +1366,8 @@
                   style="width:100%;text-align:left;"
                   onchange="saveCommandResponse('${encodeURIComponent(cmd)}', this.value)" />
               </div>
-              <div class="expand-field" style="display:flex;align-items:flex-end;">
+              <div class="expand-field" style="display:flex;align-items:flex-end;gap:8px;">
+                <button class="expand-delete-btn" style="background:rgba(100,60,200,0.15);color:rgba(180,140,255,0.8);border-color:rgba(140,80,255,0.2);" onclick="openEditCmd('${cmd.replace(/'/g, "\\'")}')">Edit command</button>
                 <button class="expand-delete-btn" onclick="deleteCommand('${encodeURIComponent(cmd)}')">Delete command</button>
               </div>` : ''}
             </div>
@@ -1467,23 +1543,56 @@
     showToast(enabled ? cmd + ' enabled' : cmd + ' disabled');
   }
   // Add command modal
-  function openAddCmd() { document.getElementById('addCmdModal').classList.add('open'); }
+  function openAddCmd() {
+    document.getElementById('addCmdTitle').textContent = 'Add Command';
+    document.getElementById('addCmdSaveBtn').textContent = 'Add Command';
+    document.getElementById('commandInput').value = '';
+    document.getElementById('commandInput').readOnly = false;
+    document.getElementById('responseInput').value = '';
+    document.getElementById('newCmdCooldown').value = '5';
+    document.getElementById('newCmdAccess').value = 'everyone';
+    document.getElementById('editingCmdName').value = '';
+    document.getElementById('addCmdModal').classList.add('open');
+  }
+  function openEditCmd(cmd) {
+    const data = commandsCache[cmd];
+    if (!data) return;
+    document.getElementById('addCmdTitle').textContent = 'Edit Command';
+    document.getElementById('addCmdSaveBtn').textContent = 'Save Changes';
+    document.getElementById('commandInput').value = cmd;
+    document.getElementById('commandInput').readOnly = true;
+    document.getElementById('responseInput').value = data.response || '';
+    document.getElementById('newCmdCooldown').value = data.cooldown ?? 5;
+    document.getElementById('newCmdAccess').value = data.access || 'everyone';
+    document.getElementById('editingCmdName').value = cmd;
+    document.getElementById('addCmdModal').classList.add('open');
+  }
   function closeAddCmd() { document.getElementById('addCmdModal').classList.remove('open'); }
   document.getElementById('addCmdModal').addEventListener('click', (e) => { if (e.target === document.getElementById('addCmdModal')) closeAddCmd(); });
 
   async function addCommand() {
+    const editingName = document.getElementById('editingCmdName').value;
     const command = document.getElementById('commandInput').value.trim();
     const response = document.getElementById('responseInput').value.trim();
     const cooldown = parseInt(document.getElementById('newCmdCooldown').value) || 5;
     const access = document.getElementById('newCmdAccess').value;
     if (!command || !response) { showToast('Fill in both fields'); return; }
     if (!command.startsWith('!')) { showToast('Command must start with !'); return; }
-    await fetch('/api/commands', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ command, response, cooldown, access, enabled: true }) });
-    document.getElementById('commandInput').value = '';
-    document.getElementById('responseInput').value = '';
-    showToast('Command added');
-    closeAddCmd();
-    loadCommands();
+    // If editing and command name changed, delete old first
+    if (editingName && editingName !== command) {
+      await fetch(`/api/commands/${encodeURIComponent(editingName)}`, { method: 'DELETE' });
+    }
+    const res = await fetch('/api/commands', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ command, response, cooldown, access, enabled: true }) });
+    if (res.ok) {
+      showToast(editingName ? 'Command updated' : 'Command added');
+      closeAddCmd();
+      // Directly update cache and re-render without full reload to avoid race condition
+      const fresh = await fetch('/api/commands');
+      commandsCache = await fresh.json();
+      renderCommandTable();
+    } else {
+      showToast('Failed to save command');
+    }
   }
 
   async function deleteCommand(cmd) {
@@ -1640,7 +1749,7 @@
       const actions = g.actions || [];
       return `<div class="group-card" id="group-${gname}">
         <div class="group-header" onclick="toggleGroup('${gname}')">
-          <div class="group-name-row">⬡ ${gname}<span class="group-count">${actions.length}</span></div>
+          <div class="group-name-row">📁 ${gname}<span class="group-count">${actions.length}</span></div>
           <span class="group-chevron">›</span>
         </div>
         <div class="group-body">
@@ -2001,7 +2110,7 @@
     if (screen === 'reconnect') { reconnect.style.display = 'flex'; }
   }
 
-  // Show reconnect/settings form (from the ⚙ Settings button or on failure)
+  // Show reconnect/settings form (from the ΓÜÖ Settings button or on failure)
   function obsShowReconnectForm() {
     document.getElementById('obsHostRetry').value = obsSavedHost;
     document.getElementById('obsPortRetry').value = obsSavedPort;
@@ -2249,7 +2358,7 @@
         row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;gap:12px;';
         row.innerHTML = `
           <div style="display:flex;align-items:center;gap:10px;min-width:0;">
-            <span style="font-size:0.9rem;flex-shrink:0;">${isNestedScene ? '🎬' : obsSourceIcon(item.inputKind)}</span>
+            <span style="font-size:0.9rem;flex-shrink:0;">${isNestedScene ? '📺' : obsSourceIcon(item.inputKind)}</span>
             <div style="min-width:0;">
               <div style="font-size:0.65rem;letter-spacing:1px;color:${isEnabled ? 'var(--text)' : 'var(--muted)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.sourceName}</div>
               <div style="font-size:0.52rem;letter-spacing:2px;color:rgba(255,255,255,0.2);text-transform:uppercase;margin-top:2px;">${isNestedScene ? 'nested scene' : (item.inputKind || 'source').replace(/_/g,' ')}</div>
@@ -2271,7 +2380,7 @@
   }
 
   function obsSourceIcon(inputKind) {
-    if (!inputKind) return '◻';
+    if (!inputKind) return '■';
     if (inputKind.includes('game')) return '🎮';
     if (inputKind.includes('monitor') || inputKind.includes('display')) return '🖥';
     if (inputKind.includes('camera') || inputKind.includes('video') || inputKind.includes('dshow')) return '📷';
@@ -2279,9 +2388,9 @@
     if (inputKind.includes('browser')) return '🌐';
     if (inputKind.includes('text')) return '📝';
     if (inputKind.includes('audio') || inputKind.includes('wasapi') || inputKind.includes('pulse')) return '🔊';
-    if (inputKind.includes('media') || inputKind.includes('vlc')) return '🎵';
+    if (inputKind.includes('media') || inputKind.includes('vlc')) return '🎬';
     if (inputKind.includes('color')) return '🎨';
-    return '◻';
+    return '■';
   }
 
   async function obsToggleSource(sceneName, sceneItemId, enabled) {
@@ -2466,7 +2575,200 @@ loadMods();
 checkBotStatus();
   setInterval(checkBotStatus, 4000);
   obsLoadSettings();
+  loadAlerts();
   loadSession();
+
+  // ---- ALERTS ----
+  let alertsCache = {};
+
+  async function loadAlerts() {
+    const res = await fetch('/api/alerts').catch(() => null);
+    if (!res) return;
+    alertsCache = await res.json();
+    renderAlerts();
+    if (currentTab === 'alerts') renderAlertsTab();
+  }
+
+  function renderAlerts() {
+    const list = document.getElementById('alertsList');
+    if (!list) return;
+    const keys = Object.keys(alertsCache);
+    if (keys.length === 0) { list.innerHTML = '<div class="empty">No alerts yet — click + New Alert</div>'; return; }
+    list.innerHTML = keys.map(name => {
+      const a = alertsCache[name];
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;gap:12px;">
+        <div style="display:flex;align-items:center;gap:14px;min-width:0;">
+          <div>
+            <div style="font-size:0.8rem;color:var(--text);">!${name}</div>
+            <div style="font-size:0.55rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-top:3px;">
+              ${a.image ? '🖼 image  ' : ''}${a.sound ? '🔊 sound  ' : ''}${a.duration || 5}s · ${a.access || 'moderator'}
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+          <button class="btn" style="padding:5px 12px;font-size:0.6rem;" onclick="editAlert('${name}')">✏ Edit</button>
+          <button class="btn" style="padding:5px 12px;font-size:0.6rem;" onclick="testAlert('${name}')">▶ Test</button>
+          <label class="toggle" onclick="event.stopPropagation()">
+            <input type="checkbox" ${a.enabled !== false ? 'checked' : ''} onchange="toggleAlert('${name}', this.checked)" />
+            <span class="toggle-slider"></span>
+          </label>
+          <button class="cmd-delete-btn" onclick="deleteAlert('${name}')">✕</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderAlertsTab() {
+    const tbody = document.getElementById('cmdTableBody');
+    const keys = Object.keys(alertsCache);
+    document.getElementById('cmdCount').textContent = keys.length + ' alert' + (keys.length !== 1 ? 's' : '');
+    if (keys.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5"><div class="empty-table">No alerts yet — click + New Alert</div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = keys.map(name => {
+      const a = alertsCache[name];
+      const rowId = 'row-alert-' + name;
+      const expandRow = `<tr class="cmd-expand-row" id="${rowId}-expand">
+        <td colspan="5">
+          <div class="cmd-expand-panel">
+            <div class="expand-grid">
+              <div class="expand-field">
+                <div class="expand-label">Duration</div>
+                <div style="display:flex;align-items:center;gap:6px">
+                  <input class="cmd-cd-input" type="number" value="${a.duration || 5}" min="1" onblur="saveAlertField('${name}','duration',this.value)" />
+                  <span style="font-size:0.65rem;color:rgba(255,255,255,0.35);font-weight:500">sec</span>
+                </div>
+              </div>
+              <div class="expand-field">
+                <div class="expand-label">Access</div>
+                <select class="cmd-access" onchange="saveAlertField('${name}','access',this.value)">
+                  ${['everyone','subscriber','moderator','broadcaster'].map(av => `<option value="${av}" ${(a.access||'moderator')===av?'selected':''}>${av.charAt(0).toUpperCase()+av.slice(1)}</option>`).join('')}
+                </select>
+              </div>
+              <div class="expand-field">
+                <div class="expand-label">Volume</div>
+                <input class="cmd-cd-input" type="number" value="${a.volume ?? 1.0}" min="0" max="1" step="0.1" onblur="saveAlertField('${name}','volume',this.value)" />
+              </div>
+              <div class="expand-field" style="display:flex;align-items:flex-end;gap:8px;">
+                <button class="expand-delete-btn" style="background:rgba(100,60,200,0.15);color:rgba(180,140,255,0.8);border-color:rgba(140,80,255,0.2);" onclick="editAlert('${name}')">Edit alert</button>
+                <button class="expand-delete-btn" onclick="deleteAlert('${name}')">Delete alert</button>
+              </div>
+            </div>
+          </div>
+        </td>
+      </tr>`;
+      return `<tr class="cmd-row" onclick="toggleExpand('${rowId}')">
+        <td>
+          <div class="cmd-name">!${name}</div>
+          <span class="cmd-type-badge custom">alert</span>
+        </td>
+        <td><span class="cmd-response-text">${a.image ? '🖼 ' : ''}${a.sound ? '🔊 ' : ''}${a.duration || 5}s · ${a.access || 'moderator'}</span></td>
+        <td></td><td></td>
+        <td>
+          <div class="cmd-actions-cell">
+            <span class="cmd-chevron">›</span>
+            <label class="toggle" onclick="event.stopPropagation()">
+              <input type="checkbox" ${a.enabled !== false ? 'checked' : ''} onchange="toggleAlert('${name}', this.checked)" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </td>
+      </tr>${expandRow}`;
+    }).join('');
+  }
+
+  async function saveAlertField(name, field, value) {
+    const a = alertsCache[name];
+    if (!a) return;
+    const fd = new FormData();
+    fd.append('name', name);
+    fd.append('duration', field === 'duration' ? value : a.duration || 5);
+    fd.append('volume', field === 'volume' ? value : a.volume ?? 1.0);
+    fd.append('access', field === 'access' ? value : a.access || 'moderator');
+    await fetch('/api/alerts', { method: 'POST', body: fd });
+    alertsCache[name][field] = field === 'access' ? value : parseFloat(value);
+    showToast('Alert updated');
+  }
+
+  function openAddAlert() {
+    document.getElementById('alertModalTitle').textContent = 'New Alert';
+    document.getElementById('alertSaveBtn').textContent = 'Create Alert';
+    document.getElementById('alertNameInput').value = '';
+    document.getElementById('alertNameInput').readOnly = false;
+    document.getElementById('alertImageInput').value = '';
+    document.getElementById('alertSoundInput').value = '';
+    document.getElementById('alertDurationInput').value = '5';
+    document.getElementById('alertVolumeInput').value = '1.0';
+    document.getElementById('alertAccessInput').value = 'moderator';
+    document.getElementById('alertEditingName').value = '';
+    document.getElementById('addAlertModal').style.display = 'flex';
+  }
+
+  function editAlert(name) {
+    const a = alertsCache[name];
+    if (!a) return;
+    document.getElementById('alertModalTitle').textContent = 'Edit Alert';
+    document.getElementById('alertSaveBtn').textContent = 'Save Changes';
+    document.getElementById('alertNameInput').value = name;
+    document.getElementById('alertNameInput').readOnly = true;
+    document.getElementById('alertImageInput').value = '';
+    document.getElementById('alertSoundInput').value = '';
+    document.getElementById('alertDurationInput').value = a.duration || 5;
+    document.getElementById('alertVolumeInput').value = a.volume ?? 1.0;
+    document.getElementById('alertAccessInput').value = a.access || 'moderator';
+    document.getElementById('alertEditingName').value = name;
+    document.getElementById('addAlertModal').style.display = 'flex';
+  }
+
+  function closeAddAlert() {
+    document.getElementById('addAlertModal').style.display = 'none';
+  }
+
+  async function saveNewAlert() {
+    const editingName = document.getElementById('alertEditingName').value;
+    const name = editingName || document.getElementById('alertNameInput').value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+    if (!name) { showToast('Enter an alert name'); return; }
+    const imageFile = document.getElementById('alertImageInput').files[0];
+    const soundFile = document.getElementById('alertSoundInput').files[0];
+    const duration = parseFloat(document.getElementById('alertDurationInput').value) || 5;
+    const volume = parseFloat(document.getElementById('alertVolumeInput').value) ?? 1.0;
+    const access = document.getElementById('alertAccessInput').value;
+    const fd = new FormData();
+    fd.append('name', name);
+    fd.append('duration', duration);
+    fd.append('volume', volume);
+    fd.append('access', access);
+    if (imageFile) fd.append('image', imageFile);
+    if (soundFile) fd.append('sound', soundFile);
+    const res = await fetch('/api/alerts', { method: 'POST', body: fd });
+    if (res.ok) {
+      showToast(editingName ? 'Alert updated' : 'Alert created');
+      closeAddAlert();
+      loadAlerts();
+    } else {
+      showToast('Failed to save alert');
+    }
+  }
+
+  async function toggleAlert(name, enabled) {
+    await fetch(`/api/alerts/${encodeURIComponent(name)}/toggle`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ enabled }) });
+    if (alertsCache[name]) alertsCache[name].enabled = enabled;
+    showToast(enabled ? name + ' enabled' : name + ' disabled');
+  }
+
+  async function testAlert(name) {
+    await fetch(`/api/alerts/trigger/${encodeURIComponent(name)}`, { method: 'POST' });
+    showToast('Fired: !' + name);
+  }
+
+  async function deleteAlert(name) {
+    showConfirm('Delete alert !' + name + '?', 'This will remove the alert and its media files.', async () => {
+      await fetch(`/api/alerts/${encodeURIComponent(name)}`, { method: 'DELETE' });
+      showToast('Alert deleted');
+      loadAlerts();
+    });
+  }
 </script>
 
 <!-- ============================================================ -->
@@ -2507,7 +2809,7 @@ checkBotStatus();
   .chat-window.minimized .chat-resize-ne,
   .chat-window.minimized .chat-resize-nw { display: none; }
 
-  /* ── Resize handles ── */
+  /* -- Resize handles -- */
   .chat-resize-handle { position: absolute; bottom: 0; right: 0; width: 16px; height: 16px; cursor: se-resize; z-index: 10; }
   .chat-resize-handle::after { content: ''; position: absolute; bottom: 4px; right: 4px; width: 6px; height: 6px; border-right: 2px solid rgba(255,255,255,0.15); border-bottom: 2px solid rgba(255,255,255,0.15); border-radius: 1px; }
   .chat-resize-n  { position: absolute; top: 0; left: 12px; right: 12px; height: 6px; cursor: n-resize; z-index: 10; }
@@ -2648,7 +2950,7 @@ checkBotStatus();
 </div>
 
 <script>
-  // ── SECTION: CHAT_WINDOW ─────────────────────────────────────────────────
+  // -- SECTION: CHAT_WINDOW -------------------------------------------------
 
   let chatVisible = false;
   let chatMinimized = false;
@@ -2667,7 +2969,7 @@ checkBotStatus();
     if (cfg.channel) chatChannel.textContent = '#' + cfg.channel.replace('#','');
   });
 
-  // ── SECTION: CHAT_SSE ────────────────────────────────────────────────────
+  // -- SECTION: CHAT_SSE ----------------------------------------------------
   let chatSource = null;
 
   function connectChatStream() {
@@ -2691,7 +2993,7 @@ checkBotStatus();
     };
   }
 
-  // ── SECTION: CHAT_APPEND ─────────────────────────────────────────────────
+  // -- SECTION: CHAT_APPEND -------------------------------------------------
   function appendChatMessage(msg) {
     chatMessages.push(msg);
     if (chatMessages.length > MAX_MSGS) { chatMessages.shift(); chatBody.firstChild && chatBody.removeChild(chatBody.firstChild); }
@@ -2712,7 +3014,7 @@ checkBotStatus();
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
-  // ── SECTION: CHAT_SEND ───────────────────────────────────────────────────
+  // -- SECTION: CHAT_SEND ---------------------------------------------------
   async function sendChatMessage() {
     const input = document.getElementById('chatInput');
     const msg = input.value.trim();
@@ -2725,7 +3027,7 @@ checkBotStatus();
     });
   }
 
-  // ── SECTION: CHAT_TOGGLE ─────────────────────────────────────────────────
+  // -- SECTION: CHAT_TOGGLE -------------------------------------------------
   function toggleChatVisible() {
     chatVisible = !chatVisible;
     chatWindow.style.display = chatVisible ? 'flex' : 'none';
@@ -2737,7 +3039,7 @@ checkBotStatus();
     chatWindow.classList.toggle('minimized', chatMinimized);
   }
 
-  // ── SECTION: CHAT_DRAG ───────────────────────────────────────────────────
+  // -- SECTION: CHAT_DRAG ---------------------------------------------------
   const dragHandle = document.getElementById('chatDragHandle');
   let isDragging = false, dragOffsetX = 0, dragOffsetY = 0;
 
@@ -2753,7 +3055,7 @@ checkBotStatus();
     e.preventDefault();
   });
 
-  // ── SECTION: CHAT_RESIZE ─────────────────────────────────────────────────
+  // -- SECTION: CHAT_RESIZE -------------------------------------------------
   let isResizing = false, resizeDir = '', resizeStartX = 0, resizeStartY = 0;
   let resizeStartW = 0, resizeStartH = 0, resizeStartL = 0, resizeStartT = 0;
 
