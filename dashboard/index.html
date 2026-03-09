@@ -1181,6 +1181,7 @@
   const DEFAULT_COMMANDS = [
     { cmd: '!bank', desc: 'Banking — balance, deposit, withdraw, give, daily, rob, leaderboard', type: 'default', actionKey: 'bank' },
     { cmd: '!gamble', desc: 'Gambling — coinflip, slots, roulette', type: 'default', actionKey: 'gamble' },
+    { cmd: '!car', desc: 'Car economy — dealership, buy, garage, sell, race', type: 'default', actionKey: 'car' },
     { cmd: '!so', desc: 'Shoutout a user — !so @username', type: 'default', actionKey: null },
     { cmd: '!commands', desc: 'List all active commands', type: 'default', actionKey: null },
   ];
@@ -1239,6 +1240,7 @@
   const ACTION_SUBCOMMANDS = {
     'bank': ['balance', 'deposit', 'withdraw', 'give', 'daily', 'rob', 'leaderboard', 'admin'],
     'gamble': ['coinflip', 'slots', 'roulette'],
+    'car': ['dealership', 'price', 'buy', 'garage', 'sell', 'race', 'accept', 'decline'],
   };
 
   function renderRow(cmd, response, type, cooldown, access, enabled, actionKey = null) {

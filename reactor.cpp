@@ -337,6 +337,9 @@ void sendToBot(const std::string& msg) {
 // ── SECTION: GAMBLE_INCLUDE ───────────────────────────────────────────────────
 #include "gamble.cpp"
 
+// ── SECTION: CAR_INCLUDE ─────────────────────────────────────────────────────
+#include "car.cpp"
+
 // ── SECTION: MESSAGE_HANDLER ──────────────────────────────────────────────────
 
 void handleMessage(const std::string& raw, SOCKET client) {
@@ -386,6 +389,8 @@ for (auto& a : admins) std::cout << "[reactor] admin: " << a << std::endl;
             handleBank(username, args, channel, admins);
         } else if (command == "gamble") {
             handleGamble(username, args, channel);
+        } else if (command == "car") {
+            handleCar(username, args, channel);
         } else {
             runAction(command, username, message, args, channel);
         }

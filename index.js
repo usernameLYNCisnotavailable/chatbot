@@ -198,17 +198,31 @@ client.on('message', (channel, tags, message, self) => {
 
     // ── Built-in defaults ─────────────────────────────────────────────────────
 
-   // !bank / !gamble — routed to reactor
-if (command === '!bank' || command === '!gamble') {
-    const key = command;
-    if (defaults[key] === false) return;
-    const cd = defaults[key + '_cd'] ?? 5;
-    console.log('[debug] cooldown check:', username, command, cd, cooldownMap[username + ':' + command]);
-    if (isOnCooldown(username, command, cd)) return;
-    setCooldown(username, command);
-    if (actionKey) sendToReactor(`COMMAND:${actionKey}:${username}:${message}:${args}:${config.channel}`);
-    return;
-}
+    // !bank / !gamble — routed to reactor
+    if (command === '!bank' || command === '!gamble') {
+        const key = command;
+        if (defaults[key] === false) return;
+        const sub = args.split(' ')[0] || '';
+        const cdKey = sub ? (key + '_sub_' + sub) : (key + '_cd');
+        const cd = defaults[cdKey] ?? defaults[key + '_cd'] ?? 5;
+        if (isOnCooldown(username, key + ':' + sub, cd)) return;
+        setCooldown(username, key + ':' + sub);
+        const ak = command.slice(1);
+        sendToReactor(`COMMAND:${ak}:${username}:${message}:${args}:${config.channel}`);
+        return;
+    }
+
+    // !car — routed to reactor with per-subcommand cooldowns
+    if (command === '!car') {
+        if (defaults['!car'] === false) return;
+        const sub = args.split(' ')[0] || '';
+        const cdKey = sub ? ('!car_sub_' + sub) : '!car_cd';
+        const cd = defaults[cdKey] ?? defaults['!car_cd'] ?? 5;
+        if (isOnCooldown(username, '!car:' + sub, cd)) return;
+        setCooldown(username, '!car:' + sub);
+        sendToReactor(`COMMAND:car:${username}:${message}:${args}:${config.channel}`);
+        return;
+    }
 
     // !so
     if (msg.startsWith('!so ') || msg.startsWith('!shoutout ')) {
@@ -234,6 +248,7 @@ if (command === '!bank' || command === '!gamble') {
             ...(defaults['!commands'] !== false ? ['!commands'] : []),
             ...(defaults['!bank'] !== false ? ['!bank'] : []),
             ...(defaults['!gamble'] !== false ? ['!gamble'] : []),
+            ...(defaults['!car'] !== false ? ['!car'] : []),
         ];
         client.say(channel, `Commands: ${[...new Set(allCommands)].join(' | ')}`);
         return;
