@@ -103,10 +103,37 @@
   .nav-item.active { background: var(--surface-raised); color: var(--text); border-color: var(--border); }
   .nav-icon { font-size: 1rem; width: 20px; text-align: center; opacity: 1; }
 
+  /* ── Collapsible nav groups ── */
+  .nav-group { display: flex; flex-direction: column; gap: 1px; }
+  .nav-group-header {
+    display: flex; align-items: center; gap: 9px;
+    padding: 8px 10px; border-radius: 8px;
+    font-size: 0.82rem; font-weight: 400; color: var(--muted);
+    cursor: pointer; transition: all 0.14s;
+    user-select: none;
+  }
+  .nav-group-header:hover { background: var(--surface-raised); color: var(--text); }
+  .nav-group-header.open { color: var(--text); }
+  .nav-group-chevron {
+    margin-left: auto; font-size: 0.6rem; color: var(--muted-2);
+    transition: transform 0.2s; flex-shrink: 0;
+  }
+  .nav-group-header.open .nav-group-chevron { transform: rotate(90deg); }
+  .nav-group-children {
+    display: none; flex-direction: column; gap: 1px;
+    padding-left: 12px;
+  }
+  .nav-group-children.open { display: flex; }
+  .nav-group-children .nav-item {
+    font-size: 0.78rem; padding: 6px 10px;
+  }
+  .nav-group-children .nav-item::before {
+    content: ''; width: 1px; height: 14px; background: var(--border);
+    flex-shrink: 0; margin-right: 2px;
+  }
+
   /* ── Main content ── */
-  .main { overflow-y: auto; display: flex; flex-direction: column; }
-  .main::-webkit-scrollbar { width: 4px; }
-  .main::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+  .main { overflow: hidden; display: flex; flex-direction: column; }
 
   .page { display: none; flex-direction: column; gap: 0; padding: 0; height: 100%; overflow: hidden; }
   .page.active { display: flex; }
@@ -225,6 +252,14 @@
   .cmd-table-wrap { flex: 1; overflow-y: auto; padding: 0 28px 28px; }
   .cmd-table-wrap::-webkit-scrollbar { width: 3px; }
   .cmd-table-wrap::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+  /* Global invisible scrollbars — show faintly only on hover */
+  * { scrollbar-width: none; }
+  *::-webkit-scrollbar { width: 0px; height: 0px; }
+  *:hover::-webkit-scrollbar { width: 3px; height: 3px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+  *:hover::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); }
 
   .cmd-table { width: 100%; border-collapse: collapse; }
   .cmd-table thead tr { border-bottom: 1px solid var(--border); }
@@ -518,44 +553,104 @@
   </header>
 
   <aside class="sidebar">
-    <div class="nav-section">Menu</div>
-    <div class="nav-item active" id="nav-commands" onclick="showPage('commands')">
-      <span class="nav-icon">⌘</span> Commands
+
+    <!-- BOT -->
+    <div class="nav-section">Bot</div>
+
+    <!-- Commands group -->
+    <div class="nav-group">
+      <div class="nav-group-header open" id="navg-commands" onclick="toggleNavGroup('commands')">
+        <span class="nav-icon">⌘</span> Commands
+        <span class="nav-group-chevron">▶</span>
+      </div>
+      <div class="nav-group-children open" id="navgc-commands">
+        <div class="nav-item active" id="nav-commands" onclick="showPage('commands')">Chat Commands</div>
+        <div class="nav-item" id="nav-actions" onclick="showPage('actions')">Actions</div>
+        <div class="nav-item" id="nav-groups" onclick="showPage('groups')">Groups</div>
+      </div>
     </div>
-    <div class="nav-item" id="nav-actions" onclick="showPage('actions')">
-      <span class="nav-icon">⚙</span> Actions
+
+    <div class="nav-item" id="nav-timers" onclick="showPage('timers')">
+      <span class="nav-icon">⏱</span> Timers
     </div>
-    <div class="nav-item" id="nav-groups" onclick="showPage('groups')">
-      <span class="nav-icon">📁</span> Groups
+    <div class="nav-item" id="nav-quotes" onclick="showPage('quotes')">
+      <span class="nav-icon">💬</span> Quotes
     </div>
-    <div style="flex:1;"></div>
-   <div class="nav-item" id="nav-admins" onclick="showPage('admins')">
-  <span class="nav-icon">🛡</span> Admins
-</div>
-   <div class="nav-item" id="nav-mods" onclick="showPage('mods');loadMods();">
-  <span class="nav-icon">👥</span> Mod Bots
-  <span id="modPendingDot" style="display:none;width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent);margin-left:auto;flex-shrink:0;"></span>
-</div>
-   
+    <div class="nav-item" id="nav-songs" onclick="showPage('songs')">
+      <span class="nav-icon">🎵</span> Song Requests
+    </div>
+    <div class="nav-item" id="nav-giveaway" onclick="showPage('giveaway')">
+      Giveaways
+    </div>
+
+    <!-- MODERATION -->
+    <div class="nav-section">Moderation</div>
+    <div class="nav-item" id="nav-automod" onclick="showPage('automod')">
+      <span class="nav-icon">🛡</span> AutoMod
+    </div>
+
+    <!-- LOYALTY -->
+    <div class="nav-section">Loyalty</div>
+    <div class="nav-item" id="nav-economy" onclick="showPage('economy');loadEconomy();">
+      Economy
+    </div>
+
+    <!-- TOOLS -->
     <div class="nav-section">Tools</div>
     <div class="nav-item" id="nav-obs" onclick="showPage('obs')">
-      <span class="nav-icon">📺</span> OBS
+      OBS
       <span id="obsNavDot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.15);display:inline-block;margin-left:auto;transition:all 0.3s;flex-shrink:0;"></span>
     </div>
-    <div class="nav-item active" id="nav-chat-toggle" onclick="openChatWindow()" title="Open Live Chat">
-      <span class="nav-icon">💬</span> Live Chat
+    <div class="nav-item" id="nav-chat-toggle" onclick="openChatWindow()" title="Open Live Chat">
+      <span class="nav-icon">🖥</span> Live Chat
       <span id="chatNavDot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.15);display:inline-block;margin-left:auto;transition:all 0.3s;flex-shrink:0;"></span>
     </div>
-    <div class="nav-item" id="nav-accounts" onclick="showPage('accounts')">
-      <span class="nav-icon">👤</span> Account
+
+    <!-- SETTINGS -->
+    <div class="nav-section">Settings</div>
+
+    <!-- Permissions group -->
+    <div class="nav-group">
+      <div class="nav-group-header" id="navg-permissions" onclick="toggleNavGroup('permissions')">
+        <span class="nav-icon" style="font-size:0.7rem;opacity:0.5;">▸</span> Permissions
+        <span class="nav-group-chevron">▶</span>
+      </div>
+      <div class="nav-group-children" id="navgc-permissions">
+        <div class="nav-item" id="nav-admins" onclick="showPage('admins')">Admins</div>
+        <div class="nav-item" id="nav-mods" onclick="showPage('mods');loadMods();">
+          Mod Bots
+          <span id="modPendingDot" style="display:none;width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent);margin-left:auto;flex-shrink:0;"></span>
+        </div>
+      </div>
     </div>
-    <div class="nav-item" id="nav-guest" onclick="showPage('guest')">
-      <span class="nav-icon">🔗</span> Guest Channels
-      <span id="guestCountBadge" style="display:none;margin-left:auto;font-size:0.58rem;background:var(--accent-soft);color:var(--accent);border:1px solid rgba(10,132,255,0.25);border-radius:10px;padding:1px 7px;flex-shrink:0;"></span>
+
+    <!-- Account group -->
+    <div class="nav-group">
+      <div class="nav-group-header" id="navg-account" onclick="toggleNavGroup('account')">
+        <span class="nav-icon">👤</span> Account
+        <span class="nav-group-chevron">▶</span>
+      </div>
+      <div class="nav-group-children" id="navgc-account">
+        <div class="nav-item" id="nav-accounts" onclick="showPage('accounts')">Connected Accounts</div>
+        <div class="nav-item" id="nav-guest" onclick="showPage('guest')">
+          Guest Channels
+          <span id="guestCountBadge" style="display:none;margin-left:auto;font-size:0.58rem;background:var(--accent-soft);color:var(--accent);border:1px solid rgba(10,132,255,0.25);border-radius:10px;padding:1px 7px;flex-shrink:0;"></span>
+        </div>
+      </div>
     </div>
-    <div class="nav-item" id="nav-economy" onclick="showPage('economy');loadEconomy();">
-      <span class="nav-icon">💰</span> Economy
+
+    <!-- Bot Settings group -->
+    <div class="nav-group">
+      <div class="nav-group-header" id="navg-botsettings" onclick="toggleNavGroup('botsettings')">
+        <span class="nav-icon">⚙</span> Bot Settings
+        <span class="nav-group-chevron">▶</span>
+      </div>
+      <div class="nav-group-children" id="navgc-botsettings">
+        <div class="nav-item" id="nav-botsettings" onclick="showPage('botsettings')">General</div>
+        <div class="nav-item" id="nav-cooldowns" onclick="showPage('cooldowns')">Cooldowns</div>
+      </div>
     </div>
+
   </aside>
 
   <main class="main">
@@ -669,50 +764,50 @@
         <div class="cmd-sub">Manage your connected accounts</div>
       </div>
     </div>
-    <div style="padding:20px 28px;display:flex;flex-direction:column;gap:16px;max-width:500px;">
+    <div style="padding:20px 28px;display:flex;flex-direction:column;gap:0;flex:1;overflow-y:auto;">
 
-      <!-- Streamer Account -->
-      <div class="card">
-        <div class="card-title">Your Account</div>
-        <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
-          <img id="accountAvatar" src="" style="width:44px;height:44px;border-radius:50%;border:1px solid var(--border);display:none;" />
-          <div id="accountAvatarPlaceholder" style="width:44px;height:44px;border-radius:50%;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:1.2rem;">👤</div>
+      <!-- Streamer Account Row -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:14px;">
+          <img id="accountAvatar" src="" style="width:40px;height:40px;border-radius:50%;border:1px solid var(--border);display:none;" />
+          <div id="accountAvatarPlaceholder" style="width:40px;height:40px;border-radius:50%;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:1.1rem;">👤</div>
           <div>
-            <div id="accountDisplayName" style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.95rem;color:var(--text);">—</div>
-            <div id="accountUsername" style="font-size:0.6rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-top:2px;">Not signed in</div>
-          </div>
-          <div style="margin-left:auto;">
-            <span id="accountStatusDot" style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.15);display:inline-block;transition:all 0.3s;"></span>
-          </div>
-        </div>
-        <button class="btn" style="width:100%;justify-content:center;" onclick="accountLogout()">Sign Out</button>
-      </div>
-
-      <!-- Bot Account -->
-      <div class="card">
-        <div class="card-title">Bot Account</div>
-        <div id="botAccountInfo" style="margin-bottom:16px;">
-          <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);flex-shrink:0;"></div>
-            <div>
-              <div id="botAccountName" style="font-size:0.75rem;color:var(--text);">—</div>
-              <div id="botAccountType" style="font-size:0.58rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-top:2px;">—</div>
+            <div style="font-size:0.6rem;color:var(--muted-2);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;">Your Account</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span id="accountStatusDot" style="width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.15);display:inline-block;transition:all 0.3s;flex-shrink:0;"></span>
+              <div id="accountDisplayName" style="font-weight:600;font-size:0.88rem;color:var(--text);">—</div>
+              <div id="accountUsername" style="font-size:0.65rem;color:var(--muted);">Not signed in</div>
             </div>
           </div>
         </div>
-        <div style="display:flex;gap:10px;">
-          <button class="btn btn-green" style="flex:1;justify-content:center;" onclick="window.location.href='/auth/bot'">Connect Different Account</button>
-          <button class="btn" id="btnUseMainAccount" style="flex:1;justify-content:center;" onclick="accountUseMain()">Use My Account</button>
+        <button class="btn btn-red btn-sm" onclick="accountLogout()">Sign Out</button>
+      </div>
+
+      <!-- Bot Account Row -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--border);">
+        <div>
+          <div style="font-size:0.6rem;color:var(--muted-2);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;">Bot Account</div>
+          <div id="botAccountInfo" style="display:flex;align-items:center;gap:8px;">
+            <div style="width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);flex-shrink:0;"></div>
+            <div id="botAccountName" style="font-weight:600;font-size:0.88rem;color:var(--text);">—</div>
+            <div id="botAccountType" style="font-size:0.65rem;color:var(--muted);">—</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-green btn-sm" onclick="window.location.href='/auth/bot'">Connect Different Account</button>
+          <button class="btn btn-sm" id="btnUseMainAccount" onclick="accountUseMain()">Use My Account</button>
         </div>
       </div>
 
-      <!-- Channel -->
-      <div class="card">
-        <div class="card-title">Channel</div>
-        <div style="font-size:0.65rem;color:var(--muted);margin-bottom:14px;">The Twitch channel the bot is active in.</div>
-        <div style="display:flex;gap:10px;align-items:center;">
-          <input class="form-input" type="text" id="accountChannelInput" placeholder="channelname" style="margin-bottom:0;flex:1;" />
-          <button class="btn btn-green" onclick="accountSaveChannel()">Save</button>
+      <!-- Channel Row -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--border);">
+        <div style="flex:1;max-width:340px;">
+          <div style="font-size:0.6rem;color:var(--muted-2);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;">Channel</div>
+          <div style="font-size:0.72rem;color:var(--muted);margin-bottom:10px;">The Twitch channel the bot is active in.</div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input class="form-input" type="text" id="accountChannelInput" placeholder="channelname" style="margin-bottom:0;flex:1;" />
+            <button class="btn btn-green btn-sm" onclick="accountSaveChannel()">Save</button>
+          </div>
         </div>
       </div>
 
@@ -768,19 +863,20 @@
       </div>
       <button class="btn" style="padding:5px 14px;font-size:0.6rem;" onclick="document.getElementById('roleSwitchModal').style.display='flex';document.getElementById('roleSwitchInput').value='';document.getElementById('roleSwitchError').style.display='none';">Switch User</button>
     </div>
-    <div style="padding:20px 28px;display:flex;flex-direction:column;gap:16px;max-width:500px;">
-      <div class="card" id="addAdminCard">
-        <div class="card-title">Add Admin</div>
-        <div class="form-group">
-          <label class="form-label">Twitch Username</label>
-          <input class="form-input" type="text" id="adminUsernameInput" placeholder="username" />
+    <div style="padding:0 28px;display:flex;flex-direction:column;flex:1;overflow-y:auto;">
+
+      <!-- Add Admin Row -->
+      <div id="addAdminCard" style="display:flex;align-items:flex-end;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--border);">
+        <div style="flex:1;max-width:360px;">
+          <div style="font-size:0.6rem;color:var(--muted-2);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">Add Admin</div>
+          <input class="form-input" type="text" id="adminUsernameInput" placeholder="Twitch username" style="margin-bottom:0;" onkeydown="if(event.key==='Enter')addAdmin()" />
         </div>
-        <button class="btn btn-green" onclick="addAdmin()">Add Admin</button>
+        <button class="btn btn-green btn-sm" style="margin-left:16px;" onclick="addAdmin()">Add Admin</button>
       </div>
-      <div class="card">
-        <div class="card-title">Current Admins</div>
-        <div id="adminList"><div class="empty">No admins yet</div></div>
-      </div>
+
+      <!-- Admin List -->
+      <div id="adminList" style="display:flex;flex-direction:column;gap:0;"><div class="empty" style="padding:20px 0;">No admins yet</div></div>
+
     </div>
   </div>
 </div>
@@ -794,29 +890,29 @@
         <div class="cmd-sub">Mods who have authorized their account to be used as a bot</div>
       </div>
     </div>
-    <div style="padding:20px 28px;display:flex;flex-direction:column;gap:16px;max-width:600px;">
+    <div style="padding:0 28px;display:flex;flex-direction:column;flex:1;overflow-y:auto;">
 
-      <!-- Request link card -->
-      <div class="card">
-        <div class="card-title">Request Mod</div>
-        <div class="cmd-sub" style="margin-bottom:14px;">Share this link with a mod. They open it, authorize with Twitch, and their account gets added as a pending request.</div>
-        <div style="display:flex;gap:10px;align-items:center;">
-          <input class="form-input" id="modRequestLink" style="margin-bottom:0;font-size:0.6rem;color:var(--muted);" readonly value="http://localhost:3000/auth/mod" />
-          <button class="btn" style="padding:6px 14px;font-size:0.6rem;flex-shrink:0;" onclick="copyModLink()">Copy</button>
+      <!-- Request Link Row -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--border);">
+        <div style="flex:1;">
+          <div style="font-size:0.6rem;color:var(--muted-2);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Mod Request Link</div>
+          <div style="font-size:0.7rem;color:var(--muted);margin-bottom:8px;">Share this with a mod. They authorize with Twitch and get added as a pending request.</div>
+          <div style="display:flex;gap:8px;align-items:center;max-width:480px;">
+            <input class="form-input" id="modRequestLink" style="margin-bottom:0;font-size:0.65rem;color:var(--muted);" readonly value="http://localhost:3000/auth/mod" />
+            <button class="btn btn-sm" onclick="copyModLink()">Copy</button>
+          </div>
         </div>
       </div>
 
       <!-- Pending requests -->
-      <div class="card" id="modPendingCard" style="display:none;">
-        <div class="card-title">Pending Requests</div>
-        <div id="modPendingList" style="display:flex;flex-direction:column;gap:8px;"></div>
+      <div id="modPendingCard" style="display:none;border-bottom:1px solid var(--border);padding:12px 0;">
+        <div style="font-size:0.6rem;color:var(--muted-2);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">Pending Requests</div>
+        <div id="modPendingList" style="display:flex;flex-direction:column;gap:6px;"></div>
       </div>
 
-      <!-- Approved mods -->
-      <div class="card">
-        <div class="card-title">Active Mod Bots</div>
-        <div id="modApprovedList"><div class="empty">No mod bots yet</div></div>
-      </div>
+      <!-- Active Mod Bots -->
+      <div style="font-size:0.6rem;color:var(--muted-2);letter-spacing:2px;text-transform:uppercase;padding:12px 0 6px;">Active Mod Bots</div>
+      <div id="modApprovedList" style="display:flex;flex-direction:column;gap:0;"><div class="empty" style="padding:12px 0;">No mod bots yet</div></div>
 
     </div>
   </div>
@@ -834,15 +930,14 @@
       </div>
       <button class="btn btn-green" style="padding:5px 14px;font-size:0.6rem;" onclick="loadEconomy()">↻ Refresh</button>
     </div>
-    <div style="padding:20px 28px;overflow-y:auto;flex:1;">
-      <div class="card" style="max-width:860px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-          <div class="card-title" style="margin-bottom:0;">Viewer Balances</div>
-          <input class="form-input" type="text" id="economySearch" placeholder="Search username..." style="margin-bottom:0;width:200px;padding:6px 12px;font-size:0.65rem;" oninput="filterEconomy(this.value)" />
-        </div>
-        <div id="economyList" style="display:flex;flex-direction:column;gap:8px;">
-          <div class="empty">Loading...</div>
-        </div>
+    <div style="padding:0 28px;display:flex;flex-direction:column;flex:1;overflow-y:auto;">
+      <!-- Search row -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);flex-shrink:0;">
+        <div style="font-size:0.6rem;color:var(--muted-2);letter-spacing:2px;text-transform:uppercase;">Viewer Balances</div>
+        <input class="form-input" type="text" id="economySearch" placeholder="Search username..." style="margin-bottom:0;width:220px;padding:6px 12px;font-size:0.65rem;" oninput="filterEconomy(this.value)" />
+      </div>
+      <div id="economyList" style="display:flex;flex-direction:column;gap:0;">
+        <div class="empty" style="padding:20px 0;">Loading...</div>
       </div>
     </div>
   </div>
@@ -878,95 +973,97 @@
           <div class="cmd-title">OBS Control</div>
           <div class="cmd-sub">Connected to OBS Studio</div>
         </div>
-        <div style="display:flex;align-items:center;gap:14px;">
-          <span id="obsStatusDot" style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.15);display:inline-block;transition:all 0.3s;"></span>
-          <span id="obsStatusText" style="font-size:0.6rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;">Disconnected</span>
-          <button class="btn" style="padding:4px 12px;font-size:0.58rem;" onclick="obsShowReconnectForm()">ΓÜÖ Settings</button>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span id="obsStatusDot" style="width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.15);display:inline-block;transition:all 0.3s;flex-shrink:0;"></span>
+          <span id="obsStatusText" style="font-size:0.65rem;color:var(--muted);">Disconnected</span>
+          <button class="btn btn-sm" onclick="obsShowReconnectForm()">⚙ Settings</button>
         </div>
       </div>
-      <div style="padding:20px 28px;overflow-y:auto;flex:1;">
+      <div style="padding:0 28px;overflow-y:auto;flex:1;display:flex;flex-direction:column;">
 
         <!-- Stream & Recording -->
-        <div class="card" id="obsStreamCard" style="max-width:860px;margin-bottom:16px;">
-          <div class="card-title">Stream & Recording</div>
-          <div style="display:flex;flex-direction:column;gap:12px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;">
+        <div id="obsStreamCard" style="border-bottom:1px solid var(--border);padding:14px 0;">
+          <div style="font-size:0.6rem;color:var(--muted-2);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">Stream &amp; Recording</div>
+          <div style="display:flex;flex-direction:column;gap:0;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);">
               <div style="display:flex;align-items:center;gap:10px;">
-                <span id="obsStreamDot" style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.15);display:inline-block;transition:all 0.3s;flex-shrink:0;"></span>
-                <span id="obsStreamStatus" style="font-size:0.65rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;">Stream Off</span>
+                <span id="obsStreamDot" style="width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.15);display:inline-block;transition:all 0.3s;flex-shrink:0;"></span>
+                <span id="obsStreamStatus" style="font-size:0.82rem;color:var(--text);">Stream Off</span>
               </div>
-              <button class="btn" id="obsStreamBtn" style="padding:5px 14px;font-size:0.6rem;" onclick="obsStreamBtnClick()">Start Stream</button>
+              <button class="btn btn-sm" id="obsStreamBtn" onclick="obsStreamBtnClick()">Start Stream</button>
             </div>
-            <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;">
-              <span id="obsRecordDot" style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.15);display:inline-block;transition:all 0.3s;flex-shrink:0;"></span>
-              <span id="obsRecordStatus" style="font-size:0.65rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;">Recording Off</span>
+            <div style="display:flex;align-items:center;padding:12px 0;gap:10px;">
+              <span id="obsRecordDot" style="width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.15);display:inline-block;transition:all 0.3s;flex-shrink:0;"></span>
+              <span id="obsRecordStatus" style="font-size:0.82rem;color:var(--text);">Recording Off</span>
             </div>
           </div>
         </div>
 
-        <!-- Templates -->
-        <div class="card" id="obsTemplateCard" style="max-width:860px;margin-bottom:16px;">
-          <div class="card-title">Quick Templates</div>
-          <div class="cmd-sub" style="margin-bottom:14px;">Switch to a scene instantly — scene names must match exactly in OBS</div>
+        <!-- Quick Templates -->
+        <div id="obsTemplateCard" style="border-bottom:1px solid var(--border);padding:14px 0;">
+          <div style="font-size:0.6rem;color:var(--muted-2);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">Quick Templates</div>
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
             <button class="btn" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;" onclick="obsTemplate('Starting Soon')">
-              <span style="font-size:1.2rem;">▶</span>
-              <span style="font-size:0.6rem;letter-spacing:2px;">Starting Soon</span>
+              <span style="font-size:1.1rem;">▶</span>
+              <span style="font-size:0.65rem;">Starting Soon</span>
             </button>
             <button class="btn" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;" onclick="obsConfirmGoLive()">
-              <span style="font-size:1.2rem;">🔴</span>
-              <span style="font-size:0.6rem;letter-spacing:2px;">Go Live</span>
+              <span style="font-size:1.1rem;">🔴</span>
+              <span style="font-size:0.65rem;">Go Live</span>
             </button>
             <button class="btn" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;" onclick="obsTemplate('BRB')">
-              <span style="font-size:1.2rem;">⏸</span>
-              <span style="font-size:0.6rem;letter-spacing:2px;">BRB</span>
+              <span style="font-size:1.1rem;">⏸</span>
+              <span style="font-size:0.65rem;">BRB</span>
             </button>
             <button class="btn" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;" onclick="obsTemplate('Ending')">
-              <span style="font-size:1.2rem;">⏹</span>
-              <span style="font-size:0.6rem;letter-spacing:2px;">Ending</span>
+              <span style="font-size:1.1rem;">⏹</span>
+              <span style="font-size:0.65rem;">Ending</span>
             </button>
           </div>
         </div>
 
         <!-- Scenes -->
-        <div class="card" id="obsSceneCard" style="max-width:860px;">
-          <div class="card-title">Scenes</div>
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-            <div id="obsCurrentScene" style="font-size:0.65rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;">Current: —</div>
-            <div style="font-size:0.55rem;letter-spacing:1px;color:rgba(255,255,255,0.18);">Left click to switch &nbsp;·&nbsp; Right click to inspect sources</div>
+        <div id="obsSceneCard" style="border-bottom:1px solid var(--border);padding:14px 0;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <div style="font-size:0.6rem;color:var(--muted-2);letter-spacing:2px;text-transform:uppercase;">Scenes</div>
+            <div style="display:flex;align-items:center;gap:14px;">
+              <span id="obsCurrentScene" style="font-size:0.65rem;color:var(--muted);">Current: —</span>
+              <span style="font-size:0.6rem;color:var(--muted-2);">Left click: switch &nbsp;·&nbsp; Right click: sources</span>
+            </div>
           </div>
-          <div id="obsSceneList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:0;">
+          <div id="obsSceneList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;">
             <div class="empty">No scenes loaded</div>
           </div>
-          <div id="obsSourcesPanel" style="display:none;margin-top:18px;padding-top:18px;border-top:1px solid var(--border);">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div id="obsSourcesPanel" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
               <div>
-                <div style="font-size:0.6rem;letter-spacing:3px;color:var(--muted);text-transform:uppercase;">Sources in</div>
-                <div id="obsSourcesTitle" style="font-size:0.85rem;font-family:'Syne',sans-serif;font-weight:700;color:var(--text);margin-top:2px;">—</div>
+                <div style="font-size:0.6rem;color:var(--muted-2);letter-spacing:2px;text-transform:uppercase;">Sources in</div>
+                <div id="obsSourcesTitle" style="font-size:0.88rem;font-family:'Syne',sans-serif;font-weight:700;color:var(--text);margin-top:2px;">—</div>
               </div>
-              <button class="btn" style="padding:4px 12px;font-size:0.58rem;" onclick="obsCloseSourcesPanel()">✕ Close</button>
+              <button class="btn btn-sm" onclick="obsCloseSourcesPanel()">✕ Close</button>
             </div>
-            <div id="obsSourcesList" style="display:flex;flex-direction:column;gap:8px;">
+            <div id="obsSourcesList" style="display:flex;flex-direction:column;gap:0;">
               <div class="empty">No sources</div>
             </div>
           </div>
         </div>
 
-
-        <!-- Alerts -->
-        <div class="card" id="obsAlertsCard" style="max-width:860px;margin-top:16px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
-            <div class="card-title" style="margin-bottom:0;">Media Alerts</div>
-            <button class="cmd-add-btn" style="padding:7px 14px;font-size:0.62rem;" onclick="openAddAlert()">+ New Alert</button>
+        <!-- Media Alerts -->
+        <div id="obsAlertsCard" style="padding:14px 0;flex:1;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <div>
+              <div style="font-size:0.6rem;color:var(--muted-2);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Media Alerts</div>
+              <div style="font-size:0.65rem;color:var(--muted);">
+                OBS browser source URL:
+                <span style="color:var(--accent);margin:0 4px;">http://localhost:3000/alert-overlay</span>
+                <button class="btn btn-sm" style="padding:2px 8px;font-size:0.6rem;" onclick="navigator.clipboard.writeText('http://localhost:3000/alert-overlay').then(()=>showToast('URL copied'))">Copy</button>
+                &nbsp;· trigger with <span style="color:var(--accent);">!alertname</span>
+              </div>
+            </div>
+            <button class="cmd-add-btn" style="padding:7px 14px;font-size:0.62rem;flex-shrink:0;" onclick="openAddAlert()">+ New Alert</button>
           </div>
-          <div style="font-size:0.6rem;color:rgba(255,255,255,0.2);margin-bottom:16px;line-height:1.7;">
-            Add OBS browser source →
-            <span style="color:rgba(208,240,255,0.5);">http://localhost:3000/alert-overlay</span>
-            <button class="btn" onclick="navigator.clipboard.writeText('http://localhost:3000/alert-overlay').then(()=>showToast('URL copied'))" style="padding:2px 10px;font-size:0.55rem;margin-left:6px;">Copy URL</button>
-            — trigger with <span style="color:rgba(208,240,255,0.5);">!alertname</span> in chat.
-          </div>
-          <div id="alertsList" style="display:flex;flex-direction:column;gap:8px;">
-            <div class="empty">No alerts yet</div>
+          <div id="alertsList" style="display:flex;flex-direction:column;gap:0;">
+            <div class="empty" style="padding:12px 0;">No alerts yet</div>
           </div>
         </div>
 
@@ -1069,24 +1166,181 @@
             <div class="cmd-sub">Make the bot active in another streamer's chat</div>
           </div>
         </div>
-        <div style="padding:20px 28px;display:flex;flex-direction:column;gap:16px;max-width:500px;">
-          <div class="card">
-            <div class="card-title">Join a Channel</div>
-            <div style="font-size:0.72rem;color:var(--muted);margin-bottom:14px;line-height:1.6;">The bot will join that channel and respond to <strong style="color:var(--text);">!commands</strong> there. Only you can do this.</div>
-            <div style="display:flex;flex-direction:column;gap:10px;">
-              <input class="form-input" type="text" id="guestChannelInput" placeholder="channelname" style="margin-bottom:0;width:100%;min-width:0;border-color:var(--border-strong);background:rgba(0,0,0,0.5);"
-                onkeydown="if(event.key==='Enter')joinGuestChannel()" />
-              <button class="btn btn-blue" style="width:100%;margin-top:0;" onclick="joinGuestChannel()">Join</button>
+        <div style="padding:0 28px;display:flex;flex-direction:column;flex:1;overflow-y:auto;">
+
+          <!-- Join Row -->
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--border);">
+            <div style="flex:1;max-width:400px;">
+              <div style="font-size:0.6rem;color:var(--muted-2);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Join a Channel</div>
+              <div style="font-size:0.7rem;color:var(--muted);margin-bottom:8px;">The bot will respond to <strong style="color:var(--text);">!commands</strong> in that channel. Only you can do this.</div>
+              <input class="form-input" type="text" id="guestChannelInput" placeholder="channelname" style="margin-bottom:0;" onkeydown="if(event.key==='Enter')joinGuestChannel()" />
+              <div id="guestJoinError" style="display:none;font-size:0.65rem;color:var(--red);margin-top:6px;"></div>
             </div>
-            <div id="guestJoinError" style="display:none;font-size:0.65rem;color:var(--red);margin-top:8px;"></div>
+            <button class="btn btn-blue btn-sm" style="margin-left:16px;" onclick="joinGuestChannel()">Join</button>
           </div>
-          <div class="card">
-            <div class="card-title">Active Guest Channels</div>
-            <div id="guestChannelList"><div class="empty">Not in any guest channels</div></div>
-          </div>
+
+          <!-- Active Guest Channels -->
+          <div style="font-size:0.6rem;color:var(--muted-2);letter-spacing:2px;text-transform:uppercase;padding:12px 0 6px;">Active Guest Channels</div>
+          <div id="guestChannelList" style="display:flex;flex-direction:column;gap:0;"><div class="empty" style="padding:12px 0;">Not in any guest channels</div></div>
+
         </div>
       </div>
     </div>
+
+<!-- TIMERS PAGE -->
+<div class="page" id="page-timers">
+  <div class="cmd-page-wrap">
+    <div class="cmd-topbar">
+      <div class="cmd-title-block">
+        <div class="cmd-title">Timers</div>
+        <div class="cmd-sub">Auto-post messages to chat on a schedule</div>
+      </div>
+      <button class="cmd-add-btn" onclick="showToast('Coming soon')">+ New Timer</button>
+    </div>
+    <div style="padding:0 28px;flex:1;display:flex;align-items:center;justify-content:center;">
+      <div style="text-align:center;opacity:0.3;">
+        <div style="font-size:2rem;margin-bottom:12px;">⏱</div>
+        <div style="font-size:0.75rem;color:var(--muted);">Timers coming soon</div>
+        <div style="font-size:0.65rem;color:var(--muted-2);margin-top:6px;">Auto-post messages like !discord, !commands every X minutes</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- COUNTERS PAGE -->
+<div class="page" id="page-counters">
+  <div class="cmd-page-wrap">
+    <div class="cmd-topbar">
+      <div class="cmd-title-block">
+        <div class="cmd-title">Counters</div>
+        <div class="cmd-sub">Track deaths, wins, losses, or anything with a number</div>
+      </div>
+      <button class="cmd-add-btn" onclick="showToast('Coming soon')">+ New Counter</button>
+    </div>
+    <div style="padding:0 28px;flex:1;display:flex;align-items:center;justify-content:center;">
+      <div style="text-align:center;opacity:0.3;">
+        <div style="font-size:2rem;margin-bottom:12px;">#</div>
+        <div style="font-size:0.75rem;color:var(--muted);">Counters coming soon</div>
+        <div style="font-size:0.65rem;color:var(--muted-2);margin-top:6px;">!deaths → "Deaths today: 7" · !deaths +1 to increment</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- QUOTES PAGE -->
+<div class="page" id="page-quotes">
+  <div class="cmd-page-wrap">
+    <div class="cmd-topbar">
+      <div class="cmd-title-block">
+        <div class="cmd-title">Quotes</div>
+        <div class="cmd-sub">Save memorable moments from your stream</div>
+      </div>
+      <button class="cmd-add-btn" onclick="showToast('Coming soon')">+ Add Quote</button>
+    </div>
+    <div style="padding:0 28px;flex:1;display:flex;align-items:center;justify-content:center;">
+      <div style="text-align:center;opacity:0.3;">
+        <div style="font-size:2rem;margin-bottom:12px;">💬</div>
+        <div style="font-size:0.75rem;color:var(--muted);">Quotes coming soon</div>
+        <div style="font-size:0.65rem;color:var(--muted-2);margin-top:6px;">!addquote "text" · !quote returns a random one</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SONG REQUESTS PAGE -->
+<div class="page" id="page-songs">
+  <div class="cmd-page-wrap">
+    <div class="cmd-topbar">
+      <div class="cmd-title-block">
+        <div class="cmd-title">Song Requests</div>
+        <div class="cmd-sub">Let viewers queue YouTube tracks with !sr</div>
+      </div>
+    </div>
+    <div style="padding:0 28px;flex:1;display:flex;align-items:center;justify-content:center;">
+      <div style="text-align:center;opacity:0.3;">
+        <div style="font-size:2rem;margin-bottom:12px;">🎵</div>
+        <div style="font-size:0.75rem;color:var(--muted);">Song Requests coming soon</div>
+        <div style="font-size:0.65rem;color:var(--muted-2);margin-top:6px;">YouTube queue · !sr · !skip · !queue · !currentsong</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- GIVEAWAYS PAGE -->
+<div class="page" id="page-giveaway">
+  <div class="cmd-page-wrap">
+    <div class="cmd-topbar">
+      <div class="cmd-title-block">
+        <div class="cmd-title">Giveaways</div>
+        <div class="cmd-sub">Run chat giveaways and pick random winners</div>
+      </div>
+    </div>
+    <div style="padding:0 28px;flex:1;display:flex;align-items:center;justify-content:center;">
+      <div style="text-align:center;opacity:0.3;">
+        <div style="font-size:1.4rem;margin-bottom:12px;font-family:'Syne',sans-serif;font-weight:700;opacity:0.4;">GIVEAWAY</div>
+        <div style="font-size:0.75rem;color:var(--muted);">Giveaways coming soon</div>
+        <div style="font-size:0.65rem;color:var(--muted-2);margin-top:6px;">!enter to join · bot picks a random winner · sub-only option</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AUTOMOD PAGE -->
+<div class="page" id="page-automod">
+  <div class="cmd-page-wrap">
+    <div class="cmd-topbar">
+      <div class="cmd-title-block">
+        <div class="cmd-title">AutoMod</div>
+        <div class="cmd-sub">Filters, banned words, and automatic moderation rules</div>
+      </div>
+    </div>
+    <div style="padding:0 28px;flex:1;display:flex;align-items:center;justify-content:center;">
+      <div style="text-align:center;opacity:0.3;">
+        <div style="font-size:2rem;margin-bottom:12px;">🛡</div>
+        <div style="font-size:0.75rem;color:var(--muted);">AutoMod coming soon</div>
+        <div style="font-size:0.65rem;color:var(--muted-2);margin-top:6px;">Caps filter · link filter · spam · banned words · auto-timeout</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BOT SETTINGS PAGE -->
+<div class="page" id="page-botsettings">
+  <div class="cmd-page-wrap">
+    <div class="cmd-topbar">
+      <div class="cmd-title-block">
+        <div class="cmd-title">Bot Settings</div>
+        <div class="cmd-sub">Global bot behaviour and defaults</div>
+      </div>
+    </div>
+    <div style="padding:0 28px;flex:1;display:flex;align-items:center;justify-content:center;">
+      <div style="text-align:center;opacity:0.3;">
+        <div style="font-size:2rem;margin-bottom:12px;">⚙</div>
+        <div style="font-size:0.75rem;color:var(--muted);">Bot Settings coming soon</div>
+        <div style="font-size:0.65rem;color:var(--muted-2);margin-top:6px;">Command prefix · hourly bonus toggle · unknown command response</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- COOLDOWNS SETTINGS PAGE -->
+<div class="page" id="page-cooldowns">
+  <div class="cmd-page-wrap">
+    <div class="cmd-topbar">
+      <div class="cmd-title-block">
+        <div class="cmd-title">Cooldowns</div>
+        <div class="cmd-sub">Global cooldown defaults and exemptions</div>
+      </div>
+    </div>
+    <div style="padding:0 28px;flex:1;display:flex;align-items:center;justify-content:center;">
+      <div style="text-align:center;opacity:0.3;">
+        <div style="font-size:2rem;margin-bottom:12px;">⏳</div>
+        <div style="font-size:0.75rem;color:var(--muted);">Cooldowns coming soon</div>
+        <div style="font-size:0.65rem;color:var(--muted-2);margin-top:6px;">Admin exempt · global vs per-user · launch mode · viewer count presets</div>
+      </div>
+    </div>
+  </div>
+</div>
 
   </main>
 </div>
@@ -1246,10 +1500,35 @@
   function showPage(name) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    document.getElementById('page-' + name).classList.add('active');
-    document.getElementById('nav-' + name).classList.add('active');
+    const page = document.getElementById('page-' + name);
+    const nav = document.getElementById('nav-' + name);
+    if (page) page.classList.add('active');
+    if (nav) { nav.classList.add('active'); openNavGroupFor(name); }
     if (name === 'groups') refreshGroupSelects();
     if (name === 'actions' && inlineEditor) setTimeout(() => inlineEditor.layout(), 50);
+  }
+
+  function toggleNavGroup(id) {
+    const header = document.getElementById('navg-' + id);
+    const children = document.getElementById('navgc-' + id);
+    if (!header || !children) return;
+    const isOpen = children.classList.contains('open');
+    header.classList.toggle('open', !isOpen);
+    children.classList.toggle('open', !isOpen);
+  }
+
+  // Auto-open group when a child page is shown
+  function openNavGroupFor(navId) {
+    const item = document.getElementById('nav-' + navId);
+    if (!item) return;
+    const children = item.closest('.nav-group-children');
+    if (!children) return;
+    const groupId = children.id.replace('navgc-', '');
+    const header = document.getElementById('navg-' + groupId);
+    if (header && !children.classList.contains('open')) {
+      header.classList.add('open');
+      children.classList.add('open');
+    }
   }
 
   function showToast(msg) {
@@ -1915,8 +2194,8 @@
     if (!list) return;
     if (adminsCache.length === 0) { list.innerHTML = '<div class="empty">No admins yet</div>'; return; }
     list.innerHTML = adminsCache.map(u => `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.05);border-radius:6px;margin-bottom:6px;">
-        <span style="font-size:0.78rem;color:rgba(255,255,255,0.75);">@${u}</span>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);">
+        <span style="font-size:0.82rem;color:var(--text);">@${u}</span>
         ${currentRole === 'streamer' ? `<button class="delete-btn" onclick="removeAdmin('${u}')">Remove</button>` : ''}
       </div>`).join('');
   }
@@ -1970,7 +2249,7 @@
     if (pending.length > 0) {
       pendingCard.style.display = '';
       pendingList.innerHTML = pending.map(m => `
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,100,0.15);border-radius:6px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid rgba(255,200,0,0.15);">
           <div style="display:flex;align-items:center;gap:10px;">
             <img src="${m.avatar}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none'" />
             <span style="font-size:0.78rem;color:rgba(255,255,255,0.75);">@${m.username}</span>
@@ -1990,10 +2269,10 @@
       approvedList.innerHTML = '<div class="empty">No mod bots yet</div>';
     } else {
       approvedList.innerHTML = approved.map(m => `
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.05);border-radius:6px;margin-bottom:6px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);">
           <div style="display:flex;align-items:center;gap:10px;">
             <img src="${m.avatar}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none'" />
-            <span style="font-size:0.78rem;color:rgba(255,255,255,0.75);">@${m.username}</span>
+            <span style="font-size:0.82rem;color:var(--text);">@${m.username}</span>
           </div>
           <button class="delete-btn" onclick="removeMod('${m.username}')">Remove</button>
         </div>`).join('');
@@ -2044,7 +2323,7 @@
     if (!list) return;
     if (users.length === 0) { list.innerHTML = '<div class="empty">No economy data yet</div>'; return; }
     list.innerHTML = users.map(u => `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;gap:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);gap:12px;">
         <div style="display:flex;align-items:center;gap:10px;min-width:0;">
           ${u.jailed ? '<span title="Jailed" style="font-size:0.8rem;">🔒</span>' : '<span style="width:16px;display:inline-block;"></span>'}
           <span style="font-size:0.72rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@${u.username}</span>
@@ -2397,7 +2676,7 @@
         const isEnabled = item.sceneItemEnabled;
         const isNestedScene = item.sourceType === 'OBS_SOURCE_TYPE_SCENE';
         const row = document.createElement('div');
-        row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;gap:12px;';
+        row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);gap:12px;';
         row.innerHTML = `
           <div style="display:flex;align-items:center;gap:10px;min-width:0;">
             <span style="font-size:0.9rem;flex-shrink:0;">${isNestedScene ? '📺' : obsSourceIcon(item.inputKind)}</span>
@@ -2640,18 +2919,18 @@ checkBotStatus();
     if (keys.length === 0) { list.innerHTML = '<div class="empty">No alerts yet — click + New Alert</div>'; return; }
     list.innerHTML = keys.map(name => {
       const a = alertsCache[name];
-      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;gap:12px;">
-        <div style="display:flex;align-items:center;gap:14px;min-width:0;">
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);gap:12px;">
+        <div style="display:flex;align-items:center;gap:12px;min-width:0;">
           <div>
-            <div style="font-size:0.8rem;color:var(--text);">!${name}</div>
-            <div style="font-size:0.55rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-top:3px;">
+            <div style="font-size:0.82rem;color:var(--text);">!${name}</div>
+            <div style="font-size:0.65rem;color:var(--muted);margin-top:2px;">
               ${a.image ? '🖼 image  ' : ''}${a.sound ? '🔊 sound  ' : ''}${a.duration || 5}s · ${a.access || 'moderator'}
             </div>
           </div>
         </div>
-        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
-          <button class="btn" style="padding:5px 12px;font-size:0.6rem;" onclick="editAlert('${name}')">✏ Edit</button>
-          <button class="btn" style="padding:5px 12px;font-size:0.6rem;" onclick="testAlert('${name}')">▶ Test</button>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+          <button class="btn btn-sm" onclick="editAlert('${name}')">✏ Edit</button>
+          <button class="btn btn-sm" onclick="testAlert('${name}')">▶ Test</button>
           <label class="toggle" onclick="event.stopPropagation()">
             <input type="checkbox" ${a.enabled !== false ? 'checked' : ''} onchange="toggleAlert('${name}', this.checked)" />
             <span class="toggle-slider"></span>
@@ -3098,10 +3377,10 @@ checkBotStatus();
       return;
     }
     list.innerHTML = guestChannelsCache.map(ch => `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:6px;margin-bottom:6px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);">
         <div style="display:flex;align-items:center;gap:10px;">
           <span style="width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);flex-shrink:0;display:inline-block;"></span>
-          <span style="font-size:0.78rem;color:var(--text);">#${ch}</span>
+          <span style="font-size:0.82rem;color:var(--text);">#${ch}</span>
         </div>
         <button class="delete-btn" onclick="leaveGuestChannel('${ch}')">Leave</button>
       </div>`).join('');
