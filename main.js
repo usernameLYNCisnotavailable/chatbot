@@ -6,6 +6,7 @@ const { autoUpdater } = require('electron-updater');
 let mainWindow;
 let botProcess = null;
 let reactorProcess = null;
+let chatWin = null;
 
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -470,6 +471,13 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
         if (!mod) return res.status(404).json({ error: 'Mod not found' });
         mod.approved = true;
         fs.writeFileSync(getDataPath('config.json'), JSON.stringify(config, null, 4));
+        // Tell bot to join their channel
+        const net2 = require('net');
+        const s = new net2.Socket();
+        s.connect(9003, '127.0.0.1', () => { s.write('JOIN:' + username); s.end(); });
+        s.on('data', () => {});
+        s.on('end', () => {});
+        s.on('error', () => {});
         res.json({ success: true });
     });
 
@@ -477,14 +485,20 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
         const { username } = req.body;
         const config = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
         const mod = (config.mods || []).find(m => m.username === username);
-        // Revoke their token on Twitch
         if (mod && mod.token) {
             const rawToken = mod.token.replace('oauth:', '');
             axios.post(`https://id.twitch.tv/oauth2/revoke?client_id=${TWITCH_CLIENT_ID}&token=${rawToken}`)
-                .catch(() => {}); // fire and forget, don't block on failure
+                .catch(() => {});
         }
         config.mods = (config.mods || []).filter(m => m.username !== username);
         fs.writeFileSync(getDataPath('config.json'), JSON.stringify(config, null, 4));
+        // Tell bot to leave their channel
+        const net2 = require('net');
+        const s = new net2.Socket();
+        s.connect(9003, '127.0.0.1', () => { s.write('LEAVE:' + username); s.end(); });
+        s.on('data', () => {});
+        s.on('end', () => {});
+        s.on('error', () => {});
         res.json({ success: true });
     });
 
@@ -740,10 +754,191 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
         res.json({ success: true });
     });
 
+    // Open standalone chat window
+    server.get('/api/chat/open', (req, res) => {
+        if (chatWin && !chatWin.isDestroyed()) {
+            chatWin.focus();
+            return res.json({ success: true });
+        }
+        chatWin = new BrowserWindow({
+            width: 380,
+            height: 620,
+            minWidth: 260,
+            minHeight: 200,
+            frame: false,
+            transparent: false,
+            alwaysOnTop: true,
+            resizable: true,
+            skipTaskbar: true,
+            title: 'Live Chat',
+            webPreferences: { nodeIntegration: false, contextIsolation: true }
+        });
+        chatWin.loadURL('http://localhost:3000/chat.html');
+        chatWin.on('closed', () => { chatWin = null; });
+        res.json({ success: true });
+    });
+
+    server.post('/api/chat/always-on-top', (req, res) => {
+        const { value } = req.body;
+        if (chatWin && !chatWin.isDestroyed()) chatWin.setAlwaysOnTop(!!value);
+        res.json({ success: true });
+    });
+
     server.broadcastChat = (data) => {
         const payload = `data: ${JSON.stringify(data)}\n\n`;
         chatClients.forEach(client => client.write(payload));
     };
+// ---- MEDIA ALERTS ----
+    const multer = require('multer');
+    const alertsPath = getDataPath('alerts.json');
+    const mediaDir = path.join(app.getPath('userData'), 'media');
+    if (!fs.existsSync(mediaDir)) fs.mkdirSync(mediaDir, { recursive: true });
+
+    const storage = multer.diskStorage({
+        destination: (req, file, cb) => cb(null, mediaDir),
+        filename: (req, file, cb) => {
+            const safe = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+            cb(null, Date.now() + '_' + safe);
+        }
+    });
+    const upload = multer({ storage });
+
+    function getAlerts() {
+        try { return JSON.parse(fs.readFileSync(alertsPath, 'utf8')); } catch(e) { return {}; }
+    }
+    function saveAlerts(data) {
+        fs.writeFileSync(alertsPath, JSON.stringify(data, null, 2));
+    }
+
+    // Serve uploaded media files
+    server.use('/media', express.static(mediaDir));
+
+    // Serve overlay page
+    server.get('/alert-overlay', (req, res) => {
+        res.sendFile(path.join(appDir, 'dashboard', 'alert-overlay.html'));
+    });
+
+    server.get('/chat.html', (req, res) => {
+        res.sendFile(path.join(appDir, 'dashboard', 'chat.html'));
+    });
+
+    // GET all alerts
+    server.get('/api/alerts', (req, res) => {
+        res.json(getAlerts());
+    });
+
+    // POST create/update alert
+    server.post('/api/alerts', upload.fields([{ name: 'image' }, { name: 'sound' }]), (req, res) => {
+        const alerts = getAlerts();
+        const { name, duration, access, volume } = req.body;
+        if (!name) return res.status(400).json({ error: 'Name required' });
+        const key = name.toLowerCase().replace(/[^a-z0-9_]/g, '');
+        if (!key) return res.status(400).json({ error: 'Invalid name' });
+
+        const existing = alerts[key] || {};
+
+        // if new files uploaded, delete old ones
+        if (req.files?.image && existing.image) {
+            const old = path.join(mediaDir, existing.image);
+            if (fs.existsSync(old)) fs.unlinkSync(old);
+        }
+        if (req.files?.sound && existing.sound) {
+            const old = path.join(mediaDir, existing.sound);
+            if (fs.existsSync(old)) fs.unlinkSync(old);
+        }
+
+        alerts[key] = {
+            name: key,
+            image:    req.files?.image  ? req.files.image[0].filename  : (existing.image  || null),
+            sound:    req.files?.sound  ? req.files.sound[0].filename  : (existing.sound  || null),
+            duration: parseFloat(duration) || existing.duration || 5,
+            volume:   parseFloat(volume)   || existing.volume   || 1.0,
+            access:   access || existing.access || 'moderator',
+            enabled:  existing.enabled !== false,
+        };
+        saveAlerts(alerts);
+        res.json({ success: true, alert: alerts[key] });
+    });
+
+    // DELETE alert
+    server.delete('/api/alerts/:name', (req, res) => {
+        const alerts = getAlerts();
+        const key = req.params.name;
+        if (alerts[key]) {
+            // clean up media files
+            if (alerts[key].image) { const f = path.join(mediaDir, alerts[key].image); if (fs.existsSync(f)) fs.unlinkSync(f); }
+            if (alerts[key].sound) { const f = path.join(mediaDir, alerts[key].sound); if (fs.existsSync(f)) fs.unlinkSync(f); }
+            delete alerts[key];
+            saveAlerts(alerts);
+        }
+        res.json({ success: true });
+    });
+
+    // TOGGLE alert enabled/disabled
+    server.post('/api/alerts/:name/toggle', (req, res) => {
+        const alerts = getAlerts();
+        const key = req.params.name;
+        if (!alerts[key]) return res.status(404).json({ error: 'Not found' });
+        alerts[key].enabled = req.body.enabled !== false;
+        saveAlerts(alerts);
+        res.json({ success: true });
+    });
+
+    // SSE stream for overlay
+    const alertOverlayClients = [];
+    server.get('/api/alert/stream', (req, res) => {
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.flushHeaders();
+        alertOverlayClients.push(res);
+        req.on('close', () => {
+            const i = alertOverlayClients.indexOf(res);
+            if (i !== -1) alertOverlayClients.splice(i, 1);
+        });
+    });
+
+    // TRIGGER alert — called by index.js when chat command fires
+    server.post('/api/alerts/trigger/:name', (req, res) => {
+        const alerts = getAlerts();
+        const key = req.params.name;
+        if (!alerts[key] || alerts[key].enabled === false) return res.json({ success: false });
+        const payload = `event: alert\ndata: ${JSON.stringify(alerts[key])}\n\n`;
+        alertOverlayClients.forEach(client => client.write(payload));
+        res.json({ success: true });
+    });
+
+    // ---- GUEST CHANNELS ----
+    server.get('/api/guest-channels', (req, res) => {
+        const socket = new net.Socket();
+        let data = '';
+        socket.connect(9003, '127.0.0.1', () => { socket.write('LIST'); socket.end(); });
+        socket.on('data', (chunk) => { data += chunk.toString(); });
+        socket.on('end', () => { try { res.json(JSON.parse(data)); } catch(e) { res.json([]); } });
+        socket.on('error', () => res.json([]));
+    });
+
+    server.post('/api/guest-channels/join', (req, res) => {
+        const { channel } = req.body;
+        if (!channel) return res.json({ success: false, error: 'No channel provided' });
+        const socket = new net.Socket();
+        let data = '';
+        socket.connect(9003, '127.0.0.1', () => { socket.write('JOIN:' + channel); socket.end(); });
+        socket.on('data', (chunk) => { data += chunk.toString(); });
+        socket.on('end', () => { try { res.json(JSON.parse(data)); } catch(e) { res.json({ success: false, error: 'Bot not responding' }); } });
+        socket.on('error', () => res.json({ success: false, error: 'Bot not running' }));
+    });
+
+    server.post('/api/guest-channels/leave', (req, res) => {
+        const { channel } = req.body;
+        if (!channel) return res.json({ success: false, error: 'No channel provided' });
+        const socket = new net.Socket();
+        let data = '';
+        socket.connect(9003, '127.0.0.1', () => { socket.write('LEAVE:' + channel); socket.end(); });
+        socket.on('data', (chunk) => { data += chunk.toString(); });
+        socket.on('end', () => { try { res.json(JSON.parse(data)); } catch(e) { res.json({ success: false, error: 'Bot not responding' }); } });
+        socket.on('error', () => res.json({ success: false, error: 'Bot not running' }));
+    });
 
     // ---- STATIC (must be last) ----
     server.use(express.static(path.join(appDir, 'dashboard'), { index: false }));
@@ -778,6 +973,7 @@ function createWindow() {
     }, 4000);
 
     mainWindow.on('closed', () => {
+        if (chatWin && !chatWin.isDestroyed()) chatWin.close();
         mainWindow = null;
     });
 }

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: transparent;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: -apple-system, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
+  }
+
+  .alert-wrap {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+  }
+  .alert-wrap.visible { display: flex; }
+
+  /* Frosted glass card that wraps the image */
+  .alert-card {
+    position: relative;
+    border-radius: 22px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(32px) saturate(1.8);
+    -webkit-backdrop-filter: blur(32px) saturate(1.8);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    box-shadow:
+      0 32px 80px rgba(0, 0, 0, 0.28),
+      0 8px 24px rgba(0, 0, 0, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  }
+
+  .alert-img {
+    display: none;
+    max-width: 460px;
+    max-height: 340px;
+    border-radius: 12px;
+    object-fit: contain;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  }
+
+  /* Entrance — spring-style: overshoot then settle */
+  @keyframes spring-in {
+    0%   { opacity: 0; transform: scale(0.82) translateY(28px); }
+    55%  { opacity: 1; transform: scale(1.03) translateY(-4px); }
+    75%  { transform: scale(0.985) translateY(1px); }
+    90%  { transform: scale(1.008) translateY(0); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  /* Exit — clean fade + scale down */
+  @keyframes spring-out {
+    0%   { opacity: 1; transform: scale(1) translateY(0); }
+    30%  { opacity: 1; transform: scale(1.02) translateY(-2px); }
+    100% { opacity: 0; transform: scale(0.88) translateY(14px); }
+  }
+
+  .alert-wrap.animating-in .alert-card {
+    animation: spring-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+  .alert-wrap.animating-out .alert-card {
+    animation: spring-out 0.38s cubic-bezier(0.4, 0, 1, 1) forwards;
+  }
+</style>
+</head>
+<body>
+
+<div class="alert-wrap" id="alertWrap">
+  <div class="alert-card" id="alertCard">
+    <img class="alert-img" id="alertImg" src="" alt="" />
+  </div>
+  <audio id="alertAudio" preload="auto"></audio>
+</div>
+
+<script>
+  const wrap  = document.getElementById('alertWrap');
+  const card  = document.getElementById('alertCard');
+  const img   = document.getElementById('alertImg');
+  const audio = document.getElementById('alertAudio');
+
+  let hideTimer = null;
+
+  function showAlert(data) {
+    if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+
+    // Reset state
+    wrap.classList.remove('animating-in', 'animating-out');
+    card.style.display = '';
+
+    // Image
+    if (data.image) {
+      img.src = '/media/' + data.image;
+      img.style.display = 'block';
+    } else {
+      img.style.display = 'none';
+      img.src = '';
+    }
+
+    // Sound
+    if (data.sound) {
+      audio.src = '/media/' + data.sound;
+      audio.volume = data.volume ?? 1.0;
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+    } else {
+      audio.src = '';
+    }
+
+    // Show + animate in
+    wrap.classList.add('visible', 'animating-in');
+
+    // Hide after duration
+    const duration = (data.duration ?? 5) * 1000;
+    hideTimer = setTimeout(() => {
+      wrap.classList.remove('animating-in');
+      wrap.classList.add('animating-out');
+      setTimeout(() => {
+        wrap.classList.remove('visible', 'animating-out');
+        img.src = '';
+        audio.pause();
+        audio.src = '';
+      }, 400);
+    }, duration);
+  }
+
+  function connect() {
+    const es = new EventSource('/api/alert/stream');
+    es.addEventListener('alert', (e) => {
+      try { showAlert(JSON.parse(e.data)); } catch(err) {}
+    });
+    es.onerror = () => {
+      es.close();
+      setTimeout(connect, 3000);
+    };
+  }
+
+  connect();
+</script>
+</body>
+</html>
