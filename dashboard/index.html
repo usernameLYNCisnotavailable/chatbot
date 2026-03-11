@@ -583,10 +583,20 @@
       Giveaways
     </div>
 
-    <!-- MODERATION -->
-    <div class="nav-section">Moderation</div>
-    <div class="nav-item" id="nav-automod" onclick="showPage('automod')">
-      <span class="nav-icon">🛡</span> AutoMod
+    <!-- Moderation group -->
+    <div class="nav-group">
+      <div class="nav-group-header" id="navg-moderation" onclick="toggleNavGroup('moderation')">
+        <span class="nav-icon">🛡</span> Moderation
+        <span class="nav-group-chevron">▶</span>
+      </div>
+      <div class="nav-group-children" id="navgc-moderation">
+        <div class="nav-item" id="nav-automod" onclick="showPage('automod')">AutoMod</div>
+        <div class="nav-item" id="nav-mods" onclick="showPage('mods');loadMods();">
+          Mod Bots
+          <span id="modPendingDot" style="display:none;width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent);margin-left:auto;flex-shrink:0;"></span>
+        </div>
+        <div class="nav-item" id="nav-mod-view" onclick="showPage('mod-view')">Mod View</div>
+      </div>
     </div>
 
     <!-- LOYALTY -->
@@ -605,10 +615,6 @@
       <span class="nav-icon">🖥</span> Live Chat
       <span id="chatNavDot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.15);display:inline-block;margin-left:auto;transition:all 0.3s;flex-shrink:0;"></span>
     </div>
-    <div class="nav-item" id="nav-mod-view" onclick="showPage('mod-view')" title="Mod View">
-      <span class="nav-icon">⚔️</span> Mod View
-      <span style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.15);display:inline-block;margin-left:auto;transition:all 0.3s;flex-shrink:0;"></span>
-    </div>
 
     <!-- SETTINGS -->
     <div class="nav-section">Settings</div>
@@ -621,10 +627,6 @@
       </div>
       <div class="nav-group-children" id="navgc-permissions">
         <div class="nav-item" id="nav-admins" onclick="showPage('admins')">Admins</div>
-        <div class="nav-item" id="nav-mods" onclick="showPage('mods');loadMods();">
-          Mod Bots
-          <span id="modPendingDot" style="display:none;width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent);margin-left:auto;flex-shrink:0;"></span>
-        </div>
       </div>
     </div>
 
