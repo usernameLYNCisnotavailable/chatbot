@@ -464,7 +464,7 @@
 <!-- TITLEBAR -->
 <div id="titlebar">
   <span class="title">⚔️ Mod View</span>
-  <button onclick="window.close()" class="close" title="Close">✕</button>
+  <button onclick="fetch('/api/mod/close',{method:'POST'})" class="close" title="Close">✕</button>
 </div>
 
 <!-- APP LAYOUT -->

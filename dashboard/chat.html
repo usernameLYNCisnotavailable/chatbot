@@ -197,7 +197,7 @@
     <div class="chat-header-channel" id="chatChannel">—</div>
     <div class="chat-header-btns">
       <button class="chat-hbtn" id="alwaysOnTopBtn" onclick="toggleAlwaysOnTop()" title="Always on top">📌</button>
-      <button class="chat-hbtn" onclick="window.close()" title="Close">✕</button>
+      <button class="chat-hbtn" onclick="fetch('/api/chat/close',{method:'POST'})" title="Close">✕</button>
     </div>
   </div>
 

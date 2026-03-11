@@ -776,6 +776,10 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
             webPreferences: { nodeIntegration: false, contextIsolation: true }
         });
         chatWin.loadURL('http://localhost:3000/chat.html');
+        chatWin.on('close', (e) => {
+            e.preventDefault();
+            chatWin.hide();
+        });
         chatWin.on('closed', () => { chatWin = null; });
         res.json({ success: true });
     });
@@ -783,6 +787,16 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
     server.post('/api/chat/always-on-top', (req, res) => {
         const { value } = req.body;
         if (chatWin && !chatWin.isDestroyed()) chatWin.setAlwaysOnTop(!!value);
+        res.json({ success: true });
+    });
+
+    server.post('/api/chat/close', (req, res) => {
+        if (chatWin && !chatWin.isDestroyed()) chatWin.hide();
+        res.json({ success: true });
+    });
+
+    server.post('/api/mod/close', (req, res) => {
+        if (modWin && !modWin.isDestroyed()) modWin.hide();
         res.json({ success: true });
     });
 
@@ -851,6 +865,10 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
             webPreferences: { nodeIntegration: false, contextIsolation: true }
         });
         modWin.loadURL(url);
+        modWin.on('close', (e) => {
+            e.preventDefault();
+            modWin.hide();
+        });
         modWin.on('closed', () => { modWin = null; });
         res.json({ success: true });
     });
@@ -1151,8 +1169,8 @@ function createWindow() {
     }, 4000);
 
     mainWindow.on('closed', () => {
-        if (chatWin && !chatWin.isDestroyed()) chatWin.close();
-        if (modWin && !modWin.isDestroyed()) modWin.close();
+        if (chatWin && !chatWin.isDestroyed()) chatWin.destroy();
+        if (modWin && !modWin.isDestroyed()) modWin.destroy();
         mainWindow = null;
     });
 }
