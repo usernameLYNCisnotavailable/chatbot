@@ -759,6 +759,7 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
     // Open standalone chat window
     server.get('/api/chat/open', (req, res) => {
         if (chatWin && !chatWin.isDestroyed()) {
+            chatWin.show();
             chatWin.focus();
             return res.json({ success: true });
         }
@@ -778,15 +779,9 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
         chatWin.loadURL('http://localhost:3000/chat.html');
         chatWin.on('close', (e) => {
             e.preventDefault();
-            chatWin.hide();
+            setImmediate(() => { if (chatWin && !chatWin.isDestroyed()) chatWin.hide(); });
         });
         chatWin.on('closed', () => { chatWin = null; });
-        res.json({ success: true });
-    });
-
-    server.post('/api/chat/always-on-top', (req, res) => {
-        const { value } = req.body;
-        if (chatWin && !chatWin.isDestroyed()) chatWin.setAlwaysOnTop(!!value);
         res.json({ success: true });
     });
 
@@ -795,8 +790,9 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
         res.json({ success: true });
     });
 
-    server.post('/api/mod/close', (req, res) => {
-        if (modWin && !modWin.isDestroyed()) modWin.hide();
+    server.post('/api/chat/always-on-top', (req, res) => {
+        const { value } = req.body;
+        if (chatWin && !chatWin.isDestroyed()) chatWin.setAlwaysOnTop(!!value);
         res.json({ success: true });
     });
 
@@ -849,6 +845,7 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
 
         if (modWin && !modWin.isDestroyed()) {
             modWin.loadURL(url);
+            modWin.show();
             modWin.focus();
             return res.json({ success: true });
         }
@@ -867,9 +864,14 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
         modWin.loadURL(url);
         modWin.on('close', (e) => {
             e.preventDefault();
-            modWin.hide();
+            setImmediate(() => { if (modWin && !modWin.isDestroyed()) modWin.hide(); });
         });
         modWin.on('closed', () => { modWin = null; });
+        res.json({ success: true });
+    });
+
+    server.post('/api/mod/close', (req, res) => {
+        if (modWin && !modWin.isDestroyed()) modWin.hide();
         res.json({ success: true });
     });
 
@@ -1197,6 +1199,8 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
+    // Only quit if the main window is actually gone; child windows being hidden should not exit the app
+    if (mainWindow && !mainWindow.isDestroyed()) return;
     if (botProcess) botProcess.kill();
     if (reactorProcess) reactorProcess.kill();
     if (process.platform !== 'darwin') app.quit();
