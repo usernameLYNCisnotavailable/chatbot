@@ -605,6 +605,10 @@
       <span class="nav-icon">🖥</span> Live Chat
       <span id="chatNavDot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.15);display:inline-block;margin-left:auto;transition:all 0.3s;flex-shrink:0;"></span>
     </div>
+    <div class="nav-item" id="nav-mod-view" onclick="showPage('mod-view')" title="Mod View">
+      <span class="nav-icon">⚔️</span> Mod View
+      <span style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.15);display:inline-block;margin-left:auto;transition:all 0.3s;flex-shrink:0;"></span>
+    </div>
 
     <!-- SETTINGS -->
     <div class="nav-section">Settings</div>
@@ -1157,8 +1161,8 @@
     </div>
 
 
-    <!-- GUEST CHANNELS PAGE -->
-    <div class="page" id="page-guest">
+<!-- GUEST CHANNELS PAGE -->
+<div class="page" id="page-guest">
       <div class="cmd-page-wrap">
         <div class="cmd-topbar">
           <div class="cmd-title-block">
@@ -1185,7 +1189,21 @@
 
         </div>
       </div>
+</div>
+
+<!-- MOD VIEW PAGE -->
+<div class="page" id="page-mod-view">
+  <div class="cmd-page-wrap">
+    <div class="cmd-topbar">
+      <div class="cmd-title-block">
+        <div class="cmd-title">Mod View</div>
+        <div class="cmd-sub">Open a mod experience for a channel you moderate</div>
+      </div>
+      <button class="cmd-add-btn" onclick="loadModChannels()">↻ Refresh</button>
     </div>
+    <div id="mod-channels-list" style="padding:0 28px 28px;"></div>
+  </div>
+</div>
 
 <!-- TIMERS PAGE -->
 <div class="page" id="page-timers">
@@ -1505,6 +1523,7 @@
     if (page) page.classList.add('active');
     if (nav) { nav.classList.add('active'); openNavGroupFor(name); }
     if (name === 'groups') refreshGroupSelects();
+    if (name === 'mod-view') loadModChannels();
     if (name === 'actions' && inlineEditor) setTimeout(() => inlineEditor.layout(), 50);
   }
 
@@ -2865,6 +2884,47 @@
     if (session.usingMainAccount) document.getElementById('btnUseMainAccount').style.display = 'none';
     if (session.channel) document.getElementById('accountChannelInput').value = session.channel;
     applyRole(session.role || 'streamer', session.activeUsername);
+  }
+
+  async function loadModChannels() {
+    const el = document.getElementById('mod-channels-list');
+    if (!el) return;
+    el.innerHTML = '<div style="padding:40px 0;text-align:center;opacity:0.4;font-size:0.75rem;">Loading...</div>';
+    try {
+      const res = await fetch('/api/mod/channels');
+      const data = await res.json();
+      if (!data.channels || !data.channels.length) {
+        el.innerHTML = `
+          <div style="padding:60px 0;text-align:center;opacity:0.35;">
+            <div style="font-size:2rem;margin-bottom:12px;">⚔️</div>
+            <div style="font-size:0.75rem;color:var(--muted);">You are not a moderator in any channels</div>
+            <div style="font-size:0.65rem;color:var(--muted-2);margin-top:6px;">Channels where you have mod status will appear here</div>
+          </div>`;
+        return;
+      }
+      el.innerHTML = data.channels.map(ch => `
+        <div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);">
+          <img src="${ch.avatar || ''}" style="width:36px;height:36px;border-radius:50%;background:var(--surface);flex-shrink:0;" onerror="this.style.display='none'">
+          <div style="flex:1;">
+            <div style="font-weight:600;font-size:0.88rem;">${ch.displayName || ch.username}</div>
+            <div style="font-size:0.7rem;color:var(--muted);">twitch.tv/${ch.username}</div>
+          </div>
+          <button class="cmd-add-btn" onclick="openModView('${ch.username}', '${ch.displayName || ch.username}')">Open Mod View</button>
+        </div>
+      `).join('');
+    } catch {
+      el.innerHTML = '<div style="padding:40px 0;text-align:center;opacity:0.4;font-size:0.75rem;color:var(--red);">Failed to load channels</div>';
+    }
+  }
+
+  function openModView(username, displayName) {
+    fetch(`/api/mod/open?channel=${encodeURIComponent(username)}&displayName=${encodeURIComponent(displayName)}`);
+  }
+
+  async function accountLogoutBot() {
+    await fetch('/api/logout-bot', { method: 'POST' });
+    showToast('Bot account disconnected — using your main account');
+    loadSession();
   }
 
   async function accountLogout() {

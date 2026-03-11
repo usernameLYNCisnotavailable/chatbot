@@ -7,6 +7,7 @@ let mainWindow;
 let botProcess = null;
 let reactorProcess = null;
 let chatWin = null;
+let modWin = null;
 
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -155,7 +156,7 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
     // ---- AUTH ----
     // Streamer signs in with their main Twitch account
     server.get('/auth/streamer', (req, res) => {
-        const url = `https://id.twitch.tv/oauth2/authorize?client_id=${TWITCH_CLIENT_ID}&redirect_uri=${encodeURIComponent(TWITCH_REDIRECT_URI)}&response_type=code&scope=chat:read+chat:edit+user:read:email+moderation:read&state=streamer&force_verify=true`;
+        const url = `https://id.twitch.tv/oauth2/authorize?client_id=${TWITCH_CLIENT_ID}&redirect_uri=${encodeURIComponent(TWITCH_REDIRECT_URI)}&response_type=code&scope=chat:read+chat:edit+user:read:email+moderation:read+user:read:moderated_channels&state=streamer&force_verify=true`;
         shell.openExternal(url);
         res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{background:#0a0a0a;color:#f0f0f0;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column;gap:12px;}h2{margin:0;font-size:1.1rem;}p{margin:0;color:rgba(255,255,255,0.4);font-size:0.75rem;text-align:center;}</style></head><body><h2>🌐 Opening in your browser...</h2><p>Sign in with Twitch in the browser window that just opened.<br>This page will update automatically when done.</p><script>const check=setInterval(async()=>{const cfg=await fetch('/api/config').then(r=>r.json()).catch(()=>({}));if(cfg.streamerUsername){clearInterval(check);window.location.replace('/setup?streamer_authed=true');}},1500);</script></body></html>`);
     });
@@ -411,6 +412,7 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
         const config = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
         config.loggedIn = false;
         config.streamerToken = '';
+        config.setupComplete = false;
         fs.writeFileSync(getDataPath('config.json'), JSON.stringify(config, null, 4));
         res.json({ success: true });
     });
@@ -784,6 +786,75 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
         res.json({ success: true });
     });
 
+    // Get channels the streamer is a mod in
+    server.get('/api/mod/channels', async (req, res) => {
+        try {
+            const config = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
+            const token = (config.streamerToken || '').replace('oauth:', '');
+            if (!token) return res.json({ channels: [] });
+
+            // Get streamer's user ID first
+            const userRes = await axios.get('https://api.twitch.tv/helix/users', {
+                headers: { 'Authorization': `Bearer ${token}`, 'Client-Id': TWITCH_CLIENT_ID }
+            });
+            const userId = userRes.data.data[0]?.id;
+            if (!userId) return res.json({ channels: [] });
+
+            // Get channels they moderate
+            const modRes = await axios.get(`https://api.twitch.tv/helix/moderation/channels?user_id=${userId}&first=100`, {
+                headers: { 'Authorization': `Bearer ${token}`, 'Client-Id': TWITCH_CLIENT_ID }
+            });
+            const channels = modRes.data.data || [];
+
+            // Fetch avatars for each channel
+            if (channels.length) {
+                const logins = channels.map(c => `login=${c.broadcaster_login}`).join('&');
+                const avatarRes = await axios.get(`https://api.twitch.tv/helix/users?${logins}`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Client-Id': TWITCH_CLIENT_ID }
+                });
+                const avatarMap = {};
+                (avatarRes.data.data || []).forEach(u => { avatarMap[u.login] = u.profile_image_url; });
+                channels.forEach(c => { c.avatar = avatarMap[c.broadcaster_login] || ''; });
+            }
+
+            res.json({ channels: channels.map(c => ({
+                username: c.broadcaster_login,
+                displayName: c.broadcaster_name,
+                avatar: c.avatar || ''
+            }))});
+        } catch (e) {
+            res.json({ channels: [], error: e.message });
+        }
+    });
+
+    // Open Mod View window for a specific channel
+    server.get('/api/mod/open', (req, res) => {
+        const channel = req.query.channel || '';
+        const displayName = req.query.displayName || channel;
+        const url = `http://localhost:3000/mod-view.html?channel=${encodeURIComponent(channel)}&displayName=${encodeURIComponent(displayName)}`;
+
+        if (modWin && !modWin.isDestroyed()) {
+            modWin.loadURL(url);
+            modWin.focus();
+            return res.json({ success: true });
+        }
+        modWin = new BrowserWindow({
+            width: 1000,
+            height: 700,
+            minWidth: 700,
+            minHeight: 500,
+            frame: false,
+            transparent: false,
+            resizable: true,
+            title: `Mod View — ${displayName}`,
+            backgroundColor: '#111114',
+            webPreferences: { nodeIntegration: false, contextIsolation: true }
+        });
+        modWin.loadURL(url);
+        modWin.on('closed', () => { modWin = null; });
+        res.json({ success: true });
+    });
+
     server.broadcastChat = (data) => {
         const payload = `data: ${JSON.stringify(data)}\n\n`;
         chatClients.forEach(client => client.write(payload));
@@ -940,6 +1011,113 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
         socket.on('error', () => res.json({ success: false, error: 'Bot not running' }));
     });
 
+    // ---- MOD VIEW HTML ----
+    server.get('/mod-view.html', (req, res) => {
+        res.sendFile(path.join(appDir, 'dashboard', 'mod-view.html'));
+    });
+
+    // ---- MOD ACTIONS (timeout / ban / unban / delete) ----
+    async function modAction(type, body, config) {
+        const token = (config.streamerToken || '').replace('oauth:', '');
+        const clientId = TWITCH_CLIENT_ID;
+        // Get broadcaster ID
+        const brRes = await axios.get(`https://api.twitch.tv/helix/users?login=${config.channel || config.streamerUsername}`, {
+            headers: { 'Authorization': `Bearer ${token}`, 'Client-Id': clientId }
+        });
+        const broadcasterId = brRes.data.data[0]?.id;
+        if (!broadcasterId) throw new Error('Could not resolve broadcaster ID');
+
+        if (type === 'timeout' || type === 'ban') {
+            // Get target user ID
+            const uRes = await axios.get(`https://api.twitch.tv/helix/users?login=${body.username}`, {
+                headers: { 'Authorization': `Bearer ${token}`, 'Client-Id': clientId }
+            });
+            const userId = uRes.data.data[0]?.id;
+            if (!userId) throw new Error('User not found');
+            const payload = { data: { user_id: userId } };
+            if (type === 'timeout') payload.data.duration = body.duration || 300;
+            return axios.post(`https://api.twitch.tv/helix/moderation/bans?broadcaster_id=${broadcasterId}&moderator_id=${broadcasterId}`,
+                payload, { headers: { 'Authorization': `Bearer ${token}`, 'Client-Id': clientId } });
+        }
+        if (type === 'unban') {
+            const uRes = await axios.get(`https://api.twitch.tv/helix/users?login=${body.username}`, {
+                headers: { 'Authorization': `Bearer ${token}`, 'Client-Id': clientId }
+            });
+            const userId = uRes.data.data[0]?.id;
+            if (!userId) throw new Error('User not found');
+            return axios.delete(`https://api.twitch.tv/helix/moderation/bans?broadcaster_id=${broadcasterId}&moderator_id=${broadcasterId}&user_id=${userId}`,
+                { headers: { 'Authorization': `Bearer ${token}`, 'Client-Id': clientId } });
+        }
+        if (type === 'delete') {
+            return axios.delete(`https://api.twitch.tv/helix/moderation/chat?broadcaster_id=${broadcasterId}&moderator_id=${broadcasterId}&message_id=${body.messageId}`,
+                { headers: { 'Authorization': `Bearer ${token}`, 'Client-Id': clientId } });
+        }
+    }
+
+    server.post('/api/mod/timeout', async (req, res) => {
+        try {
+            const config = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
+            await modAction('timeout', req.body, config);
+            res.json({ success: true });
+        } catch (e) { res.json({ success: false, error: e.message }); }
+    });
+
+    server.post('/api/mod/ban', async (req, res) => {
+        try {
+            const config = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
+            await modAction('ban', req.body, config);
+            res.json({ success: true });
+        } catch (e) { res.json({ success: false, error: e.message }); }
+    });
+
+    server.post('/api/mod/unban', async (req, res) => {
+        try {
+            const config = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
+            await modAction('unban', req.body, config);
+            res.json({ success: true });
+        } catch (e) { res.json({ success: false, error: e.message }); }
+    });
+
+    server.post('/api/mod/delete', async (req, res) => {
+        try {
+            const config = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
+            await modAction('delete', req.body, config);
+            res.json({ success: true });
+        } catch (e) { res.json({ success: false, error: e.message }); }
+    });
+
+    // ---- BANNED WORDS ----
+    server.get('/api/banned-words', (req, res) => {
+        try {
+            const p = getDataPath('banned-words.json');
+            const words = fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : [];
+            res.json({ words });
+        } catch { res.json({ words: [] }); }
+    });
+
+    server.post('/api/banned-words', (req, res) => {
+        try {
+            const { word, type } = req.body;
+            if (!word) return res.json({ success: false, error: 'No word provided' });
+            const p = getDataPath('banned-words.json');
+            const words = fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : [];
+            if (!words.find(w => w.word === word)) words.push({ word, type: type || 'exact' });
+            fs.writeFileSync(p, JSON.stringify(words, null, 2));
+            res.json({ success: true });
+        } catch (e) { res.json({ success: false, error: e.message }); }
+    });
+
+    server.delete('/api/banned-words', (req, res) => {
+        try {
+            const { word } = req.body;
+            const p = getDataPath('banned-words.json');
+            const words = fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : [];
+            const filtered = words.filter(w => w.word !== word);
+            fs.writeFileSync(p, JSON.stringify(filtered, null, 2));
+            res.json({ success: true });
+        } catch (e) { res.json({ success: false, error: e.message }); }
+    });
+
     // ---- STATIC (must be last) ----
     server.use(express.static(path.join(appDir, 'dashboard'), { index: false }));
 
@@ -974,6 +1152,7 @@ function createWindow() {
 
     mainWindow.on('closed', () => {
         if (chatWin && !chatWin.isDestroyed()) chatWin.close();
+        if (modWin && !modWin.isDestroyed()) modWin.close();
         mainWindow = null;
     });
 }

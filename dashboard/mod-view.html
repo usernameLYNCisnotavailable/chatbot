@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mod View — ChatCommander</title>
+<style>
+  :root {
+    --bg: #111114;
+    --surface: rgba(255,255,255,0.045);
+    --surface-raised: rgba(255,255,255,0.07);
+    --border: rgba(255,255,255,0.09);
+    --border-strong: rgba(255,255,255,0.14);
+    --text: #f2f2f7;
+    --muted: rgba(235,235,245,0.45);
+    --muted-2: rgba(235,235,245,0.25);
+    --accent: #0a84ff;
+    --accent-soft: rgba(10,132,255,0.14);
+    --green: #30d158;
+    --green-soft: rgba(48,209,88,0.12);
+    --red: #ff453a;
+    --red-soft: rgba(255,69,58,0.12);
+    --yellow: #ffd60a;
+    --yellow-soft: rgba(255,214,10,0.12);
+    --purple: #bf5af2;
+    --purple-soft: rgba(191,90,242,0.12);
+    --radius: 10px;
+    --titlebar-h: 40px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  *::-webkit-scrollbar { width: 3px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+    font-size: 13px;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+  }
+
+  /* ---- TITLEBAR ---- */
+  #titlebar {
+    height: var(--titlebar-h);
+    background: rgba(255,255,255,0.03);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 12px 0 16px;
+    gap: 10px;
+    -webkit-app-region: drag;
+    flex-shrink: 0;
+  }
+  #titlebar .title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    flex: 1;
+  }
+  #titlebar button {
+    -webkit-app-region: no-drag;
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    transition: background 0.15s, color 0.15s;
+  }
+  #titlebar button:hover { background: var(--surface-raised); color: var(--text); }
+  #titlebar button.close:hover { background: var(--red-soft); color: var(--red); }
+
+  /* ---- MAIN LAYOUT ---- */
+  #app {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* ---- SIDEBAR ---- */
+  #sidebar {
+    width: 200px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 12px 8px;
+    gap: 2px;
+    overflow-y: auto;
+  }
+  .sidebar-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted-2);
+    padding: 10px 8px 4px;
+  }
+  .sidebar-btn {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 10px;
+    border-radius: 7px;
+    border: none;
+    background: none;
+    color: var(--muted);
+    font-size: 13px;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    transition: background 0.12s, color 0.12s;
+  }
+  .sidebar-btn:hover { background: var(--surface-raised); color: var(--text); }
+  .sidebar-btn.active { background: var(--accent-soft); color: var(--accent); }
+  .sidebar-btn .icon { width: 16px; text-align: center; flex-shrink: 0; }
+
+  /* ---- CONTENT ---- */
+  #content {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  .page { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+  .page.active { display: flex; }
+
+  /* ---- PAGE HEADER ---- */
+  .page-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .page-header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 3px;
+  }
+  .page-header p { color: var(--muted); font-size: 12px; }
+
+  /* ---- CHAT PAGE ---- */
+  #page-chat {
+    flex-direction: row;
+  }
+
+  #chat-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-right: 1px solid var(--border);
+  }
+
+  #chat-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  #chat-header .channel-name {
+    font-weight: 600;
+    font-size: 14px;
+  }
+  #chat-header .live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--red);
+    box-shadow: 0 0 6px var(--red);
+    animation: pulse 2s infinite;
+  }
+  #chat-header .live-dot.offline { background: var(--muted-2); box-shadow: none; animation: none; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  #messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .msg {
+    padding: 4px 14px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    transition: background 0.1s;
+    border-radius: 4px;
+    margin: 0 4px;
+  }
+  .msg:hover { background: var(--surface); }
+  .msg .ts { color: var(--muted-2); font-size: 10px; margin-right: 6px; }
+  .msg .badges { margin-right: 4px; font-size: 11px; }
+  .msg .username { font-weight: 600; margin-right: 4px; cursor: pointer; }
+  .msg .username:hover { text-decoration: underline; }
+  .msg .text { color: var(--text); }
+  .msg.bot-msg .text { color: var(--green); }
+  .msg.highlight { background: var(--yellow-soft); }
+  .msg.deleted .text { text-decoration: line-through; color: var(--muted-2); }
+
+  #chat-input-row {
+    display: flex;
+    gap: 8px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  #chat-input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    color: var(--text);
+    font-size: 13px;
+    padding: 7px 11px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  #chat-input:focus { border-color: var(--border-strong); }
+  #chat-send {
+    background: var(--accent);
+    border: none;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 7px 14px;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  #chat-send:hover { opacity: 0.85; }
+
+  /* ---- MOD PANEL (right side of chat) ---- */
+  #mod-panel {
+    width: 220px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #mod-panel .panel-header {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+
+  /* User card (shown when you click a username) */
+  #user-card {
+    padding: 14px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    display: none;
+  }
+  #user-card.visible { display: block; }
+  #user-card .uc-name {
+    font-weight: 700;
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+  #user-card .uc-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .mod-action-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.12s, border-color 0.12s;
+    width: 100%;
+  }
+  .mod-action-btn:hover { background: var(--surface-raised); border-color: var(--border-strong); }
+  .mod-action-btn.danger { color: var(--red); }
+  .mod-action-btn.danger:hover { background: var(--red-soft); border-color: rgba(255,69,58,0.25); }
+  .mod-action-btn.warn { color: var(--yellow); }
+  .mod-action-btn.warn:hover { background: var(--yellow-soft); border-color: rgba(255,214,10,0.25); }
+  .mod-action-btn.success { color: var(--green); }
+  .mod-action-btn.success:hover { background: var(--green-soft); border-color: rgba(48,209,88,0.25); }
+
+  /* Timeout duration picker */
+  #timeout-picker {
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 4px;
+  }
+  #timeout-picker.visible { display: flex; }
+  .timeout-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.12s;
+    text-align: left;
+  }
+  .timeout-btn:hover { background: var(--yellow-soft); color: var(--yellow); }
+
+  /* Recent actions log in mod panel */
+  #mod-log {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+  }
+  .mod-log-entry {
+    padding: 5px 14px;
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.4;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .mod-log-entry .log-user { color: var(--text); font-weight: 600; }
+  .mod-log-entry .log-action { color: var(--red); }
+  .mod-log-entry .log-action.warn { color: var(--yellow); }
+  .mod-log-entry .log-action.success { color: var(--green); }
+  .mod-log-entry .log-ts { color: var(--muted-2); font-size: 10px; float: right; }
+
+  /* ---- BANNED WORDS PAGE ---- */
+  #page-banned {
+    overflow-y: auto;
+  }
+  .banned-list {
+    padding: 0 24px;
+  }
+  .banned-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .banned-row .word {
+    flex: 1;
+    font-size: 13px;
+    font-family: 'SF Mono', 'Cascadia Code', monospace;
+    color: var(--red);
+  }
+  .banned-row .word-type {
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 2px 7px;
+    border-radius: 4px;
+  }
+  .banned-row .del-btn {
+    background: none;
+    border: none;
+    color: var(--muted-2);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: background 0.12s, color 0.12s;
+  }
+  .banned-row .del-btn:hover { background: var(--red-soft); color: var(--red); }
+  .add-word-row {
+    display: flex;
+    gap: 8px;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .form-input {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    color: var(--text);
+    font-size: 13px;
+    padding: 7px 11px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .form-input:focus { border-color: var(--border-strong); }
+  select.form-input option { background: #1c1c1e; }
+  .btn {
+    background: var(--accent);
+    border: none;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 7px 14px;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn.secondary {
+    background: var(--surface-raised);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn.secondary:hover { background: rgba(255,255,255,0.1); }
+  .btn.danger { background: var(--red); }
+
+  /* ---- EMPTY / LOADING STATES ---- */
+  .empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--muted);
+    padding: 40px;
+    text-align: center;
+  }
+  .empty-state .icon { font-size: 32px; margin-bottom: 4px; }
+  .empty-state h3 { font-size: 14px; font-weight: 600; color: var(--text); }
+  .empty-state p { font-size: 12px; max-width: 260px; }
+
+  /* ---- TOAST ---- */
+  #toast {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--surface-raised);
+    border: 1px solid var(--border-strong);
+    color: var(--text);
+    font-size: 12px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 9999;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- TITLEBAR -->
+<div id="titlebar">
+  <span class="title">⚔️ Mod View</span>
+  <button onclick="window.close()" class="close" title="Close">✕</button>
+</div>
+
+<!-- APP LAYOUT -->
+<div id="app">
+
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div class="sidebar-label">Moderation</div>
+    <button class="sidebar-btn active" onclick="showPage('page-chat')" data-page="page-chat">
+      <span class="icon">💬</span> Live Chat
+    </button>
+    <button class="sidebar-btn" onclick="showPage('page-banned')" data-page="page-banned">
+      <span class="icon">🚫</span> Banned Words
+    </button>
+  </div>
+
+  <!-- CONTENT -->
+  <div id="content">
+
+    <!-- CHAT PAGE -->
+    <div id="page-chat" class="page active">
+      <div id="chat-area">
+        <div id="chat-header">
+          <div id="live-dot" class="live-dot offline"></div>
+          <span id="channel-label" class="channel-name">Connecting...</span>
+        </div>
+        <div id="messages"></div>
+        <div id="chat-input-row">
+          <input id="chat-input" class="form-input" type="text" placeholder="Send a message..." maxlength="500">
+          <button id="chat-send" class="btn">Send</button>
+        </div>
+      </div>
+
+      <div id="mod-panel">
+        <div class="panel-header">Mod Actions</div>
+
+        <!-- User card -->
+        <div id="user-card">
+          <div id="uc-name" class="uc-name">—</div>
+          <div class="uc-actions">
+            <button class="mod-action-btn warn" onclick="doTimeout()">⏱ Timeout</button>
+            <div id="timeout-picker">
+              <button class="timeout-btn" onclick="execTimeout(60)">1 minute</button>
+              <button class="timeout-btn" onclick="execTimeout(300)">5 minutes</button>
+              <button class="timeout-btn" onclick="execTimeout(600)">10 minutes</button>
+              <button class="timeout-btn" onclick="execTimeout(3600)">1 hour</button>
+              <button class="timeout-btn" onclick="execTimeout(86400)">24 hours</button>
+            </div>
+            <button class="mod-action-btn danger" onclick="doBan()">🔨 Ban</button>
+            <button class="mod-action-btn success" onclick="doUnban()">✅ Unban</button>
+            <button class="mod-action-btn" onclick="doDeleteLast()">🗑 Delete Last Msg</button>
+          </div>
+        </div>
+
+        <!-- Actions log -->
+        <div class="panel-header" style="margin-top:8px;">Recent Actions</div>
+        <div id="mod-log">
+          <div class="empty-state" style="padding:20px;">
+            <p>No actions yet</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BANNED WORDS PAGE -->
+    <div id="page-banned" class="page">
+      <div class="page-header">
+        <h1>Banned Words</h1>
+        <p>Words and phrases that get auto-deleted from chat</p>
+      </div>
+      <div class="add-word-row">
+        <input id="new-word-input" class="form-input" style="flex:1;" type="text" placeholder="Add word or phrase...">
+        <select id="new-word-type" class="form-input">
+          <option value="exact">Exact match</option>
+          <option value="contains">Contains</option>
+          <option value="regex">Regex</option>
+        </select>
+        <button class="btn" onclick="addBannedWord()">Add</button>
+      </div>
+      <div class="banned-list" id="banned-list"></div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /app -->
+
+<div id="toast"></div>
+
+<script>
+// ---- READ CHANNEL FROM URL ----
+const urlParams = new URLSearchParams(window.location.search);
+const targetChannel = urlParams.get('channel') || '';
+const targetDisplayName = urlParams.get('displayName') || targetChannel;
+
+if (targetChannel) {
+  document.getElementById('channel-label').textContent = '#' + targetChannel;
+  document.querySelector('#titlebar .title').textContent = `⚔️ Mod View — ${targetDisplayName}`;
+}
+
+// ---- NAV ----
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+  const page = document.getElementById(id);
+  if (page) page.classList.add('active');
+  const btn = document.querySelector(`[data-page="${id}"]`);
+  if (btn) btn.classList.add('active');
+}
+
+// ---- TOAST ----
+function toast(msg, duration = 2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), duration);
+}
+
+// ---- CHAT SSE ----
+let channelName = '';
+const messages = document.getElementById('messages');
+const MAX_MESSAGES = 200;
+
+const evtSource = new EventSource('http://localhost:3000/api/chat/stream');
+
+evtSource.onopen = () => {
+  document.getElementById('live-dot').classList.remove('offline');
+};
+evtSource.onerror = () => {
+  document.getElementById('live-dot').classList.add('offline');
+};
+
+evtSource.onmessage = (e) => {
+  try {
+    const data = JSON.parse(e.data);
+    if (data.type === 'chat') appendMessage(data);
+    if (data.type === 'channel' && data.channel) {
+      channelName = data.channel;
+      document.getElementById('channel-label').textContent = '#' + channelName;
+    }
+  } catch {}
+};
+
+function formatTs() {
+  const d = new Date();
+  return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+}
+
+function appendMessage(data) {
+  const isAtBottom = messages.scrollHeight - messages.scrollTop - messages.clientHeight < 60;
+
+  const div = document.createElement('div');
+  div.className = 'msg' + (data.isBot ? ' bot-msg' : '');
+  div.dataset.username = (data.username || '').toLowerCase();
+  div.dataset.msgId = data.id || '';
+
+  const badges = [];
+  if (data.isMod) badges.push('🛡️');
+  if (data.isSub) badges.push('⭐');
+  if (data.isBot) badges.push('🤖');
+
+  div.innerHTML = `
+    <span class="ts">${formatTs()}</span>
+    ${badges.length ? `<span class="badges">${badges.join('')}</span>` : ''}
+    <span class="username" style="color:${data.color || '#a78bfa'}"
+      onclick="selectUser('${(data.username||'').replace(/'/g,"\\'")}', '${(data.id||'')}')">
+      ${esc(data.displayName || data.username || 'unknown')}:
+    </span>
+    <span class="text">${esc(data.message || '')}</span>
+  `;
+
+  messages.appendChild(div);
+
+  // Trim old messages
+  while (messages.children.length > MAX_MESSAGES) {
+    messages.removeChild(messages.firstChild);
+  }
+
+  if (isAtBottom) messages.scrollTop = messages.scrollHeight;
+}
+
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+// ---- SEND MESSAGE ----
+document.getElementById('chat-send').addEventListener('click', sendMessage);
+document.getElementById('chat-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') sendMessage();
+});
+
+function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  fetch('http://localhost:3000/api/chat/send', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: text })
+  }).catch(() => toast('Failed to send'));
+  input.value = '';
+}
+
+// ---- MOD ACTIONS ----
+let selectedUser = null;
+let selectedMsgId = null;
+
+function selectUser(username, msgId) {
+  selectedUser = username;
+  selectedMsgId = msgId;
+  document.getElementById('uc-name').textContent = username;
+  document.getElementById('user-card').classList.add('visible');
+  document.getElementById('timeout-picker').classList.remove('visible');
+}
+
+function doTimeout() {
+  document.getElementById('timeout-picker').classList.toggle('visible');
+}
+
+async function execTimeout(seconds) {
+  if (!selectedUser) return;
+  const label = seconds < 60 ? seconds + 's' : seconds < 3600 ? (seconds/60) + 'm' : (seconds/3600) + 'h';
+  try {
+    const res = await fetch('http://localhost:3000/api/mod/timeout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: selectedUser, duration: seconds })
+    });
+    const d = await res.json();
+    if (d.success) {
+      addModLog(selectedUser, `timed out (${label})`, 'warn');
+      toast(`⏱ ${selectedUser} timed out for ${label}`);
+    } else {
+      toast('Failed: ' + (d.error || 'unknown'));
+    }
+  } catch {
+    toast('Request failed');
+  }
+  document.getElementById('timeout-picker').classList.remove('visible');
+}
+
+async function doBan() {
+  if (!selectedUser) return;
+  if (!confirm(`Ban ${selectedUser}?`)) return;
+  try {
+    const res = await fetch('http://localhost:3000/api/mod/ban', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: selectedUser })
+    });
+    const d = await res.json();
+    if (d.success) {
+      addModLog(selectedUser, 'banned', 'action');
+      toast(`🔨 ${selectedUser} banned`);
+      // Visually mark their messages
+      document.querySelectorAll(`.msg[data-username="${selectedUser.toLowerCase()}"]`)
+        .forEach(m => m.classList.add('deleted'));
+    } else {
+      toast('Failed: ' + (d.error || 'unknown'));
+    }
+  } catch { toast('Request failed'); }
+}
+
+async function doUnban() {
+  if (!selectedUser) return;
+  try {
+    const res = await fetch('http://localhost:3000/api/mod/unban', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: selectedUser })
+    });
+    const d = await res.json();
+    if (d.success) {
+      addModLog(selectedUser, 'unbanned', 'success');
+      toast(`✅ ${selectedUser} unbanned`);
+    } else {
+      toast('Failed: ' + (d.error || 'unknown'));
+    }
+  } catch { toast('Request failed'); }
+}
+
+async function doDeleteLast() {
+  if (!selectedUser || !selectedMsgId) return;
+  try {
+    const res = await fetch('http://localhost:3000/api/mod/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messageId: selectedMsgId })
+    });
+    const d = await res.json();
+    if (d.success) {
+      const msgEl = document.querySelector(`.msg[data-msg-id="${selectedMsgId}"]`);
+      if (msgEl) msgEl.classList.add('deleted');
+      addModLog(selectedUser, 'message deleted', 'warn');
+      toast(`🗑 Message deleted`);
+    } else {
+      toast('Failed: ' + (d.error || 'unknown'));
+    }
+  } catch { toast('Request failed'); }
+}
+
+// ---- MOD LOG ----
+function addModLog(username, action, type = 'action') {
+  const log = document.getElementById('mod-log');
+  // Clear empty state if present
+  const empty = log.querySelector('.empty-state');
+  if (empty) empty.remove();
+
+  const entry = document.createElement('div');
+  entry.className = 'mod-log-entry';
+  const ts = formatTs();
+  const typeClass = type === 'success' ? 'success' : type === 'warn' ? 'warn' : '';
+  entry.innerHTML = `
+    <span class="log-ts">${ts}</span>
+    <span class="log-user">${esc(username)}</span>
+    <span class="log-action ${typeClass}"> ${esc(action)}</span>
+  `;
+  log.insertBefore(entry, log.firstChild);
+}
+
+// ---- BANNED WORDS ----
+let bannedWords = [];
+
+async function loadBannedWords() {
+  try {
+    const res = await fetch('http://localhost:3000/api/banned-words');
+    const data = await res.json();
+    bannedWords = data.words || [];
+    renderBannedWords();
+  } catch {
+    bannedWords = [];
+    renderBannedWords();
+  }
+}
+
+function renderBannedWords() {
+  const list = document.getElementById('banned-list');
+  if (!bannedWords.length) {
+    list.innerHTML = `<div class="empty-state"><div class="icon">🚫</div><h3>No banned words</h3><p>Add words or phrases above to auto-delete them from chat</p></div>`;
+    return;
+  }
+  list.innerHTML = bannedWords.map((w, i) => `
+    <div class="banned-row">
+      <span class="word">${esc(w.word)}</span>
+      <span class="word-type">${w.type || 'exact'}</span>
+      <button class="del-btn" onclick="removeBannedWord(${i})">✕</button>
+    </div>
+  `).join('');
+}
+
+async function addBannedWord() {
+  const word = document.getElementById('new-word-input').value.trim();
+  const type = document.getElementById('new-word-type').value;
+  if (!word) return;
+  try {
+    const res = await fetch('http://localhost:3000/api/banned-words', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ word, type })
+    });
+    const d = await res.json();
+    if (d.success) {
+      document.getElementById('new-word-input').value = '';
+      await loadBannedWords();
+      toast('Word added');
+    }
+  } catch { toast('Failed to add'); }
+}
+
+async function removeBannedWord(index) {
+  const w = bannedWords[index];
+  if (!w) return;
+  try {
+    const res = await fetch('http://localhost:3000/api/banned-words', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ word: w.word })
+    });
+    const d = await res.json();
+    if (d.success) {
+      await loadBannedWords();
+      toast('Word removed');
+    }
+  } catch { toast('Failed to remove'); }
+}
+
+// Also load channel name from config
+async function loadConfig() {
+  try {
+    const res = await fetch('http://localhost:3000/api/status');
+    const d = await res.json();
+    if (d.channel) {
+      channelName = d.channel;
+      document.getElementById('channel-label').textContent = '#' + d.channel;
+    }
+  } catch {}
+}
+
+// ---- INIT ----
+loadConfig();
+loadBannedWords();
+</script>
+</body>
+</html>

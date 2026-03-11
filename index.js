@@ -86,9 +86,7 @@ client.connect().then(() => {
             }
         });
     } catch(e) {}
-}).catch(err => {
-    console.error('Bot connection failed:', err);
-});
+}).catch(() => {});
 
 // ---- Reply listener on port 9001 ----
 const replyServer = net.createServer((socket) => {
@@ -111,9 +109,7 @@ const replyServer = net.createServer((socket) => {
     socket.on('error', () => {});
 });
 
-replyServer.listen(9001, '127.0.0.1', () => {
-    console.log('Bot reply listener running on port 9001');
-});
+replyServer.listen(9001, '127.0.0.1');
 
 // ---- Auto $50/hr bank bonus ----
 function giveHourlyBonus() {
@@ -122,13 +118,15 @@ function giveHourlyBonus() {
     let mem = {};
     try { mem = JSON.parse(fs.readFileSync(memPath, 'utf8')); } catch(e) { return; }
     let changed = false;
-    for (const key of Object.keys(mem)) {
-        if (key.startsWith('bank_')) {
+    for (const user of activeUsers) {
+        const key = 'bank_' + user;
+        if (key in mem) {
             const current = parseInt(mem[key]) || 0;
             mem[key] = String(current + 50);
             changed = true;
         }
     }
+    activeUsers.clear();
     if (changed) fs.writeFileSync(memPath, JSON.stringify(mem, null, 4));
 }
 
@@ -158,9 +156,10 @@ const sendServer = net.createServer((socket) => {
     socket.on('error', () => {});
 });
 
-sendServer.listen(9002, '127.0.0.1', () => {
-    console.log('Bot send listener running on port 9002');
-});
+sendServer.listen(9002, '127.0.0.1');
+
+// Users who have spoken since the last hourly bonus tick
+const activeUsers = new Set();
 
 // Per-user, per-command cooldown tracker
 const cooldownMap = {};
@@ -207,6 +206,7 @@ client.on('message', (channel, tags, message, self) => {
     if (self) return;
 
     const normalizedChannel = channel.replace('#', '').toLowerCase();
+    activeUsers.add((tags['display-name'] || tags.username || '').toLowerCase());
     const homeChannel = config.channel.replace('#', '').toLowerCase();
     const username = (tags['display-name'] || tags.username || '').toLowerCase();
     const msg = message.trim();
@@ -500,8 +500,4 @@ const guestControlServer = net.createServer({ allowHalfOpen: true }, (socket) =>
     socket.on('error', () => {});
 });
 
-guestControlServer.listen(9003, '127.0.0.1', () => {
-    console.log('Guest channel control running on port 9003');
-});
-
-console.log('ChatCommander is running...');
+guestControlServer.listen(9003, '127.0.0.1');
