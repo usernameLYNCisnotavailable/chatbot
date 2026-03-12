@@ -1328,29 +1328,25 @@ async function overlayLoadSources() {
     ]);
     const statusData = await statusRes.json();
     const videoStatusData = await videoStatusRes.json();
-    const running = statusData.running || videoStatusData.running;
-    overlaySetStatus(running);
+    overlaySetStatus(statusData.running);
     if (statusData.mode) overlaySetMode(statusData.mode);
 
-    // If not running yet, keep polling until auto-launch fires (up to 6s)
-    if (!running) {
+    // If image overlay not running yet, poll until it is
+    if (!statusData.running) {
       let attempts = 0;
       const poll = setInterval(async () => {
         attempts++;
         try {
-          const [s1, s2] = await Promise.all([
-            fetch('/api/overlay/status').then(r => r.json()),
-            fetch('/api/video-overlay/status').then(r => r.json())
-          ]);
-          if (s1.running || s2.running) {
-            overlaySetStatus(true);
-            if (s1.mode) overlaySetMode(s1.mode);
-            clearInterval(poll);
-          }
+          const s = await fetch('/api/overlay/status').then(r => r.json());
+          if (s.running) { overlaySetStatus(true); if (s.mode) overlaySetMode(s.mode); clearInterval(poll); }
         } catch(e) {}
-        if (attempts >= 12) clearInterval(poll); // stop after 6s
+        if (attempts >= 12) clearInterval(poll);
       }, 500);
     }
+
+    // Video overlay ready comes via SSE READY event — handled in overlayStartVideoSSE
+    // If already running, mark ready immediately
+    if (videoStatusData.running) videoOverlayReady = true;
 
     const data = await res.json();
     if (Array.isArray(data) && data.length) {
