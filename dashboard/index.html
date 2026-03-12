@@ -1171,18 +1171,23 @@
 <div class="page" id="page-overlay">
   <div class="page-header">
     <h1>Overlay</h1>
-    <p class="page-subtitle">Drag images directly on your screen. OBS captures your display automatically.</p>
+    <p class="page-subtitle">Drag images directly on your screen. Switch to Stream mode so only your stream sees it.</p>
   </div>
 
   <div style="display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:14px;">
     <div id="overlayStatusDot" style="width:10px;height:10px;border-radius:50%;background:var(--muted-2);flex-shrink:0;transition:all 0.3s;"></div>
     <span id="overlayStatusText" style="flex:1;color:var(--muted);font-size:13px;">Overlay not running</span>
+    <!-- Mode toggle -->
+    <div id="overlayModeGroup" style="display:flex;align-items:center;gap:6px;background:var(--surface-raised);border:1px solid var(--border);border-radius:8px;padding:3px;">
+      <button id="overlayModeDesktop" onclick="overlaySetMode('desktop')" style="font-size:12px;padding:4px 12px;border-radius:6px;border:none;cursor:pointer;background:var(--accent);color:#fff;transition:all 0.2s;">🖥 Desktop</button>
+      <button id="overlayModeStream" onclick="overlaySetMode('stream')" style="font-size:12px;padding:4px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--muted);transition:all 0.2s;">📡 Stream only</button>
+    </div>
     <button class="btn btn-primary" id="overlayLaunchBtn" onclick="overlayLaunch()">Launch Overlay</button>
     <button class="btn btn-danger" id="overlayStopBtn" onclick="overlayStop()" style="display:none">Stop Overlay</button>
   </div>
 
   <div style="background:var(--accent-soft);border:1px solid var(--accent);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--muted);margin-bottom:20px;">
-    💡 Once launched, drag the <strong>center</strong> of a source to move it. Drag the <strong>bottom-right corner</strong> to resize. <strong>Right-click</strong> a source to remove it.
+    💡 <strong>Desktop mode:</strong> overlay sits above everything on your monitor. <strong>Stream mode:</strong> invisible on your screen — add a Window Capture in OBS pointed at "ChatCommander Overlay" and only your stream sees it. Drag the <strong>center</strong> of a source to move it, <strong>bottom-right corner</strong> to resize, <strong>right-click</strong> to remove.
   </div>
 
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
@@ -1275,12 +1280,27 @@
 <script>
 const overlayState = { running: false, sources: [] };
 let overlayNextId = 1;
+let overlayMode = 'desktop'; // 'desktop' or 'stream'
+
+function overlaySetMode(mode) {
+  overlayMode = mode;
+  const dBtn = document.getElementById('overlayModeDesktop');
+  const sBtn = document.getElementById('overlayModeStream');
+  if (mode === 'desktop') {
+    dBtn.style.background = 'var(--accent)'; dBtn.style.color = '#fff';
+    sBtn.style.background = 'transparent'; sBtn.style.color = 'var(--muted)';
+  } else {
+    sBtn.style.background = 'var(--accent)'; sBtn.style.color = '#fff';
+    dBtn.style.background = 'transparent'; dBtn.style.color = 'var(--muted)';
+  }
+}
 
 async function overlayLoadSources() {
   try {
     const [statusRes, res] = await Promise.all([fetch('/api/overlay/status'), fetch('/api/overlay/sources')]);
     const statusData = await statusRes.json();
     overlaySetStatus(statusData.running);
+    if (statusData.mode) overlaySetMode(statusData.mode);
     const data = await res.json();
     if (Array.isArray(data) && data.length) {
       let positions = [];
@@ -1314,7 +1334,8 @@ function overlaySetStatus(running) {
 }
 
 async function overlayLaunch() {
-  const res = await fetch('/api/overlay/launch', { method: 'POST' });
+  const res = await fetch('/api/overlay/launch', { method: 'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ mode: overlayMode }) });
   const data = await res.json();
   if (data.ok) overlaySetStatus(true);
   else alert('Failed to launch: ' + (data.error || 'unknown'));
@@ -1340,7 +1361,7 @@ function overlayAddSource() {
   document.getElementById('overlayAddModal').style.display = 'flex';
 }
 
-function overlayCloseModal() { document.getElementById('overlayAddModal').style.display = 'none'; }
+// overlayCloseModal defined below with edit reset logic
 
 function overlaySourceTypeChanged() {
   const type = document.getElementById('overlaySourceType').value;
@@ -1512,6 +1533,7 @@ function overlayRenderSources() {
       </div>
       <div style="display:flex;gap:6px;">
         <button class="btn btn-secondary" style="${btnStyle}" onclick="overlayShowSource(${src.id})">${btnLabel}</button>
+        <button class="btn btn-secondary" style="font-size:12px;padding:4px 10px" onclick="overlayEditSource(${src.id})">Edit</button>
         <button class="btn btn-danger" style="font-size:12px;padding:4px 10px" onclick="overlayRemoveSource(${src.id})">Remove</button>
       </div>`;
     list.appendChild(row);
@@ -1537,17 +1559,15 @@ async function overlayShowSource(id) {
     return;
   }
 
-  // Pure image toggle
+  // Pure image toggle (or GIF — route through triggerSource so loops are set correctly)
   if (src.visible) {
     src.visible = false;
     await fetch('/api/overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ cmd: 'CLEAR', id: src.id }) });
+    overlayRenderSources();
   } else {
-    src.visible = true;
-    await fetch('/api/overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ cmd: 'LOAD', id: src.id, path: src.path }) });
+    await overlayTriggerSource(src);
   }
-  overlayRenderSources();
 }
 
 async function overlayRemoveSource(id) {
@@ -1558,6 +1578,83 @@ async function overlayRemoveSource(id) {
   if (overlayState.running && src) {
     await fetch('/api/overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ cmd: 'REMOVE', id: src.id }) });
+  }
+}
+
+function overlayEditSource(id) {
+  const src = overlayState.sources.find(s => s.id === id);
+  if (!src) return;
+
+  // Pre-fill modal with existing values
+  document.getElementById('overlaySourceType').value = src.type;
+  document.getElementById('overlayImagePath').value = (src.type === 'image' || src.type === 'image+sound') ? src.path : '';
+  document.getElementById('overlaySoundPath').value = src.soundPath || '';
+  document.getElementById('overlayChromaKey').checked = src.chromaKey || false;
+  document.getElementById('overlayChromaColor').value = src.chromaColor || '#00ff00';
+  document.getElementById('overlayChromaThreshold').value = src.chromaThreshold || 40;
+  document.getElementById('overlayChromaThresholdVal').textContent = src.chromaThreshold || 40;
+  document.getElementById('overlayChromaOptions').style.display = src.chromaKey ? 'flex' : 'none';
+  document.getElementById('overlaySoundStart').value = src.soundStart || 0;
+  document.getElementById('overlaySoundEnd').value = src.soundEnd || 0;
+  document.getElementById('overlayGifLoops').value = src.gifLoops || 1;
+
+  // Show duration label if we have end time
+  if (src.soundEnd > 0) {
+    document.getElementById('overlayDurationLabel').textContent = 'Duration: ' + src.soundEnd.toFixed(1) + 's';
+    document.getElementById('overlayTrimGroup').style.display = '';
+  } else {
+    document.getElementById('overlayDurationLabel').textContent = 'Duration: --';
+    document.getElementById('overlayTrimGroup').style.display = 'none';
+  }
+
+  overlaySourceTypeChanged();
+
+  // Change confirm button to save edits
+  const confirmBtn = document.querySelector('#overlayAddModal .btn-primary');
+  confirmBtn.textContent = 'Save Changes';
+  confirmBtn.onclick = () => overlayConfirmEdit(id);
+
+  document.getElementById('overlayAddModal').style.display = 'flex';
+}
+
+function overlayCloseModal() {
+  document.getElementById('overlayAddModal').style.display = 'none';
+  // Reset confirm button back to Add Source
+  const confirmBtn = document.querySelector('#overlayAddModal .btn-primary');
+  if (confirmBtn) { confirmBtn.textContent = 'Add Source'; confirmBtn.onclick = overlayConfirmAdd; }
+}
+
+async function overlayConfirmEdit(id) {
+  const src = overlayState.sources.find(s => s.id === id);
+  if (!src) return;
+
+  const type = document.getElementById('overlaySourceType').value;
+  const imagePath = document.getElementById('overlayImagePath').value.trim();
+  const soundPath = document.getElementById('overlaySoundPath').value.trim();
+  const hasImage = type === 'image' || type === 'image+sound';
+  const hasSound = type === 'sound' || type === 'image+sound';
+
+  if (hasImage && !imagePath) { alert('Please select an image file.'); return; }
+  if (hasSound && !soundPath) { alert('Please select a sound file.'); return; }
+
+  // Update source in place
+  src.type = type;
+  src.path = hasImage ? imagePath : soundPath;
+  src.soundPath = hasSound ? soundPath : null;
+  src.soundStart = parseFloat(document.getElementById('overlaySoundStart').value) || 0;
+  src.soundEnd = parseFloat(document.getElementById('overlaySoundEnd').value) || 0;
+  src.gifLoops = (type === 'image') ? (parseInt(document.getElementById('overlayGifLoops').value) || 1) : 0;
+  src.chromaKey = document.getElementById('overlayChromaKey').checked;
+  src.chromaColor = document.getElementById('overlayChromaColor').value;
+  src.chromaThreshold = parseInt(document.getElementById('overlayChromaThreshold').value);
+
+  overlayRenderSources();
+  overlaySaveSources();
+  overlayCloseModal();
+
+  // If visible, reload with new settings
+  if (overlayState.running && src.visible) {
+    await overlayTriggerSource(src);
   }
 }
 

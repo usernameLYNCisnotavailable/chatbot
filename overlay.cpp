@@ -50,6 +50,7 @@ HWND g_hwnd = NULL;
 int g_screenW = 0, g_screenH = 0;
 std::string g_cmdPath;
 std::string g_posPath;
+bool g_streamMode = false;
 
 const int CORNER = 20;
 int g_dragId = -1;
@@ -437,6 +438,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR lpCmd, int) {
         if (!cur.empty()) parts.push_back(cur);
         if (parts.size()>=1) g_cmdPath=parts[0];
         if (parts.size()>=2) g_posPath=parts[1];
+        if (parts.size()>=3) g_streamMode=(parts[2]=="stream");
     }
 
     g_screenW=GetSystemMetrics(SM_CXSCREEN);
@@ -447,8 +449,11 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR lpCmd, int) {
     wc.hCursor=LoadCursor(NULL,IDC_ARROW);
     RegisterClassEx(&wc);
 
+    DWORD exStyle = WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE;
+    if (!g_streamMode) exStyle |= WS_EX_TOPMOST;
+
     g_hwnd=CreateWindowEx(
-        WS_EX_LAYERED|WS_EX_TRANSPARENT|WS_EX_TOPMOST|WS_EX_TOOLWINDOW|WS_EX_NOACTIVATE,
+        exStyle,
         L"CCOverlay",L"ChatCommander Overlay",
         WS_POPUP,0,0,g_screenW,g_screenH,NULL,NULL,hInst,NULL);
 

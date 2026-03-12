@@ -1154,8 +1154,11 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
         } catch(e) { res.json({ ok: false, error: e.message }); }
     });
 
-    function launchOverlay() {
+    let overlayCurrentMode = 'desktop';
+
+    function launchOverlay(mode) {
         if (overlayProcess) return;
+        overlayCurrentMode = mode || 'desktop';
         const overlayExePath = app.isPackaged
             ? path.join(process.resourcesPath, 'overlay.exe')
             : path.join(__dirname, 'overlay.exe');
@@ -1164,20 +1167,21 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
             const overlayCmdPath = getDataPath('overlay-cmd.txt');
             try { fs.writeFileSync(overlayCmdPath, ''); } catch(e) {}
             const overlayPosPath = getDataPath('overlay-positions.json');
-            overlayProcess = spawn(overlayExePath, [overlayCmdPath, overlayPosPath], { stdio: 'ignore', detached: false });
+            overlayProcess = spawn(overlayExePath, [overlayCmdPath, overlayPosPath, overlayCurrentMode], { stdio: 'ignore', detached: false });
             overlayProcess.on('exit', (code) => { console.log('[overlay] exited:', code); overlayProcess = null; });
             overlayProcess.on('error', (err) => { console.error('[overlay] error:', err); overlayProcess = null; });
-            console.log('[overlay] launched');
+            console.log('[overlay] launched in', overlayCurrentMode, 'mode');
         } catch(e) { console.error('[overlay] launch error:', e.message); }
     }
 
     // Auto-launch overlay shortly after startup
     setTimeout(() => { if (!overlayProcess) launchOverlay(); }, 3000);
 
-    server.get('/api/overlay/status', (req, res) => { res.json({ running: !!overlayProcess }); });
+    server.get('/api/overlay/status', (req, res) => { res.json({ running: !!overlayProcess, mode: overlayCurrentMode }); });
 
     server.post('/api/overlay/launch', (req, res) => {
-        launchOverlay();
+        const mode = (req.body && req.body.mode) || 'desktop';
+        launchOverlay(mode);
         res.json({ ok: true, running: !!overlayProcess });
     });
     server.post('/api/overlay/stop', (req, res) => {
