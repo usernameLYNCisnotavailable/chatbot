@@ -1178,8 +1178,11 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
         } catch(e) { console.error('[overlay] launch error:', e.message); }
     }
 
-    // Auto-launch overlay shortly after startup
-    setTimeout(() => { if (!overlayProcess) launchOverlay(); }, 3000);
+    // Auto-launch overlays shortly after startup
+    setTimeout(() => {
+        if (!overlayProcess) launchOverlay('desktop');
+        launchVideoOverlay('desktop');
+    }, 3000);
 
     server.get('/api/overlay/status', (req, res) => { res.json({ running: !!overlayProcess, mode: overlayCurrentMode }); });
 
@@ -1372,14 +1375,19 @@ Write-Output $sb.ToString().Trim()
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
         res.flushHeaders();
-        videoOverlayClients.push(res);
+        // Only one video overlay window ever exists — clear stale connections
+        videoOverlayClients.forEach(c => { try { c.end(); } catch(e) {} });
+        videoOverlayClients = [res];
+        // Immediate ping so client knows connection is live
+        res.write(': connected\n\n');
+        const keepalive = setInterval(() => { try { res.write(': ping\n\n'); } catch(e) {} }, 15000);
         req.on('close', () => {
+            clearInterval(keepalive);
             videoOverlayClients = videoOverlayClients.filter(c => c !== res);
         });
     });
 
     function broadcastVideoCmd(payload) {
-        console.log('[video-overlay cmd] clients:', videoOverlayClients.length, 'payload:', JSON.stringify(payload).slice(0,80));
         const data = 'data: ' + JSON.stringify(payload) + '\n\n';
         videoOverlayClients.forEach(c => c.write(data));
     }
@@ -1409,10 +1417,17 @@ Write-Output $sb.ToString().Trim()
         res.json({ ok: true });
     });
 
+    // Load video positions from disk on startup
+    try {
+        const vp = getDataPath('video-positions.json');
+        if (fs.existsSync(vp)) videoPositions = JSON.parse(fs.readFileSync(vp, 'utf8'));
+    } catch(e) {}
+
     // Save position from drag/resize in video-overlay.html
     server.post('/api/video-overlay/savepos', (req, res) => {
         const { id, x, y, w, h } = req.body;
         videoPositions[id] = { x, y, w, h };
+        try { fs.writeFileSync(getDataPath('video-positions.json'), JSON.stringify(videoPositions)); } catch(e) {}
         res.json({ ok: true });
     });
 
