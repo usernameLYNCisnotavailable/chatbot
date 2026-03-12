@@ -1154,18 +1154,31 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
         } catch(e) { res.json({ ok: false, error: e.message }); }
     });
 
-    server.post('/api/overlay/launch', (req, res) => {
-        if (overlayProcess) return res.json({ ok: true, msg: 'already running' });
-        const overlayExePath = require('path').join(__dirname, 'overlay.exe');
+    function launchOverlay() {
+        if (overlayProcess) return;
+        const overlayExePath = app.isPackaged
+            ? path.join(process.resourcesPath, 'overlay.exe')
+            : path.join(__dirname, 'overlay.exe');
+        if (!fs.existsSync(overlayExePath)) { console.log('[overlay] overlay.exe not found'); return; }
         try {
             const overlayCmdPath = getDataPath('overlay-cmd.txt');
-            // Clear any old command file
             try { fs.writeFileSync(overlayCmdPath, ''); } catch(e) {}
-            overlayProcess = spawn(overlayExePath, [overlayCmdPath], { stdio: 'ignore', detached: false });
+            const overlayPosPath = getDataPath('overlay-positions.json');
+            overlayProcess = spawn(overlayExePath, [overlayCmdPath, overlayPosPath], { stdio: 'ignore', detached: false });
             overlayProcess.on('exit', (code) => { console.log('[overlay] exited:', code); overlayProcess = null; });
             overlayProcess.on('error', (err) => { console.error('[overlay] error:', err); overlayProcess = null; });
-            res.json({ ok: true });
-        } catch (e) { res.json({ ok: false, error: e.message }); }
+            console.log('[overlay] launched');
+        } catch(e) { console.error('[overlay] launch error:', e.message); }
+    }
+
+    // Auto-launch overlay shortly after startup
+    setTimeout(() => { if (!overlayProcess) launchOverlay(); }, 3000);
+
+    server.get('/api/overlay/status', (req, res) => { res.json({ running: !!overlayProcess }); });
+
+    server.post('/api/overlay/launch', (req, res) => {
+        launchOverlay();
+        res.json({ ok: true, running: !!overlayProcess });
     });
     server.post('/api/overlay/stop', (req, res) => {
         if (overlayProcess) {
@@ -1180,8 +1193,10 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
     server.post('/api/overlay/command', (req, res) => {
         if (!overlayProcess) return res.json({ ok: false, error: 'overlay not running' });
         const { cmd, id, type, path: filePath, x, y, w, h, r, g, b, threshold } = req.body;
+        console.log('[overlay cmd]', cmd, id, filePath);
         let line = '';
-        if      (cmd === 'LOAD')   line = 'LOAD ' + filePath + '\n';
+        if      (cmd === 'LOAD')   line = 'LOAD ' + id + ' ' + filePath + '\n';
+        else if (cmd === 'CLEAR')  line = 'CLEAR ' + id + '\n';
         else if (cmd === 'CHROMA') line = 'CHROMA ' + id + ' ' + r + ' ' + g + ' ' + b + ' ' + threshold + '\n';
         else if (cmd === 'MOVE')   line = 'MOVE ' + id + ' ' + x + ' ' + y + '\n';
         else if (cmd === 'SIZE')   line = 'SIZE ' + id + ' ' + w + ' ' + h + '\n';
@@ -1191,11 +1206,15 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
         if (line) { 
             try { 
                 const overlayCmdPath = getDataPath('overlay-cmd.txt');
-                fs.writeFileSync(overlayCmdPath, line);
-            } catch(e) {} 
+                const overlayCmdTmp = getDataPath('overlay-cmd.tmp');
+                fs.writeFileSync(overlayCmdTmp, line);
+                fs.renameSync(overlayCmdTmp, overlayCmdPath);
+            } catch(e) { console.error('[overlay cmd error]', e.message); } 
         }
         res.json({ ok: true });
     });
+    // Clear saved position for a source (overlay handles this on REMOVE)
+    server.post('/api/overlay/clearpos', (req, res) => { res.json({ ok: true }); });
     // Get saved positions
     server.get('/api/overlay/positions', (req, res) => {
         try {
