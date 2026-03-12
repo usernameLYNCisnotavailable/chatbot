@@ -1195,13 +1195,14 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
         const { cmd, id, type, path: filePath, x, y, w, h, r, g, b, threshold } = req.body;
         console.log('[overlay cmd]', cmd, id, filePath);
         let line = '';
-        if      (cmd === 'LOAD')   line = 'LOAD ' + id + ' ' + filePath + '\n';
+        if      (cmd === 'LOAD')   line = 'LOAD ' + id + ' ' + (req.body.loops || 1) + ' ' + filePath + '\n';
         else if (cmd === 'CLEAR')  line = 'CLEAR ' + id + '\n';
         else if (cmd === 'CHROMA') line = 'CHROMA ' + id + ' ' + r + ' ' + g + ' ' + b + ' ' + threshold + '\n';
         else if (cmd === 'MOVE')   line = 'MOVE ' + id + ' ' + x + ' ' + y + '\n';
         else if (cmd === 'SIZE')   line = 'SIZE ' + id + ' ' + w + ' ' + h + '\n';
         else if (cmd === 'REMOVE') line = 'REMOVE ' + id + '\n';
-        else if (cmd === 'SOUND')  line = 'SOUND ' + filePath + '\n';
+        else if (cmd === 'GIFLOOPS') line = 'GIFLOOPS ' + id + ' ' + (req.body.loops || 1) + '\n';
+        else if (cmd === 'SOUND')  line = 'SOUND ' + (req.body.startMs || 0) + ' ' + (req.body.endMs || 0) + ' ' + filePath + '\n';
         else if (cmd === 'QUIT')   line = 'QUIT\n';
         if (line) { 
             try { 
@@ -1225,18 +1226,53 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
     });
     server.get('/api/overlay/browse', async (req, res) => {
         try {
+            const type = req.query.type || 'image';
+            const filters = type === 'sound'
+                ? [{ name: 'Audio Files', extensions: ['mp3', 'wav'] }, { name: 'All Files', extensions: ['*'] }]
+                : [{ name: 'Image Files', extensions: ['png', 'jpg', 'jpeg', 'gif', 'bmp'] }, { name: 'All Files', extensions: ['*'] }];
             const result = await dialog.showOpenDialog(mainWindow, {
-                title: 'Select Media File',
-                filters: [
-                    { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'bmp'] },
-                    { name: 'Sounds', extensions: ['mp3', 'wav', 'ogg'] },
-                    { name: 'All Files', extensions: ['*'] }
-                ],
+                title: type === 'sound' ? 'Select Audio File' : 'Select Image File',
+                filters,
                 properties: ['openFile']
             });
             if (result.canceled || !result.filePaths.length) return res.json({ path: null });
             res.json({ path: result.filePaths[0] });
         } catch (e) { res.json({ path: null, error: e.message }); }
+    });
+
+    server.get('/api/overlay/duration', (req, res) => {
+        const filePath = req.query.path;
+        if (!filePath) return res.json({ durationMs: 0 });
+        try {
+            const { execFileSync } = require('child_process');
+            const os = require('os');
+            const tmpScript = path.join(os.tmpdir(), 'cc_dur.ps1');
+            const escaped = filePath.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+            const script = `
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+using System.Text;
+public class MCI2 {
+    [DllImport("winmm.dll", CharSet=CharSet.Unicode)]
+    public static extern int mciSendString(string cmd, StringBuilder ret, int len, IntPtr cb);
+}
+"@
+$sb = New-Object System.Text.StringBuilder 128
+[MCI2]::mciSendString('open "${escaped}" type mpegvideo alias ccdur', $null, 0, [IntPtr]::Zero) | Out-Null
+[MCI2]::mciSendString('set ccdur time format milliseconds', $null, 0, [IntPtr]::Zero) | Out-Null
+[MCI2]::mciSendString('status ccdur length', $sb, 128, [IntPtr]::Zero) | Out-Null
+[MCI2]::mciSendString('close ccdur', $null, 0, [IntPtr]::Zero) | Out-Null
+Write-Output $sb.ToString().Trim()
+`;
+            fs.writeFileSync(tmpScript, script, 'utf8');
+            const result = execFileSync('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', tmpScript], { timeout: 6000 }).toString().trim();
+            const ms = parseInt(result);
+            if (!isNaN(ms) && ms > 0) return res.json({ durationMs: ms });
+            res.json({ durationMs: 0 });
+        } catch(e) {
+            res.json({ durationMs: 0 });
+        }
     });
 
     // ---- STATIC (must be last) ----
