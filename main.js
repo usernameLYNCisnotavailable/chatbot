@@ -1369,7 +1369,9 @@ Write-Output $sb.ToString().Trim()
         res.json({ ok: true });
     });
 
-    // SSE stream — video-overlay.html connects here
+    let videoDashboardClients = []; // dashboard listeners
+
+    // SSE stream — video-overlay.html connects here to receive commands
     server.get('/api/video-overlay/stream', (req, res) => {
         res.setHeader('Content-Type', 'text/event-stream');
         res.setHeader('Cache-Control', 'no-cache');
@@ -1378,18 +1380,39 @@ Write-Output $sb.ToString().Trim()
         // Only one video overlay window ever exists — clear stale connections
         videoOverlayClients.forEach(c => { try { c.end(); } catch(e) {} });
         videoOverlayClients = [res];
-        // Immediate ping so client knows connection is live
         res.write(': connected\n\n');
         const keepalive = setInterval(() => { try { res.write(': ping\n\n'); } catch(e) {} }, 15000);
         req.on('close', () => {
             clearInterval(keepalive);
             videoOverlayClients = videoOverlayClients.filter(c => c !== res);
         });
+        // Notify dashboard that video window is ready
+        const readyMsg = 'data: ' + JSON.stringify({ cmd: 'READY' }) + '\n\n';
+        videoDashboardClients.forEach(c => { try { c.write(readyMsg); } catch(e) {} });
+    });
+
+    // SSE events — dashboard connects here to receive READY and VIDDONE
+    server.get('/api/video-overlay/events', (req, res) => {
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.flushHeaders();
+        videoDashboardClients.push(res);
+        const keepalive = setInterval(() => { try { res.write(': ping\n\n'); } catch(e) {} }, 15000);
+        req.on('close', () => {
+            clearInterval(keepalive);
+            videoDashboardClients = videoDashboardClients.filter(c => c !== res);
+        });
     });
 
     function broadcastVideoCmd(payload) {
         const data = 'data: ' + JSON.stringify(payload) + '\n\n';
-        videoOverlayClients.forEach(c => c.write(data));
+        videoOverlayClients.forEach(c => { try { c.write(data); } catch(e) {} });
+    }
+
+    function broadcastVideoDashboard(payload) {
+        const data = 'data: ' + JSON.stringify(payload) + '\n\n';
+        videoDashboardClients.forEach(c => { try { c.write(data); } catch(e) {} });
     }
 
     server.post('/api/video-overlay/command', (req, res) => {
@@ -1412,8 +1435,7 @@ Write-Output $sb.ToString().Trim()
         res.json({ ok: true });
     });
     server.post('/api/video-overlay/done', (req, res) => {
-        // Dashboard gets notified via a separate SSE event
-        broadcastVideoCmd({ cmd: 'VIDDONE', id: req.body.id });
+        broadcastVideoDashboard({ cmd: 'VIDDONE', id: req.body.id });
         res.json({ ok: true });
     });
 

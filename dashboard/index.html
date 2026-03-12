@@ -1345,12 +1345,17 @@ async function overlayLoadSources() {
 }
 
 // Listen for video done events (video finished all loops)
+let videoOverlayReady = false;
+
 function overlayStartVideoSSE() {
-  const es = new EventSource('/api/video-overlay/stream');
+  const es = new EventSource('/api/video-overlay/events');
   es.onmessage = (e) => {
     try {
       const msg = JSON.parse(e.data);
-      if (msg.cmd === 'VIDDONE') {
+      if (msg.cmd === 'READY') {
+        videoOverlayReady = true;
+        console.log('[video-overlay] ready');
+      } else if (msg.cmd === 'VIDDONE') {
         const src = overlayState.sources.find(s => s.id === msg.id);
         if (src) { src.visible = false; overlayRenderSources(); }
       }
@@ -1390,6 +1395,7 @@ async function overlayLaunch() {
 }
 
 async function overlayStop() {
+  videoOverlayReady = false;
   await Promise.all([
     fetch('/api/overlay/stop', { method: 'POST' }),
     fetch('/api/video-overlay/stop', { method: 'POST' })
@@ -1637,6 +1643,19 @@ async function overlayShowSource(id) {
   const src = overlayState.sources.find(s => s.id === id);
   if (!src) return;
   if (!overlayState.running) { alert('Launch the overlay first.'); return; }
+  const hasVideo = src.type === 'video' || src.type === 'video+sound';
+  if (hasVideo && !videoOverlayReady) {
+    // Wait up to 5s for video window to connect
+    await new Promise((resolve, reject) => {
+      let waited = 0;
+      const check = setInterval(() => {
+        waited += 100;
+        if (videoOverlayReady) { clearInterval(check); resolve(); }
+        else if (waited >= 5000) { clearInterval(check); reject(); }
+      }, 100);
+    }).catch(() => { alert('Video overlay not ready. Try clicking Launch again.'); return; });
+    if (!videoOverlayReady) return;
+  }
   await overlayTriggerSource(src);
 }
 
