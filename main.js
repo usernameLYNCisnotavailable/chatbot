@@ -9,6 +9,10 @@ let reactorProcess = null;
 let chatWin = null;
 let modWin = null;
 let overlayProcess = null;
+let videoWin = null;
+let videoWinMode = 'desktop';
+let videoOverlayClients = []; // SSE clients
+let videoPositions = {}; // id -> {x,y,w,h}
 
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -1233,6 +1237,8 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
             const type = req.query.type || 'image';
             const filters = type === 'sound'
                 ? [{ name: 'Audio Files', extensions: ['mp3', 'wav'] }, { name: 'All Files', extensions: ['*'] }]
+                : type === 'video'
+                ? [{ name: 'Video Files', extensions: ['mp4'] }, { name: 'All Files', extensions: ['*'] }]
                 : [{ name: 'Image Files', extensions: ['png', 'jpg', 'jpeg', 'gif', 'bmp'] }, { name: 'All Files', extensions: ['*'] }];
             const result = await dialog.showOpenDialog(mainWindow, {
                 title: type === 'sound' ? 'Select Audio File' : 'Select Image File',
@@ -1279,6 +1285,137 @@ Write-Output $sb.ToString().Trim()
         }
     });
 
+    // Serve local files for video overlay (Electron security blocks file:/// in BrowserWindow)
+    server.get('/api/localfile', (req, res) => {
+        const filePath = req.query.path;
+        if (!filePath) return res.status(400).end();
+        try {
+            const stat = fs.statSync(filePath);
+            const ext = path.extname(filePath).toLowerCase();
+            const mime = ext === '.mp4' ? 'video/mp4' : ext === '.webm' ? 'video/webm' : 'application/octet-stream';
+            const range = req.headers.range;
+            if (range) {
+                const parts = range.replace(/bytes=/, '').split('-');
+                const start = parseInt(parts[0], 10);
+                const end = parts[1] ? parseInt(parts[1], 10) : stat.size - 1;
+                const chunkSize = end - start + 1;
+                const fileStream = fs.createReadStream(filePath, { start, end });
+                res.writeHead(206, {
+                    'Content-Range': `bytes ${start}-${end}/${stat.size}`,
+                    'Accept-Ranges': 'bytes',
+                    'Content-Length': chunkSize,
+                    'Content-Type': mime
+                });
+                fileStream.pipe(res);
+            } else {
+                res.writeHead(200, { 'Content-Length': stat.size, 'Content-Type': mime, 'Accept-Ranges': 'bytes' });
+                fs.createReadStream(filePath).pipe(res);
+            }
+        } catch(e) {
+            res.status(404).end();
+        }
+    });
+
+    // ---- ROUTES_VIDEO_OVERLAY ----
+
+    function launchVideoOverlay(mode) {
+        videoWinMode = mode || 'desktop';
+        if (videoWin && !videoWin.isDestroyed()) return;
+        const { screen } = require('electron');
+        const { width, height } = screen.getPrimaryDisplay().size;
+        videoWin = new BrowserWindow({
+            width, height,
+            x: 0, y: 0,
+            frame: false,
+            transparent: true,
+            alwaysOnTop: true,
+            type: 'toolbar',
+            skipTaskbar: true,
+            resizable: false,
+            focusable: false,
+            webPreferences: {
+                nodeIntegration: false,
+                contextIsolation: true,
+                offscreen: false
+            }
+        });
+        videoWin.setAlwaysOnTop(true, 'screen-saver');
+        videoWin.setVisibleOnAllWorkspaces(true);
+        videoWin.setIgnoreMouseEvents(true, { forward: true });
+        videoWin.loadURL('http://localhost:3000/video-overlay.html');
+        videoWin.on('closed', () => { videoWin = null; });
+        // Re-enable mouse when over a source (video-overlay sends a flag)
+        videoWin.webContents.on('did-finish-load', () => {
+            console.log('[video-overlay] loaded, mode:', videoWinMode);
+        });
+    }
+
+    server.get('/api/video-overlay/status', (req, res) => {
+        res.json({ running: !!(videoWin && !videoWin.isDestroyed()), mode: videoWinMode });
+    });
+
+    server.post('/api/video-overlay/launch', (req, res) => {
+        const mode = (req.body && req.body.mode) || 'desktop';
+        launchVideoOverlay(mode);
+        res.json({ ok: true });
+    });
+
+    server.post('/api/video-overlay/stop', (req, res) => {
+        if (videoWin && !videoWin.isDestroyed()) videoWin.destroy();
+        videoWin = null;
+        res.json({ ok: true });
+    });
+
+    // SSE stream — video-overlay.html connects here
+    server.get('/api/video-overlay/stream', (req, res) => {
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.flushHeaders();
+        videoOverlayClients.push(res);
+        req.on('close', () => {
+            videoOverlayClients = videoOverlayClients.filter(c => c !== res);
+        });
+    });
+
+    function broadcastVideoCmd(payload) {
+        console.log('[video-overlay cmd] clients:', videoOverlayClients.length, 'payload:', JSON.stringify(payload).slice(0,80));
+        const data = 'data: ' + JSON.stringify(payload) + '\n\n';
+        videoOverlayClients.forEach(c => c.write(data));
+    }
+
+    server.post('/api/video-overlay/command', (req, res) => {
+        const { cmd, id, path: filePath, loops, x, y, w, h } = req.body;
+        // Merge saved position if available
+        let px = x, py = y, pw = w, ph = h;
+        if (videoPositions[id] && x === undefined) {
+            px = videoPositions[id].x; py = videoPositions[id].y;
+            pw = videoPositions[id].w; ph = videoPositions[id].h;
+        }
+        broadcastVideoCmd({ cmd, id, path: filePath, loops, x: px, y: py, w: pw, h: ph });
+        res.json({ ok: true });
+    });
+
+    server.post('/api/video-overlay/mouse', (req, res) => {
+        if (videoWin && !videoWin.isDestroyed()) {
+            const ignore = req.body.ignore !== false;
+            videoWin.setIgnoreMouseEvents(ignore, { forward: true });
+        }
+        res.json({ ok: true });
+    });
+    server.post('/api/video-overlay/done', (req, res) => {
+        // Dashboard gets notified via a separate SSE event
+        broadcastVideoCmd({ cmd: 'VIDDONE', id: req.body.id });
+        res.json({ ok: true });
+    });
+
+    // Save position from drag/resize in video-overlay.html
+    server.post('/api/video-overlay/savepos', (req, res) => {
+        const { id, x, y, w, h } = req.body;
+        videoPositions[id] = { x, y, w, h };
+        res.json({ ok: true });
+    });
+
     // ---- STATIC (must be last) ----
     server.use(express.static(path.join(appDir, 'dashboard'), { index: false }));
 
@@ -1314,6 +1451,7 @@ function createWindow() {
     mainWindow.on('closed', () => {
         if (chatWin && !chatWin.isDestroyed()) chatWin.destroy();
         if (modWin && !modWin.isDestroyed()) modWin.destroy();
+        if (videoWin && !videoWin.isDestroyed()) videoWin.destroy();
         mainWindow = null;
     });
 }

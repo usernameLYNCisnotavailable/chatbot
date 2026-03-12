@@ -1212,9 +1212,11 @@
         <div>
           <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px;">Type</label>
           <select id="overlaySourceType" class="input" onchange="overlaySourceTypeChanged()">
-            <option value="image">Image only (PNG, JPG, GIF)</option>
+            <option value="image">Image (PNG, JPG, GIF)</option>
             <option value="sound">Sound only (MP3, WAV)</option>
             <option value="image+sound">Image + Sound</option>
+            <option value="video">Video (MP4)</option>
+            <option value="video+sound">Video + Sound</option>
           </select>
         </div>
         <div id="overlayImageGroup">
@@ -1261,12 +1263,34 @@
             <div style="font-size:11px;color:var(--muted-2);margin-top:8px;">Leave Start at 0 and End at full duration to play the whole file.</div>
           </div>
         </div>
-        <!-- GIF repeat count — shown when image is a GIF and no sound attached -->
+        <!-- Video file row -->
+        <div id="overlayVideoGroup" style="display:none;">
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px;">Video File</label>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="overlayVideoPath" class="input" placeholder="C:\path\to\file.mp4" style="flex:1;" oninput="overlayUpdateVideoRepeat()">
+            <button class="btn btn-secondary" onclick="overlayBrowse('video')">Browse</button>
+          </div>
+        </div>
+        <!-- Video repeat count -->
+        <div id="overlayVideoRepeatGroup" style="display:none;">
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px;">Repeat</label>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <input type="number" id="overlayVideoLoops" class="input" value="1" min="1" step="1" style="width:80px;font-size:13px;">
+            <span style="font-size:12px;color:var(--muted);">times, then disappear</span>
+          </div>
+        </div>
         <div id="overlayGifRepeatGroup" style="display:none;">
           <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px;">Repeat</label>
           <div style="display:flex;align-items:center;gap:10px;">
             <input type="number" id="overlayGifLoops" class="input" value="1" min="1" step="1" style="width:80px;font-size:13px;">
             <span style="font-size:12px;color:var(--muted);">times, then disappear</span>
+          </div>
+        </div>
+        <div id="overlayDurationGroup" style="display:none;">
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px;">Display Duration</label>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <input type="number" id="overlayDisplaySeconds" class="input" value="3" min="0" step="0.5" style="width:80px;font-size:13px;">
+            <span style="font-size:12px;color:var(--muted);">seconds &nbsp;·&nbsp; 0 = stay forever</span>
           </div>
         </div>
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
@@ -1297,9 +1321,14 @@ function overlaySetMode(mode) {
 
 async function overlayLoadSources() {
   try {
-    const [statusRes, res] = await Promise.all([fetch('/api/overlay/status'), fetch('/api/overlay/sources')]);
+    const [statusRes, videoStatusRes, res] = await Promise.all([
+      fetch('/api/overlay/status'),
+      fetch('/api/video-overlay/status'),
+      fetch('/api/overlay/sources')
+    ]);
     const statusData = await statusRes.json();
-    overlaySetStatus(statusData.running);
+    const videoStatusData = await videoStatusRes.json();
+    overlaySetStatus(statusData.running || videoStatusData.running);
     if (statusData.mode) overlaySetMode(statusData.mode);
     const data = await res.json();
     if (Array.isArray(data) && data.length) {
@@ -1313,6 +1342,21 @@ async function overlayLoadSources() {
       overlayRenderSources();
     }
   } catch(e) {}
+}
+
+// Listen for video done events (video finished all loops)
+function overlayStartVideoSSE() {
+  const es = new EventSource('/api/video-overlay/stream');
+  es.onmessage = (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.cmd === 'VIDDONE') {
+        const src = overlayState.sources.find(s => s.id === msg.id);
+        if (src) { src.visible = false; overlayRenderSources(); }
+      }
+    } catch(err) {}
+  };
+  es.onerror = () => { es.close(); setTimeout(overlayStartVideoSSE, 3000); };
 }
 
 async function overlaySaveSources() {
@@ -1334,15 +1378,22 @@ function overlaySetStatus(running) {
 }
 
 async function overlayLaunch() {
-  const res = await fetch('/api/overlay/launch', { method: 'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ mode: overlayMode }) });
+  const [res] = await Promise.all([
+    fetch('/api/overlay/launch', { method: 'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ mode: overlayMode }) }),
+    fetch('/api/video-overlay/launch', { method: 'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ mode: overlayMode }) })
+  ]);
   const data = await res.json();
   if (data.ok) overlaySetStatus(true);
   else alert('Failed to launch: ' + (data.error || 'unknown'));
 }
 
 async function overlayStop() {
-  await fetch('/api/overlay/stop', { method: 'POST' });
+  await Promise.all([
+    fetch('/api/overlay/stop', { method: 'POST' }),
+    fetch('/api/video-overlay/stop', { method: 'POST' })
+  ]);
   overlaySetStatus(false);
 }
 
@@ -1356,6 +1407,9 @@ function overlayAddSource() {
   document.getElementById('overlayDurationLabel').textContent = 'Duration: --';
   document.getElementById('overlaySoundStart').value = '0';
   document.getElementById('overlaySoundEnd').value = '0';
+  document.getElementById('overlayVideoPath').value = '';
+  document.getElementById('overlayVideoLoops').value = '1';
+  document.getElementById('overlayDisplaySeconds').value = '3';
   document.getElementById('overlayGifLoops').value = '1';
   overlaySourceTypeChanged();
   document.getElementById('overlayAddModal').style.display = 'flex';
@@ -1365,14 +1419,15 @@ function overlayAddSource() {
 
 function overlaySourceTypeChanged() {
   const type = document.getElementById('overlaySourceType').value;
-  const imagePath = document.getElementById('overlayImagePath').value.toLowerCase();
   const showImage = type === 'image' || type === 'image+sound';
-  const showSound = type === 'sound' || type === 'image+sound';
+  const showSound = type === 'sound' || type === 'image+sound' || type === 'video+sound';
+  const showVideo = type === 'video' || type === 'video+sound';
   document.getElementById('overlayImageGroup').style.display = showImage ? '' : 'none';
   document.getElementById('overlayChromaGroup').style.display = showImage ? '' : 'none';
   document.getElementById('overlaySoundGroup').style.display = showSound ? '' : 'none';
-  // Show repeat only for image-only GIFs (not image+sound — loops are driven by sound end)
+  document.getElementById('overlayVideoGroup').style.display = showVideo ? '' : 'none';
   overlayUpdateGifRepeat();
+  overlayUpdateVideoRepeat();
 }
 
 function overlayUpdateGifRepeat() {
@@ -1381,6 +1436,14 @@ function overlayUpdateGifRepeat() {
   const isGif = imagePath.endsWith('.gif');
   const imageOnly = type === 'image';
   document.getElementById('overlayGifRepeatGroup').style.display = (isGif && imageOnly) ? '' : 'none';
+  // Duration only for non-GIF image-only
+  document.getElementById('overlayDurationGroup').style.display = (!isGif && imageOnly) ? '' : 'none';
+}
+
+function overlayUpdateVideoRepeat() {
+  const type = document.getElementById('overlaySourceType').value;
+  const videoOnly = type === 'video'; // video+sound loops driven by sound
+  document.getElementById('overlayVideoRepeatGroup').style.display = videoOnly ? '' : 'none';
 }
 
 function overlayChromaChanged() {
@@ -1401,6 +1464,9 @@ async function overlayBrowse(forType) {
   if (forType === 'image') {
     document.getElementById('overlayImagePath').value = data.path;
     overlayUpdateGifRepeat();
+  } else if (forType === 'video') {
+    document.getElementById('overlayVideoPath').value = data.path;
+    overlayUpdateVideoRepeat();
   } else {
     document.getElementById('overlaySoundPath').value = data.path;
     overlayFetchDuration(data.path);
@@ -1430,12 +1496,15 @@ async function overlayConfirmAdd() {
   const type = document.getElementById('overlaySourceType').value;
   const imagePath = document.getElementById('overlayImagePath').value.trim();
   const soundPath = document.getElementById('overlaySoundPath').value.trim();
+  const videoPath = document.getElementById('overlayVideoPath').value.trim();
 
   const hasImage = type === 'image' || type === 'image+sound';
-  const hasSound = type === 'sound' || type === 'image+sound';
+  const hasSound = type === 'sound' || type === 'image+sound' || type === 'video+sound';
+  const hasVideo = type === 'video' || type === 'video+sound';
 
   if (hasImage && !imagePath) { alert('Please select an image file.'); return; }
   if (hasSound && !soundPath) { alert('Please select a sound file.'); return; }
+  if (hasVideo && !videoPath) { alert('Please select a video file.'); return; }
 
   const soundStart = parseFloat(document.getElementById('overlaySoundStart').value) || 0;
   const soundEnd = parseFloat(document.getElementById('overlaySoundEnd').value) || 0;
@@ -1443,11 +1512,14 @@ async function overlayConfirmAdd() {
   const src = {
     id: overlayNextId++,
     type,
-    path: hasImage ? imagePath : soundPath,
+    path: hasImage ? imagePath : (hasVideo ? videoPath : soundPath),
+    videoPath: hasVideo ? videoPath : null,
     soundPath: hasSound ? soundPath : null,
     soundStart: hasSound ? soundStart : 0,
     soundEnd: hasSound ? soundEnd : 0,
     gifLoops: (type === 'image') ? (parseInt(document.getElementById('overlayGifLoops').value) || 1) : 0,
+    displaySeconds: (type === 'image') ? (parseFloat(document.getElementById('overlayDisplaySeconds').value) || 0) : 0,
+    videoLoops: (type === 'video') ? (parseInt(document.getElementById('overlayVideoLoops').value) || 1) : 0,
     chromaKey: document.getElementById('overlayChromaKey').checked,
     chromaColor: document.getElementById('overlayChromaColor').value,
     chromaThreshold: parseInt(document.getElementById('overlayChromaThreshold').value)
@@ -1463,17 +1535,34 @@ async function overlayConfirmAdd() {
   }
 }
 
-// Trigger a source: load image and/or play sound, then auto-hide after duration
+// Trigger a source: load image/video and/or play sound, then auto-hide after duration
 async function overlayTriggerSource(src) {
   const hasImage = src.type === 'image' || src.type === 'image+sound';
-  const hasSound = src.type === 'sound' || src.type === 'image+sound';
+  const hasSound = src.type === 'sound' || src.type === 'image+sound' || src.type === 'video+sound';
+  const hasVideo = src.type === 'video' || src.type === 'video+sound';
   const isGif = hasImage && src.path.toLowerCase().endsWith('.gif');
 
   if (hasImage) {
-    src.visible = true;
     const loops = isGif ? (hasSound ? 0 : (src.gifLoops || 1)) : 1;
     await fetch('/api/overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ cmd: 'LOAD', id: src.id, path: src.path, loops }) });
+
+    // Image-only auto-hide after displaySeconds (0 = unlimited)
+    if (!hasSound && !isGif) {
+      const ms = (src.displaySeconds || 0) * 1000;
+      if (ms > 0) {
+        setTimeout(() => {
+          fetch('/api/overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ cmd: 'CLEAR', id: src.id }) });
+        }, ms);
+      }
+    }
+  }
+
+  if (hasVideo) {
+    const loops = hasSound ? 0 : (src.videoLoops || 1);
+    await fetch('/api/video-overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ cmd: 'PLAYVID', id: src.id, path: src.videoPath, loops }) });
   }
 
   if (hasSound) {
@@ -1482,19 +1571,17 @@ async function overlayTriggerSource(src) {
     await fetch('/api/overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ cmd: 'SOUND', startMs, endMs, path: src.soundPath }) });
 
-    // Auto-hide image after sound finishes
-    if (hasImage && endMs > startMs) {
+    // Auto-hide image/video after sound finishes
+    if ((hasImage || hasVideo) && endMs > startMs) {
       const displayMs = endMs - startMs;
-      setTimeout(async () => {
-        src.visible = false;
-        await fetch('/api/overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
+      setTimeout(() => {
+        if (hasImage) fetch('/api/overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ cmd: 'CLEAR', id: src.id }) });
-        overlayRenderSources();
+        if (hasVideo) fetch('/api/video-overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ cmd: 'CLEARVID', id: src.id }) });
       }, displayMs);
     }
   }
-
-  overlayRenderSources();
 }
 
 function overlayRenderSources() {
@@ -1505,23 +1592,24 @@ function overlayRenderSources() {
   empty.style.display = 'none';
   overlayState.sources.forEach(src => {
     const hasImage = src.type === 'image' || src.type === 'image+sound';
-    const hasSound = src.type === 'sound' || src.type === 'image+sound';
-    const icon = src.type === 'image+sound' ? '🖼️🔊' : (hasImage ? '🖼️' : '🔊');
+    const hasSound = src.type === 'sound' || src.type === 'image+sound' || src.type === 'video+sound';
+    const hasVideo = src.type === 'video' || src.type === 'video+sound';
+    const isGif = hasImage && src.path && src.path.toLowerCase().endsWith('.gif');
+    const icon = hasVideo ? (hasSound ? '🎬🔊' : '🎬') : (src.type === 'image+sound' ? '🖼️🔊' : (hasImage ? '🖼️' : '🔊'));
     const name = src.path.split(/[\\/]/).pop();
     const soundName = (hasSound && src.soundPath) ? src.soundPath.split(/[\\/]/).pop() : null;
 
     let metaParts = [src.type.toUpperCase()];
-    if (hasSound && src.soundEnd > 0) {
-      metaParts.push(src.soundStart.toFixed(1) + 's → ' + src.soundEnd.toFixed(1) + 's');
-    }
+    if (hasSound && src.soundEnd > 0) metaParts.push(src.soundStart.toFixed(1) + 's → ' + src.soundEnd.toFixed(1) + 's');
     if (src.chromaKey) metaParts.push('Chroma Key');
+    if (hasImage && !isGif && !hasSound) {
+      metaParts.push(src.displaySeconds > 0 ? src.displaySeconds + 's' : 'Forever');
+    }
     const meta = metaParts.join(' · ');
 
     const isVisible = src.visible;
-    const btnLabel = hasSound ? (hasImage ? 'Trigger' : 'Play') : (isVisible ? 'Hide' : 'Show');
-    const btnStyle = isVisible && !hasSound
-      ? 'font-size:12px;padding:4px 10px;background:var(--green);border-color:var(--green);color:#000'
-      : 'font-size:12px;padding:4px 10px';
+    const btnLabel = 'Trigger';
+    const btnStyle = 'font-size:12px;padding:4px 10px';
 
     const row = document.createElement('div');
     row.className = 'overlay-src-row';
@@ -1549,25 +1637,7 @@ async function overlayShowSource(id) {
   const src = overlayState.sources.find(s => s.id === id);
   if (!src) return;
   if (!overlayState.running) { alert('Launch the overlay first.'); return; }
-
-  const hasImage = src.type === 'image' || src.type === 'image+sound';
-  const hasSound = src.type === 'sound' || src.type === 'image+sound';
-
-  // Sound or image+sound or plain image with a toggle
-  if (hasSound) {
-    await overlayTriggerSource(src);
-    return;
-  }
-
-  // Pure image toggle (or GIF — route through triggerSource so loops are set correctly)
-  if (src.visible) {
-    src.visible = false;
-    await fetch('/api/overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ cmd: 'CLEAR', id: src.id }) });
-    overlayRenderSources();
-  } else {
-    await overlayTriggerSource(src);
-  }
+  await overlayTriggerSource(src);
 }
 
 async function overlayRemoveSource(id) {
@@ -1576,8 +1646,16 @@ async function overlayRemoveSource(id) {
   overlayRenderSources();
   overlaySaveSources();
   if (overlayState.running && src) {
-    await fetch('/api/overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ cmd: 'REMOVE', id: src.id }) });
+    const hasVideo = src.type === 'video' || src.type === 'video+sound';
+    const hasImage = src.type === 'image' || src.type === 'image+sound';
+    if (hasImage || (!hasVideo && !hasImage)) {
+      await fetch('/api/overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ cmd: 'REMOVE', id: src.id }) });
+    }
+    if (hasVideo) {
+      await fetch('/api/video-overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ cmd: 'REMOVEVID', id: src.id }) });
+    }
   }
 }
 
@@ -1589,6 +1667,8 @@ function overlayEditSource(id) {
   document.getElementById('overlaySourceType').value = src.type;
   document.getElementById('overlayImagePath').value = (src.type === 'image' || src.type === 'image+sound') ? src.path : '';
   document.getElementById('overlaySoundPath').value = src.soundPath || '';
+  document.getElementById('overlayVideoPath').value = src.videoPath || '';
+  document.getElementById('overlayVideoLoops').value = src.videoLoops || 1;
   document.getElementById('overlayChromaKey').checked = src.chromaKey || false;
   document.getElementById('overlayChromaColor').value = src.chromaColor || '#00ff00';
   document.getElementById('overlayChromaThreshold').value = src.chromaThreshold || 40;
@@ -1597,6 +1677,7 @@ function overlayEditSource(id) {
   document.getElementById('overlaySoundStart').value = src.soundStart || 0;
   document.getElementById('overlaySoundEnd').value = src.soundEnd || 0;
   document.getElementById('overlayGifLoops').value = src.gifLoops || 1;
+  document.getElementById('overlayDisplaySeconds').value = src.displaySeconds !== undefined ? src.displaySeconds : 3;
 
   // Show duration label if we have end time
   if (src.soundEnd > 0) {
@@ -1631,19 +1712,24 @@ async function overlayConfirmEdit(id) {
   const type = document.getElementById('overlaySourceType').value;
   const imagePath = document.getElementById('overlayImagePath').value.trim();
   const soundPath = document.getElementById('overlaySoundPath').value.trim();
+  const videoPath = document.getElementById('overlayVideoPath').value.trim();
   const hasImage = type === 'image' || type === 'image+sound';
-  const hasSound = type === 'sound' || type === 'image+sound';
+  const hasSound = type === 'sound' || type === 'image+sound' || type === 'video+sound';
+  const hasVideo = type === 'video' || type === 'video+sound';
 
   if (hasImage && !imagePath) { alert('Please select an image file.'); return; }
   if (hasSound && !soundPath) { alert('Please select a sound file.'); return; }
+  if (hasVideo && !videoPath) { alert('Please select a video file.'); return; }
 
-  // Update source in place
   src.type = type;
-  src.path = hasImage ? imagePath : soundPath;
+  src.path = hasImage ? imagePath : (hasVideo ? videoPath : soundPath);
+  src.videoPath = hasVideo ? videoPath : null;
   src.soundPath = hasSound ? soundPath : null;
   src.soundStart = parseFloat(document.getElementById('overlaySoundStart').value) || 0;
   src.soundEnd = parseFloat(document.getElementById('overlaySoundEnd').value) || 0;
   src.gifLoops = (type === 'image') ? (parseInt(document.getElementById('overlayGifLoops').value) || 1) : 0;
+  src.displaySeconds = (type === 'image') ? (parseFloat(document.getElementById('overlayDisplaySeconds').value) || 0) : 0;
+  src.videoLoops = (type === 'video') ? (parseInt(document.getElementById('overlayVideoLoops').value) || 1) : 0;
   src.chromaKey = document.getElementById('overlayChromaKey').checked;
   src.chromaColor = document.getElementById('overlayChromaColor').value;
   src.chromaThreshold = parseInt(document.getElementById('overlayChromaThreshold').value);
@@ -1652,7 +1738,6 @@ async function overlayConfirmEdit(id) {
   overlaySaveSources();
   overlayCloseModal();
 
-  // If visible, reload with new settings
   if (overlayState.running && src.visible) {
     await overlayTriggerSource(src);
   }
@@ -2022,7 +2107,7 @@ async function overlayConfirmEdit(id) {
     if (nav) { nav.classList.add('active'); openNavGroupFor(name); }
     if (name === 'groups') refreshGroupSelects();
     if (name === 'mod-view') loadModChannels();
-    if (name === 'overlay') overlayLoadSources();
+    if (name === 'overlay') { overlayLoadSources(); overlayStartVideoSSE(); }
     if (name === 'actions' && inlineEditor) setTimeout(() => inlineEditor.layout(), 50);
   }
 
