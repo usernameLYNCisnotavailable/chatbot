@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell } = require('electron');
+const { app, BrowserWindow, shell, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
@@ -8,6 +8,7 @@ let botProcess = null;
 let reactorProcess = null;
 let chatWin = null;
 let modWin = null;
+let overlayProcess = null;
 
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -1136,6 +1137,65 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
             fs.writeFileSync(p, JSON.stringify(filtered, null, 2));
             res.json({ success: true });
         } catch (e) { res.json({ success: false, error: e.message }); }
+    });
+
+    // ---- ROUTES_OVERLAY ----
+    server.get('/api/overlay/sources', (req, res) => {
+        try {
+            const p = getDataPath('overlay-sources.json');
+            if (!fs.existsSync(p)) return res.json([]);
+            res.json(JSON.parse(fs.readFileSync(p, 'utf8')));
+        } catch(e) { res.json([]); }
+    });
+    server.post('/api/overlay/sources', (req, res) => {
+        try {
+            fs.writeFileSync(getDataPath('overlay-sources.json'), JSON.stringify(req.body, null, 2));
+            res.json({ ok: true });
+        } catch(e) { res.json({ ok: false, error: e.message }); }
+    });
+
+    server.post('/api/overlay/launch', (req, res) => {
+        if (overlayProcess) return res.json({ ok: true, msg: 'already running' });
+        const overlayExePath = require('path').join(__dirname, 'overlay.exe');
+        try {
+            overlayProcess = spawn(overlayExePath, [], { stdio: ['pipe', 'pipe', 'pipe'] });
+            overlayProcess.on('exit', () => { overlayProcess = null; });
+            overlayProcess.on('error', (err) => { console.error('[overlay] error:', err); overlayProcess = null; });
+            res.json({ ok: true });
+        } catch (e) { res.json({ ok: false, error: e.message }); }
+    });
+    server.post('/api/overlay/stop', (req, res) => {
+        if (overlayProcess) {
+            try { overlayProcess.stdin.write('QUIT\n'); } catch(e) {}
+            setTimeout(() => { if (overlayProcess) { overlayProcess.kill(); overlayProcess = null; } }, 500);
+        }
+        res.json({ ok: true });
+    });
+    server.post('/api/overlay/command', (req, res) => {
+        if (!overlayProcess) return res.json({ ok: false, error: 'overlay not running' });
+        const { cmd, path: filePath, x, y, w, h } = req.body;
+        let line = '';
+        if (cmd === 'LOAD') line = 'LOAD ' + filePath + '\n';
+        else if (cmd === 'MOVE') line = 'MOVE ' + x + ' ' + y + '\n';
+        else if (cmd === 'SIZE') line = 'SIZE ' + w + ' ' + h + '\n';
+        else if (cmd === 'QUIT') line = 'QUIT\n';
+        if (line) { try { overlayProcess.stdin.write(line); } catch(e) {} }
+        res.json({ ok: true });
+    });
+    server.get('/api/overlay/browse', async (req, res) => {
+        try {
+            const result = await dialog.showOpenDialog(mainWindow, {
+                title: 'Select Media File',
+                filters: [
+                    { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'bmp'] },
+                    { name: 'Sounds', extensions: ['mp3', 'wav', 'ogg'] },
+                    { name: 'All Files', extensions: ['*'] }
+                ],
+                properties: ['openFile']
+            });
+            if (result.canceled || !result.filePaths.length) return res.json({ path: null });
+            res.json({ path: result.filePaths[0] });
+        } catch (e) { res.json({ path: null, error: e.message }); }
     });
 
     // ---- STATIC (must be last) ----
