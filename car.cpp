@@ -19,11 +19,9 @@ void handleCar(const std::string& username, const std::string& args, const std::
         send(s, msg.c_str(), msg.size(), 0);
         closesocket(s);
         WSACleanup();
-        Sleep(300); // small delay between messages so they arrive in order
+        Sleep(300);
     };
 
-    // ---- CAR LIST (edit here to add/change cars later) ----
-    // Format: { name, price, tier (1=slowest, 10=fastest) }
     struct CarDef { std::string name; long long price; int tier; };
     std::vector<CarDef> carList = {
         { "Civic",      500,    1 },
@@ -38,10 +36,9 @@ void handleCar(const std::string& username, const std::string& args, const std::
         { "Koenigsegg", 250000, 10 },
     };
 
-    const int CARS_PER_PAGE = 5; // change this to adjust page size
-    const int PRICE_PAGES   = 1; // pages that show prices (first N pages)
+    const int CARS_PER_PAGE = 5;
+    const int PRICE_PAGES   = 1;
 
-    // ---- PARSE ARGS ----
     std::string sub  = "";
     std::string arg1 = "";
     std::string arg2 = "";
@@ -49,9 +46,7 @@ void handleCar(const std::string& username, const std::string& args, const std::
     argStream >> sub >> arg1 >> arg2;
     if (!arg1.empty() && arg1[0] == '@') arg1 = arg1.substr(1);
 
-    // helper: find car index by name or number (1-based), returns -1 if not found
     auto findCar = [&](const std::string& query) -> int {
-        // try number first
         bool isNum = !query.empty();
         for (char c : query) if (!isdigit(c)) { isNum = false; break; }
         if (isNum) {
@@ -59,7 +54,6 @@ void handleCar(const std::string& username, const std::string& args, const std::
             if (idx >= 0 && idx < (int)carList.size()) return idx;
             return -1;
         }
-        // try name (case-insensitive partial match)
         std::string ql = query;
         std::transform(ql.begin(), ql.end(), ql.begin(), ::tolower);
         for (int i = 0; i < (int)carList.size(); i++) {
@@ -70,7 +64,6 @@ void handleCar(const std::string& username, const std::string& args, const std::
         return -1;
     };
 
-    // helper: get user's garage as vector of car names
     auto getGarage = [&](const std::string& user) -> std::vector<std::string> {
         std::string raw = memGet("garage_" + user);
         std::vector<std::string> cars;
@@ -83,7 +76,6 @@ void handleCar(const std::string& username, const std::string& args, const std::
         return cars;
     };
 
-    // helper: save garage vector back to memory
     auto saveGarage = [&](const std::string& user, const std::vector<std::string>& garage) {
         std::string val = "";
         for (int i = 0; i < (int)garage.size(); i++) {
@@ -93,7 +85,6 @@ void handleCar(const std::string& username, const std::string& args, const std::
         memSet("garage_" + user, val);
     };
 
-    // helper: get car tier for racing (highest tier car in garage wins more)
     auto getBestTier = [&](const std::string& user) -> int {
         std::vector<std::string> garage = getGarage(user);
         int best = 0;
@@ -105,14 +96,18 @@ void handleCar(const std::string& username, const std::string& args, const std::
         return best;
     };
 
-    // helper: cash helpers
     auto getCash = [&](const std::string& user) -> long long {
         std::string val = memGet("cash_" + user);
-        if (val.empty()) { memSet("cash_" + user, "25"); return 25; }
+        if (val.empty()) { memSet("cash_" + user, "200"); return 200; }
         return std::stoll(val);
     };
     auto setCash = [&](const std::string& user, long long amount) {
         memSet("cash_" + user, std::to_string(amount));
+    };
+    auto getBank = [&](const std::string& user) -> long long {
+        std::string val = memGet("bank_" + user);
+        if (val.empty()) { memSet("bank_" + user, "500"); return 500; }
+        return std::stoll(val);
     };
 
     // ---- DEALERSHIP ----
@@ -123,16 +118,13 @@ void handleCar(const std::string& username, const std::string& args, const std::
             for (char c : arg1) if (!isdigit(c)) { isNum = false; break; }
             if (isNum) page = std::stoi(arg1);
         }
-
         int totalCars = (int)carList.size();
         int totalPages = (totalCars + CARS_PER_PAGE - 1) / CARS_PER_PAGE;
         if (page < 1) page = 1;
         if (page > totalPages) page = totalPages;
-
         int start = (page - 1) * CARS_PER_PAGE;
         int end   = std::min(start + CARS_PER_PAGE, totalCars);
         bool showPrices = (page <= PRICE_PAGES);
-
         std::string out = "\xF0\x9F\x9A\x97 Dealership p" + std::to_string(page) + "/" + std::to_string(totalPages) + ": ";
         for (int i = start; i < end; i++) {
             if (i > start) out += " | ";
@@ -140,8 +132,7 @@ void handleCar(const std::string& username, const std::string& args, const std::
             if (showPrices) out += " $" + std::to_string(carList[i].price);
         }
         if (page < totalPages) out += "  (!car dealership " + std::to_string(page + 1) + " for more)";
-        if (!showPrices) out += "  (!car price <name> for details)";
-
+        if (!showPrices) out += "  (!car price <n> for details)";
         sendToChat(out);
         return;
     }
@@ -149,7 +140,7 @@ void handleCar(const std::string& username, const std::string& args, const std::
     // ---- PRICE ----
     if (sub == "price") {
         if (arg1.empty()) {
-            sendToChat("@" + username + " usage: !car price <name or number>");
+            sendToChat("@" + username + " you typed that wrong.");
             return;
         }
         int idx = findCar(arg1);
@@ -157,14 +148,14 @@ void handleCar(const std::string& username, const std::string& args, const std::
             sendToChat("@" + username + " car not found. Use !car dealership to browse.");
             return;
         }
-        sendToChat("@" + username + " \xF0\x9F\x9A\x97 " + carList[idx].name + " costs $" + std::to_string(carList[idx].price) + " — type !car buy " + carList[idx].name + " to purchase.");
+        sendToChat("@" + username + " \xF0\x9F\x9A\x97 " + carList[idx].name + " \xe2\x80\x94 $" + std::to_string(carList[idx].price));
         return;
     }
 
     // ---- BUY ----
     if (sub == "buy") {
         if (arg1.empty()) {
-            sendToChat("@" + username + " usage: !car buy <name or number>");
+            sendToChat("@" + username + " you typed that wrong.");
             return;
         }
         int idx = findCar(arg1);
@@ -175,22 +166,29 @@ void handleCar(const std::string& username, const std::string& args, const std::
         long long price = carList[idx].price;
         long long cash  = getCash(username);
         if (cash < price) {
-            sendToChat("@" + username + " not enough \xF0\x9F\x92\xB5 cash. Need $" + std::to_string(price) + ", you have $" + std::to_string(cash) + ".");
+            long long bank = getBank(username);
+            if (bank <= 0 && cash <= 0) {
+                sendToChat("@" + username + " you're broke.");
+                return;
+            }
+            if (bank <= 0) {
+                sendToChat("@" + username + " not enough \xF0\x9F\x92\xB5 cash \xe2\x80\x94 $" + std::to_string(cash) + " on hand, nothing in the bank.");
+                return;
+            }
+            sendToChat("@" + username + " not enough \xF0\x9F\x92\xB5 cash \xe2\x80\x94 \xF0\x9F\x8F\xA6 $" + std::to_string(bank) + " in the bank. Use !bank withdraw <amount> to get cash first.");
             return;
         }
-        // check if already owned
         std::vector<std::string> garage = getGarage(username);
         for (auto& c : garage) {
             if (c == carList[idx].name) {
-                sendToChat("@" + username + " you already own a " + carList[idx].name + "! Check !car garage.");
+                sendToChat("@" + username + " you already own a " + carList[idx].name + "!");
                 return;
             }
         }
-        // purchase
         setCash(username, cash - price);
         garage.push_back(carList[idx].name);
         saveGarage(username, garage);
-        sendToChat("@" + username + " \xF0\x9F\x9A\x97 bought a " + carList[idx].name + " for $" + std::to_string(price) + "! \xF0\x9F\x92\xB5 $" + std::to_string(cash - price) + " remaining.");
+        sendToChat("@" + username + " \xF0\x9F\x9A\x97 bought a " + carList[idx].name + " for $" + std::to_string(price) + "! \xF0\x9F\x92\xB5 $" + std::to_string(cash - price));
         return;
     }
 
@@ -214,7 +212,7 @@ void handleCar(const std::string& username, const std::string& args, const std::
     // ---- SELL ----
     if (sub == "sell") {
         if (arg1.empty()) {
-            sendToChat("@" + username + " usage: !car sell <name or number>");
+            sendToChat("@" + username + " you typed that wrong.");
             return;
         }
         std::vector<std::string> garage = getGarage(username);
@@ -222,7 +220,6 @@ void handleCar(const std::string& username, const std::string& args, const std::
             sendToChat("@" + username + " you don't own any cars.");
             return;
         }
-        // find car in garage by name
         std::string sellName = "";
         long long sellPrice = 0;
         std::string ql = arg1;
@@ -231,7 +228,6 @@ void handleCar(const std::string& username, const std::string& args, const std::
             std::string nl = cd.name;
             std::transform(nl.begin(), nl.end(), nl.begin(), ::tolower);
             if (nl.find(ql) != std::string::npos) {
-                // check if in garage
                 for (auto& g : garage) {
                     if (g == cd.name) { sellName = cd.name; sellPrice = cd.price; break; }
                 }
@@ -239,7 +235,7 @@ void handleCar(const std::string& username, const std::string& args, const std::
             if (!sellName.empty()) break;
         }
         if (sellName.empty()) {
-            sendToChat("@" + username + " you don't own that car. Check !car garage.");
+            sendToChat("@" + username + " you don't own that car.");
             return;
         }
         long long payout = (sellPrice * 70) / 100;
@@ -253,41 +249,34 @@ void handleCar(const std::string& username, const std::string& args, const std::
 
     // ---- RACE ----
     if (sub == "race") {
-        if (arg1.empty()) {
-            sendToChat("@" + username + " usage: !car race @user <bet>");
-            return;
-        }
-        if (arg2.empty()) {
-            sendToChat("@" + username + " usage: !car race @user <bet>");
+        if (arg1.empty() || arg2.empty()) {
+            sendToChat("@" + username + " you typed that wrong.");
             return;
         }
         std::string target = arg1;
         long long bet = 0;
         bool isNum = !arg2.empty();
         for (char c : arg2) if (!isdigit(c)) { isNum = false; break; }
-        if (!isNum) { sendToChat("@" + username + " bet must be a number."); return; }
+        if (!isNum) { sendToChat("@" + username + " you typed that wrong."); return; }
         bet = std::stoll(arg2);
-        if (bet <= 0) { sendToChat("@" + username + " bet must be greater than $0."); return; }
+        if (bet <= 0) { sendToChat("@" + username + " you typed that wrong."); return; }
         if (target == username) { sendToChat("@" + username + " you can't race yourself!"); return; }
-
         long long myCash = getCash(username);
         if (myCash < bet) {
-            sendToChat("@" + username + " not enough \xF0\x9F\x92\xB5 cash. You have $" + std::to_string(myCash) + ".");
+            long long myBank = getBank(username);
+            if (myBank <= 0 && myCash <= 0) { sendToChat("@" + username + " you're broke."); return; }
+            if (myBank <= 0) { sendToChat("@" + username + " not enough \xF0\x9F\x92\xB5 cash \xe2\x80\x94 $" + std::to_string(myCash) + " on hand, nothing in the bank."); return; }
+            sendToChat("@" + username + " not enough \xF0\x9F\x92\xB5 cash \xe2\x80\x94 \xF0\x9F\x8F\xA6 $" + std::to_string(myBank) + " in the bank. Use !bank withdraw <amount> to get cash first.");
             return;
         }
-
-        // check challenger has a car
         std::vector<std::string> myGarage = getGarage(username);
         if (myGarage.empty()) {
             sendToChat("@" + username + " you need a car to race! Use !car buy.");
             return;
         }
-
-        // store pending race challenge
         long long now = (long long)time(nullptr);
         memSet("racepending_" + target, username + ":" + std::to_string(bet) + ":" + std::to_string(now));
-
-        sendToChat("/me @" + target + " — @" + username + " challenges you to a race for $" + std::to_string(bet) + "! Type !car accept or !car decline (60s to respond)");
+        sendToChat("/me @" + target + " \xe2\x80\x94 @" + username + " challenges you to a race for $" + std::to_string(bet) + "! Type !car accept or !car decline (60s to respond)");
         return;
     }
 
@@ -298,13 +287,11 @@ void handleCar(const std::string& username, const std::string& args, const std::
             sendToChat("@" + username + " no pending race challenge.");
             return;
         }
-        // parse pending: challenger:bet:timestamp
         std::istringstream ps(pending);
         std::string challenger, betStr, tsStr;
         std::getline(ps, challenger, ':');
         std::getline(ps, betStr, ':');
         std::getline(ps, tsStr, ':');
-
         long long now = (long long)time(nullptr);
         long long ts  = tsStr.empty() ? 0 : std::stoll(tsStr);
         if (now - ts > 60) {
@@ -312,13 +299,14 @@ void handleCar(const std::string& username, const std::string& args, const std::
             sendToChat("@" + username + " that race challenge expired.");
             return;
         }
-
-        long long bet         = std::stoll(betStr);
-        long long myCash      = getCash(username);
-        long long theirCash   = getCash(challenger);
-
+        long long bet       = std::stoll(betStr);
+        long long myCash    = getCash(username);
+        long long theirCash = getCash(challenger);
         if (myCash < bet) {
-            sendToChat("@" + username + " not enough \xF0\x9F\x92\xB5 cash to cover the $" + std::to_string(bet) + " bet.");
+            long long myBank = getBank(username);
+            if (myBank <= 0 && myCash <= 0) { sendToChat("@" + username + " you're broke."); return; }
+            if (myBank <= 0) { sendToChat("@" + username + " not enough \xF0\x9F\x92\xB5 cash \xe2\x80\x94 $" + std::to_string(myCash) + " on hand, nothing in the bank."); return; }
+            sendToChat("@" + username + " not enough \xF0\x9F\x92\xB5 cash \xe2\x80\x94 \xF0\x9F\x8F\xA6 $" + std::to_string(myBank) + " in the bank. Use !bank withdraw <amount> to get cash first.");
             return;
         }
         if (theirCash < bet) {
@@ -326,10 +314,8 @@ void handleCar(const std::string& username, const std::string& args, const std::
             sendToChat("@" + challenger + " no longer has enough cash for the race.");
             return;
         }
-
-        // check both have cars
-        std::vector<std::string> myGarage     = getGarage(username);
-        std::vector<std::string> theirGarage  = getGarage(challenger);
+        std::vector<std::string> myGarage    = getGarage(username);
+        std::vector<std::string> theirGarage = getGarage(challenger);
         if (myGarage.empty()) {
             sendToChat("@" + username + " you need a car to race! Use !car buy.");
             return;
@@ -339,23 +325,16 @@ void handleCar(const std::string& username, const std::string& args, const std::
             sendToChat("@" + challenger + " doesn't have a car anymore!");
             return;
         }
-
-        // tier-based race: higher tier = better win chance, but RNG keeps it interesting
         int myTier    = getBestTier(username);
         int theirTier = getBestTier(challenger);
-        // base win chance 50%, +5% per tier advantage, capped at 80%
         int tierDiff  = myTier - theirTier;
         int myChance  = 50 + (tierDiff * 5);
         if (myChance < 20) myChance = 20;
         if (myChance > 80) myChance = 80;
-
         srand((unsigned int)time(nullptr) ^ (unsigned int)(uintptr_t)&challenger);
         int roll = rand() % 100;
         bool iWin = roll < myChance;
-
         memSet("racepending_" + username, "");
-
-        // find best car names for flavour
         std::string myBestCar = myGarage.back();
         std::string theirBestCar = theirGarage.back();
         for (auto& cd : carList) {
@@ -364,18 +343,16 @@ void handleCar(const std::string& username, const std::string& args, const std::
         for (auto& cd : carList) {
             for (auto& g : theirGarage) if (g == cd.name) theirBestCar = cd.name;
         }
-
-        sendToChat("\xF0\x9F\x9A\xA6 RACE: @" + challenger + " (" + theirBestCar + ") vs @" + username + " (" + myBestCar + ") — $" + std::to_string(bet) + " on the line!");
+        sendToChat("\xF0\x9F\x9A\xA6 RACE: @" + challenger + " (" + theirBestCar + ") vs @" + username + " (" + myBestCar + ") \xe2\x80\x94 $" + std::to_string(bet) + " on the line!");
         Sleep(2000);
-
         if (iWin) {
             setCash(username, myCash + bet);
             setCash(challenger, theirCash - bet);
-            sendToChat("\xF0\x9F\x8F\x81 @" + username + " wins! +$" + std::to_string(bet) + " \xF0\x9F\x92\xB5 $" + std::to_string(myCash + bet) + " | @" + challenger + " \xF0\x9F\x92\xB5 $" + std::to_string(theirCash - bet));
+            sendToChat("\xF0\x9F\x8F\x81 @" + username + " +$" + std::to_string(bet) + " \xF0\x9F\x92\xB5 $" + std::to_string(myCash + bet) + " | @" + challenger + " \xF0\x9F\x92\xB5 $" + std::to_string(theirCash - bet));
         } else {
             setCash(challenger, theirCash + bet);
             setCash(username, myCash - bet);
-            sendToChat("\xF0\x9F\x8F\x81 @" + challenger + " wins! +$" + std::to_string(bet) + " \xF0\x9F\x92\xB5 $" + std::to_string(theirCash + bet) + " | @" + username + " \xF0\x9F\x92\xB5 $" + std::to_string(myCash - bet));
+            sendToChat("\xF0\x9F\x8F\x81 @" + challenger + " +$" + std::to_string(bet) + " \xF0\x9F\x92\xB5 $" + std::to_string(theirCash + bet) + " | @" + username + " \xF0\x9F\x92\xB5 $" + std::to_string(myCash - bet));
         }
         return;
     }
@@ -395,6 +372,12 @@ void handleCar(const std::string& username, const std::string& args, const std::
         return;
     }
 
-    // ---- HELP ----
-    sendToChat("@" + username + " \xF0\x9F\x9A\x97 !car dealership | price <car> | buy <car> | garage [@user] | sell <car> | race @user <bet>");
+    // ---- UNKNOWN SUBCOMMAND ----
+    if (!sub.empty()) {
+        sendToChat("@" + username + " you typed that wrong.");
+        return;
+    }
+
+    // ---- BARE !car — show menu ----
+    sendToChat("@" + username + " \xF0\x9F\x9A\x97 dealership | price <car> | buy <car> | garage | sell <car> | race @user <bet>");
 }

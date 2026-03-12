@@ -1,7 +1,7 @@
 #include <vector>
 #include <algorithm>
 // -- SECTION: BANK_COMMAND -----------------------------------------------------
-// bank.cpp � #included by reactor.cpp after sendToBot(), memoryGet(), memorySet()
+// bank.cpp — #included by reactor.cpp after sendToBot(), memoryGet(), memorySet()
 void handleBank(const std::string& username, const std::string& args, const std::string& channel, const std::vector<std::string>& admins) {
 
     std::string _memPath = getMemoryPath();
@@ -25,7 +25,7 @@ void handleBank(const std::string& username, const std::string& args, const std:
 
     auto getBank = [&](const std::string& user) -> long long {
         std::string val = memGet("bank_" + user);
-        if (val.empty()) { memSet("bank_" + user, "75"); return 75; }
+        if (val.empty()) { memSet("bank_" + user, "500"); return 500; }
         return std::stoll(val);
     };
     auto setBank = [&](const std::string& user, long long amount) {
@@ -33,7 +33,7 @@ void handleBank(const std::string& username, const std::string& args, const std:
     };
     auto getCash = [&](const std::string& user) -> long long {
         std::string val = memGet("cash_" + user);
-        if (val.empty()) { memSet("cash_" + user, "25"); return 25; }
+        if (val.empty()) { memSet("cash_" + user, "200"); return 200; }
         return std::stoll(val);
     };
     auto setCash = [&](const std::string& user, long long amount) {
@@ -100,7 +100,7 @@ void handleBank(const std::string& username, const std::string& args, const std:
     // ---- DEPOSIT ----
     else if (sub == "deposit") {
         if (arg1.empty()) {
-            sendToChat("@" + username + " usage: !bank deposit <amount> (max $50/hr)");
+            sendToChat("@" + username + " you typed that wrong.");
         } else {
             long long amount = std::stoll(arg1);
             if (amount <= 0 || amount > 50) {
@@ -131,12 +131,12 @@ void handleBank(const std::string& username, const std::string& args, const std:
     // ---- WITHDRAW ----
     else if (sub == "withdraw") {
         if (arg1.empty()) {
-            sendToChat("@" + username + " usage: !bank withdraw <amount>");
+            sendToChat("@" + username + " you typed that wrong.");
         } else {
             long long amount = std::stoll(arg1);
             long long bank = getBank(username);
             if (amount <= 0) {
-                sendToChat("@" + username + " invalid amount.");
+                sendToChat("@" + username + " you typed that wrong.");
             } else if (amount > bank) {
                 sendToChat("@" + username + " \xF0\x9F\x8F\xA6 only has $" + std::to_string(bank));
             } else {
@@ -151,12 +151,12 @@ void handleBank(const std::string& username, const std::string& args, const std:
     // ---- GIVE ----
     else if (sub == "give") {
         if (arg1.empty() || arg2.empty()) {
-            sendToChat("@" + username + " usage: !bank give @user <amount>");
+            sendToChat("@" + username + " you typed that wrong.");
         } else {
             long long amount = std::stoll(arg2);
             long long myBank = getBank(username);
             if (amount <= 0) {
-                sendToChat("@" + username + " invalid amount.");
+                sendToChat("@" + username + " you typed that wrong.");
             } else if (amount > myBank) {
                 sendToChat("@" + username + " \xF0\x9F\x8F\xA6 only has $" + std::to_string(myBank));
             } else {
@@ -261,28 +261,27 @@ void handleBank(const std::string& username, const std::string& args, const std:
         }
     }
 
-    // ---- ADMIN ----
-    // ---- UNJAIL ----
+    // ---- UNJAIL (admin) ----
     else if (sub == "unjail") {
-       std::string userLower = username;
-std::transform(userLower.begin(), userLower.end(), userLower.begin(), ::tolower);
-bool isAdmin = std::find(admins.begin(), admins.end(), userLower) != admins.end();
+        std::string userLower = username;
+        std::transform(userLower.begin(), userLower.end(), userLower.begin(), ::tolower);
+        bool isAdmin = std::find(admins.begin(), admins.end(), userLower) != admins.end();
         if (!isAdmin) { sendToChat("@" + username + " no permission."); return; }
         std::string target = arg1;
-        if (target.empty()) { sendToChat("@" + username + " usage: !bank unjail @user"); return; }
+        if (target.empty()) { sendToChat("@" + username + " you typed that wrong."); return; }
         if (target[0] == '@') target = target.substr(1);
         memSet("jail_" + target, "0");
         sendToChat("@" + target + " \xF0\x9F\x91\xAE released!");
     }
 
-    // ---- RESETCOOLDOWN ----
+    // ---- RESETCOOLDOWN (admin) ----
     else if (sub == "resetcooldown") {
         std::string userLower = username;
-std::transform(userLower.begin(), userLower.end(), userLower.begin(), ::tolower);
-bool isAdmin = std::find(admins.begin(), admins.end(), userLower) != admins.end();
+        std::transform(userLower.begin(), userLower.end(), userLower.begin(), ::tolower);
+        bool isAdmin = std::find(admins.begin(), admins.end(), userLower) != admins.end();
         if (!isAdmin) { sendToChat("@" + username + " no permission."); return; }
         std::string target = arg1;
-        if (target.empty()) { sendToChat("@" + username + " usage: !bank resetcooldown @user"); return; }
+        if (target.empty()) { sendToChat("@" + username + " you typed that wrong."); return; }
         if (target[0] == '@') target = target.substr(1);
         memSet("rob_cooldown_" + target, "0");
         memSet("deposit_time_" + target, "0");
@@ -290,30 +289,35 @@ bool isAdmin = std::find(admins.begin(), admins.end(), userLower) != admins.end(
         sendToChat("@" + target + " cooldowns reset!");
     }
 
-    // ---- SETBANK ----
+    // ---- SETBANK (admin) ----
     else if (sub == "setbank") {
         bool isAdmin = std::find(admins.begin(), admins.end(), username) != admins.end();
         if (!isAdmin) { sendToChat("@" + username + " no permission."); return; }
-        if (arg1.empty() || arg2.empty()) { sendToChat("@" + username + " usage: !bank setbank @user <amount>"); return; }
+        if (arg1.empty() || arg2.empty()) { sendToChat("@" + username + " you typed that wrong."); return; }
         std::string target = arg1;
         if (target[0] == '@') target = target.substr(1);
         setBank(target, std::stoll(arg2));
         sendToChat("@" + target + " \xF0\x9F\x8F\xA6 $" + arg2);
     }
 
-    // ---- SETCASH ----
+    // ---- SETCASH (admin) ----
     else if (sub == "setcash") {
         bool isAdmin = std::find(admins.begin(), admins.end(), username) != admins.end();
         if (!isAdmin) { sendToChat("@" + username + " no permission."); return; }
-        if (arg1.empty() || arg2.empty()) { sendToChat("@" + username + " usage: !bank setcash @user <amount>"); return; }
+        if (arg1.empty() || arg2.empty()) { sendToChat("@" + username + " you typed that wrong."); return; }
         std::string target = arg1;
         if (target[0] == '@') target = target.substr(1);
         setCash(target, std::stoll(arg2));
         sendToChat("@" + target + " \xF0\x9F\x92\xB5 $" + arg2);
     }
 
-// ---- HELP ----
-else {
-    sendToChat("@" + username + " \xF0\x9F\x8F\xA6 balance [@user] | deposit | withdraw | give @user | \xF0\x9F\x8E\x81 daily | \xF0\x9F\xA6\x9D rob [@user] | \xF0\x9F\x8F\x86 leaderboard " + std::to_string(rand() % 9999));
-}
+    // ---- UNKNOWN SUBCOMMAND ----
+    else if (!sub.empty()) {
+        sendToChat("@" + username + " you typed that wrong.");
+    }
+
+    // ---- BARE !bank — show menu ----
+    else {
+        sendToChat("@" + username + " \xF0\x9F\x8F\xA6 balance | deposit | withdraw | give @user | \xF0\x9F\x8E\x81 daily | \xF0\x9F\xA6\x9D rob | \xF0\x9F\x8F\x86 leaderboard");
+    }
 }
