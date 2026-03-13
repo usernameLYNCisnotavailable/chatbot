@@ -1258,6 +1258,10 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
                     broadcastTextCmd({ cmd: 'ADDTEXT', id: src.id, text: src.text, x: src.x || 100, y: src.y || 100,
                         font: src.font, size: src.fontSize, color: src.color, bold: src.bold, italic: src.italic,
                         shadow: src.shadow, animation: src.animation, animDuration: src.animDuration, maxW: src.maxW });
+                    const textSecs = src.displaySeconds || 0;
+                    if (textSecs > 0) {
+                        setTimeout(() => broadcastTextCmd({ cmd: 'CLEARTEXT', id: src.id }), textSecs * 1000);
+                    }
                 }
 
                 if (hasImage && overlayProcess) {

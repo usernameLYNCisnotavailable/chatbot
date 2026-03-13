@@ -1343,7 +1343,7 @@
             </label>
             <button type="button" onclick="overlayExpandCanvas()" style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;padding:2px 6px;border-radius:4px;border:1px solid var(--border);" title="Open large preview">&#x26F6; Expand</button>
           </div>
-          <div id="overlaySharedCanvas" style="position:relative;width:100%;aspect-ratio:16/9;background:#111;border:1px solid var(--border);border-radius:6px;overflow:hidden;user-select:none;">
+          <div id="overlaySharedCanvas" style="position:relative;width:100%;background:#111;border:1px solid var(--border);border-radius:6px;overflow:hidden;user-select:none;">
             <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 10%,rgba(255,255,255,0.02) 10%,rgba(255,255,255,0.02) 10.5%),repeating-linear-gradient(90deg,transparent,transparent 17.7%,rgba(255,255,255,0.02) 17.7%,rgba(255,255,255,0.02) 18.2%);pointer-events:none;"></div>
             <!-- Media box (image / video) -->
             <div id="overlayMediaBox" style="display:none;position:absolute;left:10%;top:10%;width:40%;height:40%;cursor:grab;border:2px dashed rgba(145,71,255,0.7);border-radius:4px;background:rgba(145,71,255,0.08);align-items:center;justify-content:center;min-width:20px;min-height:12px;box-sizing:border-box;">
@@ -1352,7 +1352,7 @@
             </div>
             <!-- Text box -->
             <div id="overlayTextBox" style="display:none;position:absolute;left:5.2%;top:37%;cursor:grab;min-width:32px;min-height:12px;">
-              <div id="overlayTextPreview" style="font-family:Arial;font-size:14px;color:#fff;font-weight:normal;font-style:normal;text-shadow:1px 1px 4px rgba(0,0,0,0.8);white-space:pre-wrap;word-break:break-word;line-height:1.25;padding:4px 6px;border:1px dashed rgba(145,71,255,0.6);border-radius:3px;pointer-events:none;box-sizing:border-box;width:100%;">Text preview</div>
+              <div id="overlayTextPreview" style="font-family:Arial;font-size:14px;color:#fff;font-weight:normal;font-style:normal;text-shadow:1px 1px 4px rgba(0,0,0,0.8);white-space:pre-wrap;word-break:break-word;line-height:1.25;border:1px dashed rgba(145,71,255,0.6);border-radius:3px;pointer-events:none;box-sizing:border-box;width:100%;">Text preview</div>
               <div id="overlayTextResizeHandle" style="position:absolute;bottom:-5px;right:-5px;width:14px;height:14px;background:var(--accent);border-radius:3px;cursor:se-resize;z-index:2;"></div>
             </div>
           </div>
@@ -1589,7 +1589,7 @@ function overlayAddSource() {
   overlaySourceTypeChanged();
   overlayLoadCommandsList();
   document.getElementById('overlayAddModal').style.display = 'flex';
-  setTimeout(() => { overlayMediaUpdateBox(); overlayTextPreviewUpdate(); }, 30);
+  setTimeout(() => { overlayFixCanvasHeight(); overlayMediaUpdateBox(); overlayTextPreviewUpdate(); }, 30);
 }
 
 // overlayCloseModal defined below with edit reset logic
@@ -1675,6 +1675,7 @@ function overlaySourceTypeChanged() {
 
   // Shared canvas
   document.getElementById('overlayPosCanvasGroup').style.display = showCanvas ? 'flex' : 'none';
+  if (showCanvas) overlayFixCanvasHeight();
   const mediaBox = document.getElementById('overlayMediaBox');
   const textBox  = document.getElementById('overlayTextBox');
   if (mediaBox) mediaBox.style.display = (image || video) ? 'flex' : 'none';
@@ -1858,55 +1859,101 @@ function overlayVideoTrimInputChanged() {
   overlayVideoScrubTo(start);
 }
 
-// Dual-handle slider drag logic for video trim
+// Dual-handle slider drag logic for video trim + playhead seek
 (function() {
-  let draggingHandle = null;
+  let draggingHandle = null; // 'start' | 'end' | 'playhead'
+
   function getHandleFromEvent(e) {
     if (e.target.id === 'overlayVideoHandleStart') return 'start';
-    if (e.target.id === 'overlayVideoHandleEnd') return 'end';
+    if (e.target.id === 'overlayVideoHandleEnd')   return 'end';
+    if (e.target.id === 'overlayVideoPlayhead')    return 'playhead';
     return null;
   }
+
+  function seekToSliderX(clientX) {
+    const wrap = document.getElementById('overlayVideoSliderWrap');
+    if (!wrap || !overlayVideoDuration) return;
+    const rect = wrap.getBoundingClientRect();
+    const pct  = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    const t    = pct * overlayVideoDuration;
+    const vid  = document.getElementById('overlayVideoPreview');
+    if (vid) vid.currentTime = t;
+    const ph = document.getElementById('overlayVideoPlayhead');
+    if (ph) ph.style.left = (pct * 100) + '%';
+  }
+
   document.addEventListener('mousedown', (e) => {
     const h = getHandleFromEvent(e);
     if (h) {
       draggingHandle = h;
-      // Pause video while scrubbing so frame is visible
       const vid = document.getElementById('overlayVideoPreview');
-      if (vid && !vid.paused) vid.pause();
+      if (h === 'playhead') {
+        // Start scrubbing — pause while dragging
+        if (vid && !vid.paused) vid.pause();
+      } else {
+        if (vid && !vid.paused) vid.pause();
+      }
+      e.preventDefault();
+      return;
+    }
+    // Click anywhere on the track to seek
+    if (e.target.id === 'overlayVideoSliderWrap' ||
+        e.target.id === 'overlayVideoSliderRange' ||
+        (e.target.closest && e.target.closest('#overlayVideoSliderWrap') &&
+         !['overlayVideoHandleStart','overlayVideoHandleEnd','overlayVideoPlayhead'].includes(e.target.id))) {
+      const vid = document.getElementById('overlayVideoPreview');
+      if (!vid || !vid.src) return;
+      seekToSliderX(e.clientX);
+      const wasPlaying = !vid.paused;
+      vid.pause();
+      draggingHandle = 'playhead';
       e.preventDefault();
     }
   });
+
   document.addEventListener('mousemove', (e) => {
     if (!draggingHandle || !overlayVideoDuration) return;
     const wrap = document.getElementById('overlayVideoSliderWrap');
     if (!wrap) return;
     const rect = wrap.getBoundingClientRect();
-    let pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    const val = (pct * overlayVideoDuration).toFixed(1);
-    if (draggingHandle === 'start') {
+    const pct  = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const val  = (pct * overlayVideoDuration).toFixed(1);
+
+    if (draggingHandle === 'playhead') {
+      seekToSliderX(e.clientX);
+    } else if (draggingHandle === 'start') {
       const end = parseFloat(document.getElementById('overlayVideoEnd').value) || overlayVideoDuration;
-      const t = Math.min(parseFloat(val), end - 0.1);
+      const t   = Math.min(parseFloat(val), end - 0.1);
       document.getElementById('overlayVideoStart').value = t.toFixed(1);
       overlayVideoScrubTo(t);
     } else {
       const start = parseFloat(document.getElementById('overlayVideoStart').value) || 0;
-      const t = Math.max(parseFloat(val), start + 0.1);
+      const t     = Math.max(parseFloat(val), start + 0.1);
       document.getElementById('overlayVideoEnd').value = t.toFixed(1);
       overlayVideoScrubTo(t);
     }
-    overlayVideoUpdateSlider();
+    if (draggingHandle !== 'playhead') overlayVideoUpdateSlider();
   });
+
   document.addEventListener('mouseup', () => {
     if (draggingHandle) {
+      const wasSeek = draggingHandle === 'playhead';
       draggingHandle = null;
-      // Resume playback from start point after releasing handle
-      const vid = document.getElementById('overlayVideoPreview');
+      const vid   = document.getElementById('overlayVideoPreview');
       const start = parseFloat(document.getElementById('overlayVideoStart').value) || 0;
-      if (vid && vid.src) { vid.currentTime = start; vid.play().catch(() => {}); }
+      if (vid && vid.src) {
+        if (wasSeek) {
+          // Resume from wherever the playhead was dropped
+          vid.play().catch(() => {});
+        } else {
+          // Resume trim handle drag from start point
+          vid.currentTime = start;
+          vid.play().catch(() => {});
+        }
+      }
     }
   });
 })();
-
 // ---- Text source JS ----
 
 function overlayTextFontSelectChanged() {
@@ -1944,6 +1991,15 @@ function overlayTextSizeAltChanged() {
 // ---- Shared canvas constants ----
 const SCREEN_W = 1920, SCREEN_H = 1080;
 const MEDIA_SCREEN_W = 1920, MEDIA_SCREEN_H = 1080;
+
+// Fix canvas height — aspect-ratio:16/9 doesn't resolve inside overflow:auto flex containers
+function overlayFixCanvasHeight() {
+  const c = document.getElementById('overlaySharedCanvas');
+  if (!c) return;
+  const w = c.offsetWidth;
+  if (w > 0) c.style.height = Math.round(w * 9 / 16) + 'px';
+}
+window.addEventListener('resize', overlayFixCanvasHeight);
 
 // ---- Media position canvas (image / video) ----
 function overlayMediaUpdateBox() {
@@ -2024,69 +2080,181 @@ function overlayMediaPopulatePos(src) {
   });
 })();
 
-// Expand canvas — opens a larger preview modal
+// Expand canvas — opens a larger preview modal with draggable boxes
 function overlayExpandCanvas() {
-  const type = document.getElementById('overlaySourceType').value;
-  const isText = type === 'text';
-  // Build a fullscreen-ish overlay showing the canvas at larger scale
   let existing = document.getElementById('overlayCanvasExpandModal');
   if (existing) { existing.remove(); return; }
+
+  const hasImage = overlayTypeState.image;
+  const hasVideo = overlayTypeState.video;
+  const hasText  = overlayTypeState.text;
+  const hasMedia = hasImage || hasVideo;
+  const mediaLabel = hasVideo ? 'VIDEO' : 'IMAGE';
+
   const modal = document.createElement('div');
   modal.id = 'overlayCanvasExpandModal';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10001;display:flex;align-items:center;justify-content:center;';
   modal.innerHTML = `
     <div style="width:90vw;max-width:1280px;display:flex;flex-direction:column;gap:10px;">
       <div style="display:flex;align-items:center;justify-content:space-between;">
-        <span style="color:var(--muted);font-size:13px;">Position preview — actual proportions (16:9)</span>
+        <span style="color:var(--muted);font-size:13px;">Position preview — drag boxes to reposition</span>
         <button onclick="document.getElementById('overlayCanvasExpandModal').remove()" style="background:none;border:1px solid var(--border);color:var(--text);font-size:13px;cursor:pointer;padding:4px 12px;border-radius:6px;">Close</button>
       </div>
       <div id="overlayExpandedCanvas" style="position:relative;width:100%;aspect-ratio:16/9;background:#0a0a0a;border:1px solid var(--border);border-radius:8px;overflow:hidden;">
         <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 10%,rgba(255,255,255,0.015) 10%,rgba(255,255,255,0.015) 10.5%),repeating-linear-gradient(90deg,transparent,transparent 17.7%,rgba(255,255,255,0.015) 17.7%,rgba(255,255,255,0.015) 18.2%);pointer-events:none;"></div>
-        ${isText ? `
-          <div id="overlayExpandTextBox" style="position:absolute;left:5.2%;top:37%;cursor:grab;min-width:32px;">
-            <div id="overlayExpandTextPreview" style="font-family:Arial;font-size:28px;color:#fff;white-space:pre-wrap;word-break:break-word;padding:4px 6px;border:1px dashed rgba(145,71,255,0.6);border-radius:3px;pointer-events:none;box-sizing:border-box;width:100%;">Text preview</div>
-          </div>` : `
-          <div id="overlayExpandMediaBox" style="position:absolute;cursor:grab;border:2px dashed rgba(145,71,255,0.7);border-radius:4px;background:rgba(145,71,255,0.08);display:flex;align-items:center;justify-content:center;">
-            <span style="font-size:14px;color:rgba(145,71,255,0.9);font-weight:600;">${type.includes('video') ? 'VIDEO' : 'IMAGE'}</span>
-          </div>`}
+        ${hasMedia ? `<div id="overlayExpandMediaBox" style="position:absolute;cursor:grab;border:2px dashed rgba(145,71,255,0.7);border-radius:4px;background:rgba(145,71,255,0.08);display:flex;align-items:center;justify-content:center;box-sizing:border-box;">
+          <span style="font-size:14px;color:rgba(145,71,255,0.9);font-weight:600;pointer-events:none;">${mediaLabel}</span>
+        </div>` : ''}
+        ${hasText ? `<div id="overlayExpandTextBox" style="position:absolute;cursor:grab;min-width:32px;">
+          <div id="overlayExpandTextPreview" style="font-family:Arial;font-size:28px;color:#fff;white-space:pre-wrap;word-break:break-word;border:1px dashed rgba(145,71,255,0.6);border-radius:3px;pointer-events:none;box-sizing:border-box;width:100%;">Text preview</div>
+          <div id="overlayExpandResizeHandle" style="position:absolute;bottom:-5px;right:-5px;width:14px;height:14px;background:var(--accent);border-radius:3px;cursor:se-resize;z-index:2;"></div>
+        </div>` : ''}
       </div>
     </div>`;
   document.body.appendChild(modal);
   modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
 
-  // Sync position into expanded view
+  // Position both boxes after modal is visible
   setTimeout(() => {
     const expCanvas = document.getElementById('overlayExpandedCanvas');
     if (!expCanvas) return;
-    const cw = expCanvas.offsetWidth; const ch = expCanvas.offsetHeight;
-    if (isText) {
+    const cw = expCanvas.offsetWidth;
+    const ch = expCanvas.offsetHeight;
+
+    if (hasMedia) {
+      const mb = document.getElementById('overlayExpandMediaBox');
+      if (mb) {
+        const x = parseFloat(document.getElementById('overlayMediaX').value) || 0;
+        const y = parseFloat(document.getElementById('overlayMediaY').value) || 0;
+        const w = parseFloat(document.getElementById('overlayMediaW').value) || 960;
+        const h = parseFloat(document.getElementById('overlayMediaH').value) || 540;
+        mb.style.left   = (x / SCREEN_W * cw) + 'px';
+        mb.style.top    = (y / SCREEN_H * ch) + 'px';
+        mb.style.width  = (w / SCREEN_W * cw) + 'px';
+        mb.style.height = (h / SCREEN_H * ch) + 'px';
+      }
+    }
+
+    if (hasText) {
       const tb = document.getElementById('overlayExpandTextBox');
       const tp = document.getElementById('overlayExpandTextPreview');
-      if (!tb) return;
-      const x = parseFloat(document.getElementById('overlayTextX').value) || 0;
-      const y = parseFloat(document.getElementById('overlayTextY').value) || 0;
-      const mw = parseFloat(document.getElementById('overlayTextMaxW').value) || 600;
-      const sz = parseFloat(document.getElementById('overlayTextSize').value) || 48;
-      tb.style.left = (x / SCREEN_W * cw) + 'px';
-      tb.style.top  = (y / SCREEN_H * ch) + 'px';
-      tb.style.width = (mw / SCREEN_W * cw) + 'px';
-      if (tp) {
-        const scaleFont = sz / SCREEN_H * ch;
-        tp.style.fontSize = scaleFont + 'px';
+      if (tb && tp) {
+        const x   = parseFloat(document.getElementById('overlayTextX').value)    || 0;
+        const y   = parseFloat(document.getElementById('overlayTextY').value)    || 0;
+        const mw  = parseFloat(document.getElementById('overlayTextMaxW').value) || 600;
+        const sz  = parseFloat(document.getElementById('overlayTextSize').value) || 48;
+        tb.style.left  = (x  / SCREEN_W * cw) + 'px';
+        tb.style.top   = (y  / SCREEN_H * ch) + 'px';
+        tb.style.width = (mw / SCREEN_W * cw) + 'px';
+        tp.style.fontSize   = (sz / SCREEN_H * ch) + 'px';
+        tp.style.fontFamily = overlayTextGetFont();
+        tp.style.color      = document.getElementById('overlayTextColor').value;
+        tp.style.fontWeight = document.getElementById('overlayTextBold').checked ? 'bold' : 'normal';
+        tp.style.fontStyle  = document.getElementById('overlayTextItalic').checked ? 'italic' : 'normal';
+        tp.style.textShadow = document.getElementById('overlayTextShadow').checked ? '1px 1px 4px rgba(0,0,0,0.85)' : 'none';
         tp.textContent = document.getElementById('overlayTextContent').value || 'Text preview';
       }
-    } else {
-      const mb = document.getElementById('overlayExpandMediaBox');
-      if (!mb) return;
-      const x = parseFloat(document.getElementById('overlayMediaX').value) || 0;
-      const y = parseFloat(document.getElementById('overlayMediaY').value) || 0;
-      const w = parseFloat(document.getElementById('overlayMediaW').value) || 960;
-      const h = parseFloat(document.getElementById('overlayMediaH').value) || 540;
-      mb.style.left   = (x / MEDIA_SCREEN_W * cw) + 'px';
-      mb.style.top    = (y / MEDIA_SCREEN_H * ch) + 'px';
-      mb.style.width  = (w / MEDIA_SCREEN_W * cw) + 'px';
-      mb.style.height = (h / MEDIA_SCREEN_H * ch) + 'px';
     }
+
+    // Drag logic for expand modal boxes
+    let dragTarget = null, dragMode = null, dStartX, dStartY, dStartL, dStartT, dStartW, dStartFontSize;
+
+    function expandMouseDown(e) {
+      const expC = document.getElementById('overlayExpandedCanvas');
+      if (!expC) return;
+
+      const rh = document.getElementById('overlayExpandResizeHandle');
+      const tb = document.getElementById('overlayExpandTextBox');
+      const mb = document.getElementById('overlayExpandMediaBox');
+
+      if (rh && e.target === rh) {
+        dragTarget = 'text'; dragMode = 'resize';
+        dStartX = e.clientX; dStartY = e.clientY;
+        dStartW = tb ? tb.offsetWidth : 100;
+        dStartFontSize = parseFloat(document.getElementById('overlayTextSize').value) || 48;
+        e.preventDefault(); return;
+      }
+      if (tb && (e.target === tb || tb.contains(e.target))) {
+        dragTarget = 'text'; dragMode = 'move';
+        dStartX = e.clientX; dStartY = e.clientY;
+        dStartL = parseFloat(tb.style.left) || 0;
+        dStartT = parseFloat(tb.style.top)  || 0;
+        tb.style.cursor = 'grabbing';
+        e.preventDefault(); return;
+      }
+      if (mb && (e.target === mb || mb.contains(e.target))) {
+        dragTarget = 'media'; dragMode = 'move';
+        dStartX = e.clientX; dStartY = e.clientY;
+        dStartL = parseFloat(mb.style.left) || 0;
+        dStartT = parseFloat(mb.style.top)  || 0;
+        mb.style.cursor = 'grabbing';
+        e.preventDefault();
+      }
+    }
+
+    function expandMouseMove(e) {
+      if (!dragTarget) return;
+      const expC = document.getElementById('overlayExpandedCanvas');
+      if (!expC) return;
+      const ecw = expC.offsetWidth, ech = expC.offsetHeight;
+      const dx = e.clientX - dStartX, dy = e.clientY - dStartY;
+
+      if (dragTarget === 'text') {
+        const tb = document.getElementById('overlayExpandTextBox');
+        if (!tb) return;
+        if (dragMode === 'move') {
+          const nl = Math.max(0, Math.min(ecw - tb.offsetWidth,  dStartL + dx));
+          const nt = Math.max(0, Math.min(ech - 10,              dStartT + dy));
+          tb.style.left = nl + 'px'; tb.style.top = nt + 'px';
+          document.getElementById('overlayTextX').value = Math.round(nl / ecw * SCREEN_W);
+          document.getElementById('overlayTextY').value = Math.round(nt / ech * SCREEN_H);
+          overlayTextPreviewUpdate();
+        } else if (dragMode === 'resize') {
+          const newW = Math.max(40, dStartW + dx);
+          tb.style.width = newW + 'px';
+          document.getElementById('overlayTextMaxW').value = Math.round(newW / ecw * SCREEN_W);
+          const newSz = Math.min(300, Math.max(8, Math.round(dStartFontSize + dy * 0.4)));
+          const tp = document.getElementById('overlayExpandTextPreview');
+          if (tp) tp.style.fontSize = (newSz / SCREEN_H * ech) + 'px';
+          document.getElementById('overlayTextSize').value = newSz;
+          document.getElementById('overlayTextSizeAlt').value = newSz;
+          overlayTextPreviewUpdate();
+        }
+      } else if (dragTarget === 'media') {
+        const mb = document.getElementById('overlayExpandMediaBox');
+        if (!mb) return;
+        const nl = Math.max(0, Math.min(ecw - mb.offsetWidth,  dStartL + dx));
+        const nt = Math.max(0, Math.min(ech - mb.offsetHeight, dStartT + dy));
+        mb.style.left = nl + 'px'; mb.style.top = nt + 'px';
+        document.getElementById('overlayMediaX').value = Math.round(nl / ecw * SCREEN_W);
+        document.getElementById('overlayMediaY').value = Math.round(nt / ech * SCREEN_H);
+        overlayMediaUpdateBox();
+      }
+    }
+
+    function expandMouseUp() {
+      if (!dragTarget) return;
+      const tb = document.getElementById('overlayExpandTextBox');
+      const mb = document.getElementById('overlayExpandMediaBox');
+      if (tb) tb.style.cursor = 'grab';
+      if (mb) mb.style.cursor = 'grab';
+      dragTarget = null; dragMode = null;
+    }
+
+    expCanvas.addEventListener('mousedown', expandMouseDown);
+    document.addEventListener('mousemove', expandMouseMove);
+    document.addEventListener('mouseup', expandMouseUp);
+
+    // Clean up listeners when modal closes
+    const observer = new MutationObserver(() => {
+      if (!document.getElementById('overlayCanvasExpandModal')) {
+        document.removeEventListener('mousemove', expandMouseMove);
+        document.removeEventListener('mouseup', expandMouseUp);
+        observer.disconnect();
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+
   }, 50);
 }
 
@@ -2100,24 +2268,25 @@ function overlayTextPreviewUpdate() {
   const canvas  = document.getElementById('overlaySharedCanvas');
   if (!box || !preview || !canvas) return;
 
-  const cw = canvas.offsetWidth || 1;
+  const cw = canvas.offsetWidth  || 1;
   const ch = canvas.offsetHeight || 1;
+  // Use canvas height as the reference — same axis the text coords use on screen
   const scaleX = cw / SCREEN_W;
   const scaleY = ch / SCREEN_H;
 
-  // Position
+  // Position — map screen coords to canvas coords
   const x = parseFloat(document.getElementById('overlayTextX').value) || 0;
   const y = parseFloat(document.getElementById('overlayTextY').value) || 0;
   box.style.left = (x * scaleX) + 'px';
   box.style.top  = (y * scaleY) + 'px';
 
-  // Width
+  // Width — max width scaled by X axis
   const maxW = parseFloat(document.getElementById('overlayTextMaxW').value) || 600;
-  box.style.width = Math.max(40, maxW * scaleX) + 'px';
+  box.style.width = Math.max(20, maxW * scaleX) + 'px';
 
-  // Preview text styling (scaled down proportionally)
-  const fontSize = parseFloat(document.getElementById('overlayTextSize').value) || 48;
-  const scaledFont = Math.max(7, Math.round(fontSize * scaleY));
+  // Font size — scale proportionally to canvas height (same as real screen)
+  const fontSize   = parseFloat(document.getElementById('overlayTextSize').value) || 48;
+  const scaledFont = Math.max(4, fontSize * scaleY);
   const font    = overlayTextGetFont();
   const color   = document.getElementById('overlayTextColor').value;
   const bold    = document.getElementById('overlayTextBold').checked;
@@ -2128,7 +2297,7 @@ function overlayTextPreviewUpdate() {
   preview.style.fontFamily  = font;
   preview.style.fontSize    = scaledFont + 'px';
   preview.style.color       = color;
-  preview.style.fontWeight  = bold ? 'bold' : 'normal';
+  preview.style.fontWeight  = bold   ? 'bold'   : 'normal';
   preview.style.fontStyle   = italic ? 'italic' : 'normal';
   preview.style.textShadow  = shadow ? '1px 1px 4px rgba(0,0,0,0.85)' : 'none';
   preview.textContent = text;
@@ -2384,8 +2553,17 @@ async function overlayTriggerSource(src) {
   if (hasImage) {
     const loops = isGif ? (hasSound ? 0 : (src.gifLoops || 1)) : 1;
     await fetch('/api/overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ cmd: 'LOAD', id: src.id, path: src.path, loops,
-        x: src.mediaX || 0, y: src.mediaY || 0, w: src.mediaW || null, h: src.mediaH || null }) });
+      body: JSON.stringify({ cmd: 'LOAD', id: src.id, path: src.path, loops }) });
+
+    // Apply dashboard position — LOAD restores from positions file, so override with MOVE+SIZE
+    if (src.mediaX != null || src.mediaY != null) {
+      await fetch('/api/overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ cmd: 'MOVE', id: src.id, x: src.mediaX || 0, y: src.mediaY || 0 }) });
+    }
+    if (src.mediaW != null || src.mediaH != null) {
+      await fetch('/api/overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ cmd: 'SIZE', id: src.id, w: src.mediaW || 960, h: src.mediaH || 540 }) });
+    }
 
     if (!hasSound && !isGif) {
       const ms = (src.displaySeconds || 0) * 1000;
@@ -2593,8 +2771,9 @@ function overlayEditSource(id) {
   });
 
   document.getElementById('overlayAddModal').style.display = 'flex';
-  // Redraw canvas AFTER modal is visible so offsetWidth is real
+  // Fix canvas height then redraw boxes
   setTimeout(() => {
+    overlayFixCanvasHeight();
     if (_hasImg || _hasVid) overlayMediaUpdateBox();
     if (src.text) overlayTextPreviewUpdate();
   }, 30);
