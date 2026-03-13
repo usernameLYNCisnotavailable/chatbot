@@ -43,7 +43,7 @@ let dragOffX = 0, dragOffY = 0;
 
 // ---- SSE connection ----
 function connectSSE() {
-  const es = new EventSource('http://localhost:3000/api/media-overlay/stream');
+  const es = new EventSource('http://localhost:3000/api/video-overlay/stream');
   es.onmessage = (e) => {
     try { handleCmd(JSON.parse(e.data)); } catch(err) {}
   };
@@ -51,6 +51,7 @@ function connectSSE() {
 }
 
 function handleCmd(msg) {
+  console.log('[media-overlay] cmd:', msg.cmd, 'id:', msg.id, 'keys in activeSounds:', Object.keys(activeSounds));
   const id = String(msg.id);
   const { cmd, x, y, w, h } = msg;
 
@@ -64,6 +65,35 @@ function handleCmd(msg) {
   else if (cmd === 'REMOVEIMG') removeSource(id);
   else if (cmd === 'MOVEIMG')  moveSource(id, x, y);
   else if (cmd === 'SIZEIMG')  sizeSource(id, w, h);
+  else if (cmd === 'PLAYSOUND') playSound(msg.path, msg.startMs || 0, msg.endMs || 0, msg.id || msg.path);
+  else if (cmd === 'STOPSOUND') stopSound(String(msg.id));
+  else if (cmd === 'STOPALL')  stopAll();
+}
+
+const activeSounds = {}; // id -> Audio — track per source to stop previous before replay
+
+function playSound(filePath, startMs, endMs, id) {
+  id = id !== undefined ? String(id) : undefined;
+  // Stop any existing sound for this id
+  const existing = activeSounds[id];
+  if (existing) { try { existing.pause(); } catch(e) {} delete activeSounds[id]; }
+
+  const audio = new Audio('http://localhost:3000/api/localfile?path=' + encodeURIComponent(filePath));
+  if (id) activeSounds[id] = audio;
+  audio.currentTime = startMs / 1000;
+  audio.play().catch(() => {});
+  if (endMs > startMs) {
+    const checkInterval = setInterval(() => {
+      if (audio.currentTime >= endMs / 1000) {
+        audio.pause();
+        if (id) delete activeSounds[id];
+        clearInterval(checkInterval);
+      }
+    }, 50);
+    audio.addEventListener('ended', () => { clearInterval(checkInterval); if (id) delete activeSounds[id]; });
+  } else {
+    audio.addEventListener('ended', () => { if (id) delete activeSounds[id]; });
+  }
 }
 
 // ---- Shared element creation ----
@@ -134,7 +164,8 @@ function playVid(id, filePath, loops, x, y, w, h, videoStart, videoEnd) {
     });
 
     src.mediaEl.addEventListener('ended', () => {
-      if (src.videoEnd > 0) return; // timeupdate handles trimmed
+      // Always handle ended — timeupdate catches mid-trim loops but if video
+      // reaches natural end (e.g. trim end == duration, or no trim), ended fires.
       src.loopsDone++;
       if (src.loopsTotal === 0 || src.loopsDone < src.loopsTotal) {
         src.mediaEl.currentTime = src.videoStart || 0;
@@ -210,6 +241,17 @@ function playImg(id, filePath, loops, x, y, w, h, displaySeconds) {
 }
 
 // ---- Shared clear / remove / move / size ----
+function stopSound(id) {
+  const a = activeSounds[id];
+  if (a) { try { a.pause(); } catch(e) {} delete activeSounds[id]; }
+}
+
+function stopAll() {
+  Object.keys(sources).forEach(id => clearSource(id));
+  Object.values(activeSounds).forEach(a => { try { a.pause(); } catch(e) {} });
+  for (const k in activeSounds) delete activeSounds[k];
+}
+
 function clearSource(id) {
   const src = sources[id];
   if (!src) return;
@@ -254,7 +296,7 @@ function applyPos(src) {
 function savePos(id) {
   const src = sources[id];
   if (!src) return;
-  fetch('http://localhost:3000/api/media-overlay/savepos', {
+  fetch('http://localhost:3000/api/video-overlay/savepos', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id, x: src.x, y: src.y, w: src.w, h: src.h })
@@ -262,7 +304,7 @@ function savePos(id) {
 }
 
 function notifyDone(id) {
-  fetch('http://localhost:3000/api/media-overlay/done', {
+  fetch('http://localhost:3000/api/video-overlay/done', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id })
@@ -281,7 +323,7 @@ document.addEventListener('mousemove', (e) => {
 
   if (overSource !== mouseOverSource) {
     mouseOverSource = overSource;
-    fetch('http://localhost:3000/api/media-overlay/mouse', {
+    fetch('http://localhost:3000/api/video-overlay/mouse', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ignore: !overSource })
@@ -303,7 +345,7 @@ document.addEventListener('mouseup', () => {
 });
 
 // Signal ready
-fetch('http://localhost:3000/api/media-overlay/done', {
+fetch('http://localhost:3000/api/video-overlay/done', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ type: 'ready' })

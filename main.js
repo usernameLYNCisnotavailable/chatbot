@@ -9,11 +9,10 @@ let reactorProcess = null;
 let chatWin = null;
 let modWin = null;
 let overlayProcess = null;
-let mediaWin = null;
-let mediaWinMode = 'desktop';
-let mediaOverlayClients = []; // SSE clients (media-overlay.html)
-let mediaDashboardClients = []; // SSE clients (dashboard)
-let mediaPositions = {}; // id -> {x,y,w,h}
+let videoWin = null;
+let videoWinMode = 'desktop';
+let videoOverlayClients = []; // SSE clients
+let videoPositions = {}; // id -> {x,y,w,h}
 let textWin = null;
 let textWinMode = 'desktop';
 let textOverlayClients = []; // SSE clients
@@ -1185,7 +1184,7 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
     // Auto-launch overlays shortly after startup
     setTimeout(() => {
         if (!overlayProcess) launchOverlay('desktop');
-        launchMediaOverlay('desktop');
+        launchVideoOverlay('desktop');
         launchTextOverlay('desktop');
     }, 3000);
 
@@ -1265,26 +1264,23 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
                     }
                 }
 
-                if (hasImage && mediaWin && !mediaWin.isDestroyed()) {
+                if (hasImage && overlayProcess) {
                     const loops = isGif ? (hasSound ? 0 : (src.gifLoops || 1)) : 1;
-                    const displaySeconds = (!hasSound && !isGif) ? (src.displaySeconds || 0) : 0;
-                    let px = src.mediaX, py = src.mediaY, pw = src.mediaW, ph = src.mediaH;
-                    if (mediaPositions[src.id]) {
-                        px = mediaPositions[src.id].x; py = mediaPositions[src.id].y;
-                        pw = mediaPositions[src.id].w; ph = mediaPositions[src.id].h;
+                    writeOverlayCmd('LOAD ' + src.id + ' ' + loops + ' ' + src.path + '\n');
+                    if (!hasSound && !isGif && src.displaySeconds > 0) {
+                        const ms = src.displaySeconds * 1000;
+                        setTimeout(() => writeOverlayCmd('CLEAR ' + src.id + '\n'), ms);
                     }
-                    broadcastMediaCmd({ cmd: 'PLAYIMG', id: src.id, path: src.path, loops,
-                        x: px||0, y: py||0, w: pw||960, h: ph||540, displaySeconds });
                 }
 
-                if (hasVideo && mediaWin && !mediaWin.isDestroyed()) {
+                if (hasVideo && videoWin && !videoWin.isDestroyed()) {
                     const loops = hasSound ? 0 : (src.videoLoops || 1);
-                    let px = src.mediaX, py = src.mediaY, pw = src.mediaW, ph = src.mediaH;
-                    if (mediaPositions[src.id]) {
-                        px = mediaPositions[src.id].x; py = mediaPositions[src.id].y;
-                        pw = mediaPositions[src.id].w; ph = mediaPositions[src.id].h;
+                    let px, py, pw, ph;
+                    if (videoPositions[src.id]) {
+                        px = videoPositions[src.id].x; py = videoPositions[src.id].y;
+                        pw = videoPositions[src.id].w; ph = videoPositions[src.id].h;
                     }
-                    broadcastMediaCmd({ cmd: 'PLAYVID', id: src.id, path: src.videoPath, loops, videoStart: src.videoStart || 0, videoEnd: src.videoEnd || 0, x: px||0, y: py||0, w: pw||960, h: ph||540 });
+                    broadcastVideoCmd({ cmd: 'PLAYVID', id: src.id, path: src.videoPath, loops, videoStart: src.videoStart || 0, videoEnd: src.videoEnd || 0, x: px, y: py, w: pw, h: ph });
                 }
 
                 if (hasSound && overlayProcess) {
@@ -1294,8 +1290,8 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
                     if ((hasImage || hasVideo) && endMs > startMs) {
                         const displayMs = endMs - startMs;
                         setTimeout(() => {
-                            if (hasImage && mediaWin && !mediaWin.isDestroyed()) broadcastMediaCmd({ cmd: 'CLEARIMG', id: src.id });
-                            if (hasVideo && mediaWin && !mediaWin.isDestroyed()) broadcastMediaCmd({ cmd: 'CLEARVID', id: src.id });
+                            if (hasImage && overlayProcess) writeOverlayCmd('CLEAR ' + src.id + '\n');
+                            if (hasVideo && videoWin && !videoWin.isDestroyed()) broadcastVideoCmd({ cmd: 'CLEARVID', id: src.id });
                         }, displayMs);
                     }
                 }
@@ -1398,14 +1394,14 @@ Write-Output $sb.ToString().Trim()
         }
     });
 
-    // ---- ROUTES_MEDIA_OVERLAY ----
+    // ---- ROUTES_VIDEO_OVERLAY ----
 
-    function launchMediaOverlay(mode) {
-        mediaWinMode = mode || 'desktop';
-        if (mediaWin && !mediaWin.isDestroyed()) return;
+    function launchVideoOverlay(mode) {
+        videoWinMode = mode || 'desktop';
+        if (videoWin && !videoWin.isDestroyed()) return;
         const { screen } = require('electron');
         const { width, height } = screen.getPrimaryDisplay().size;
-        mediaWin = new BrowserWindow({
+        videoWin = new BrowserWindow({
             width, height,
             x: 0, y: 0,
             frame: false,
@@ -1421,120 +1417,116 @@ Write-Output $sb.ToString().Trim()
                 offscreen: false
             }
         });
-        mediaWin.setAlwaysOnTop(true, 'screen-saver');
-        mediaWin.setVisibleOnAllWorkspaces(true);
-        mediaWin.setIgnoreMouseEvents(true, { forward: true });
-        mediaWin.loadURL('http://localhost:3000/media-overlay.html');
-        mediaWin.on('closed', () => { mediaWin = null; });
-        mediaWin.webContents.on('did-finish-load', () => {
-            console.log('[media-overlay] loaded, mode:', mediaWinMode);
+        videoWin.setAlwaysOnTop(true, 'screen-saver');
+        videoWin.setVisibleOnAllWorkspaces(true);
+        videoWin.setIgnoreMouseEvents(true, { forward: true });
+        videoWin.loadURL('http://localhost:3000/media-overlay.html');
+        videoWin.on('closed', () => { videoWin = null; });
+        // Re-enable mouse when over a source (video-overlay sends a flag)
+        videoWin.webContents.on('did-finish-load', () => {
+            console.log('[video-overlay] loaded, mode:', videoWinMode);
         });
     }
 
-    server.get('/api/media-overlay/status', (req, res) => {
-        res.json({ running: !!(mediaWin && !mediaWin.isDestroyed()), mode: mediaWinMode });
+    server.get('/api/video-overlay/status', (req, res) => {
+        res.json({ running: !!(videoWin && !videoWin.isDestroyed()), mode: videoWinMode });
     });
 
-    server.post('/api/media-overlay/launch', (req, res) => {
+    server.post('/api/video-overlay/launch', (req, res) => {
         const mode = (req.body && req.body.mode) || 'desktop';
-        launchMediaOverlay(mode);
+        launchVideoOverlay(mode);
         res.json({ ok: true });
     });
 
-    server.post('/api/media-overlay/stop', (req, res) => {
-        if (mediaWin && !mediaWin.isDestroyed()) mediaWin.destroy();
-        mediaWin = null;
+    server.post('/api/video-overlay/stop', (req, res) => {
+        if (videoWin && !videoWin.isDestroyed()) videoWin.destroy();
+        videoWin = null;
         res.json({ ok: true });
     });
 
-    // SSE stream — media-overlay.html connects here to receive commands
-    server.get('/api/media-overlay/stream', (req, res) => {
+    let videoDashboardClients = []; // dashboard listeners
+
+    // SSE stream — video-overlay.html connects here to receive commands
+    server.get('/api/video-overlay/stream', (req, res) => {
         res.setHeader('Content-Type', 'text/event-stream');
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
         res.flushHeaders();
-        mediaOverlayClients.forEach(c => { try { c.end(); } catch(e) {} });
-        mediaOverlayClients = [res];
+        // Only one video overlay window ever exists — clear stale connections
+        videoOverlayClients.forEach(c => { try { c.end(); } catch(e) {} });
+        videoOverlayClients = [res];
         res.write(': connected\n\n');
         const keepalive = setInterval(() => { try { res.write(': ping\n\n'); } catch(e) {} }, 15000);
         req.on('close', () => {
             clearInterval(keepalive);
-            mediaOverlayClients = mediaOverlayClients.filter(c => c !== res);
+            videoOverlayClients = videoOverlayClients.filter(c => c !== res);
         });
-        // Notify dashboard that media window is ready
+        // Notify dashboard that video window is ready
         const readyMsg = 'data: ' + JSON.stringify({ cmd: 'READY' }) + '\n\n';
-        mediaDashboardClients.forEach(c => { try { c.write(readyMsg); } catch(e) {} });
+        videoDashboardClients.forEach(c => { try { c.write(readyMsg); } catch(e) {} });
     });
 
-    // SSE events — dashboard connects here to receive READY and MEDIADONE
-    server.get('/api/media-overlay/events', (req, res) => {
+    // SSE events — dashboard connects here to receive READY and VIDDONE
+    server.get('/api/video-overlay/events', (req, res) => {
         res.setHeader('Content-Type', 'text/event-stream');
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
         res.flushHeaders();
-        mediaDashboardClients.push(res);
+        videoDashboardClients.push(res);
         const keepalive = setInterval(() => { try { res.write(': ping\n\n'); } catch(e) {} }, 15000);
         req.on('close', () => {
             clearInterval(keepalive);
-            mediaDashboardClients = mediaDashboardClients.filter(c => c !== res);
+            videoDashboardClients = videoDashboardClients.filter(c => c !== res);
         });
     });
 
-    function broadcastMediaCmd(payload) {
+    function broadcastVideoCmd(payload) {
         const data = 'data: ' + JSON.stringify(payload) + '\n\n';
-        mediaOverlayClients.forEach(c => { try { c.write(data); } catch(e) {} });
+        videoOverlayClients.forEach(c => { try { c.write(data); } catch(e) {} });
     }
 
-    function broadcastMediaDashboard(payload) {
+    function broadcastVideoDashboard(payload) {
         const data = 'data: ' + JSON.stringify(payload) + '\n\n';
-        mediaDashboardClients.forEach(c => { try { c.write(data); } catch(e) {} });
+        videoDashboardClients.forEach(c => { try { c.write(data); } catch(e) {} });
     }
 
-    server.post('/api/media-overlay/command', (req, res) => {
-        const { cmd, id, path: filePath, loops, x, y, w, h, videoStart, videoEnd, displaySeconds } = req.body;
+    server.post('/api/video-overlay/command', (req, res) => {
+        const body = req.body;
+        const { id, x, y, w, h } = body;
         let px = x, py = y, pw = w, ph = h;
-        if (mediaPositions[id] && x === undefined) {
-            px = mediaPositions[id].x; py = mediaPositions[id].y;
-            pw = mediaPositions[id].w; ph = mediaPositions[id].h;
+        if (id && videoPositions[id] && x === undefined) {
+            px = videoPositions[id].x; py = videoPositions[id].y;
+            pw = videoPositions[id].w; ph = videoPositions[id].h;
         }
-        broadcastMediaCmd({ cmd, id, path: filePath, loops,
-            videoStart: videoStart || 0, videoEnd: videoEnd || 0,
-            displaySeconds: displaySeconds || 0,
-            x: px, y: py, w: pw, h: ph });
+        broadcastVideoCmd(Object.assign({}, body, { x: px, y: py, w: pw, h: ph }));
         res.json({ ok: true });
     });
 
-    server.post('/api/media-overlay/mouse', (req, res) => {
-        if (mediaWin && !mediaWin.isDestroyed()) {
+    server.post('/api/video-overlay/mouse', (req, res) => {
+        if (videoWin && !videoWin.isDestroyed()) {
             const ignore = req.body.ignore !== false;
-            mediaWin.setIgnoreMouseEvents(ignore, { forward: true });
+            videoWin.setIgnoreMouseEvents(ignore, { forward: true });
         }
         res.json({ ok: true });
     });
-
-    server.post('/api/media-overlay/done', (req, res) => {
-        const { type, id } = req.body;
-        if (type === 'ready') {
-            broadcastMediaDashboard({ cmd: 'READY' });
-        } else {
-            broadcastMediaDashboard({ cmd: 'MEDIADONE', id });
-        }
+    server.post('/api/video-overlay/done', (req, res) => {
+        broadcastVideoDashboard({ cmd: 'VIDDONE', id: req.body.id });
         res.json({ ok: true });
     });
 
-    // Load media positions from disk on startup
+    // Load video positions from disk on startup
     try {
-        const mp = getDataPath('media-positions.json');
-        if (fs.existsSync(mp)) mediaPositions = JSON.parse(fs.readFileSync(mp, 'utf8'));
+        const vp = getDataPath('video-positions.json');
+        if (fs.existsSync(vp)) videoPositions = JSON.parse(fs.readFileSync(vp, 'utf8'));
     } catch(e) {}
 
-    server.post('/api/media-overlay/savepos', (req, res) => {
+    // Save position from drag/resize in video-overlay.html
+    server.post('/api/video-overlay/savepos', (req, res) => {
         const { id, x, y, w, h } = req.body;
-        mediaPositions[id] = { x, y, w, h };
-        try { fs.writeFileSync(getDataPath('media-positions.json'), JSON.stringify(mediaPositions)); } catch(e) {}
+        videoPositions[id] = { x, y, w, h };
+        try { fs.writeFileSync(getDataPath('video-positions.json'), JSON.stringify(videoPositions)); } catch(e) {}
         res.json({ ok: true });
     });
-
 
     // ---- ROUTES_TEXT_OVERLAY ----
 
