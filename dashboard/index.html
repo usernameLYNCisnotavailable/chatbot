@@ -1224,6 +1224,13 @@
             <span style="font-size:12px;color:var(--muted);">seconds &nbsp;·&nbsp; 0 = stay forever</span>
           </div>
         </div>
+        <div id="overlayAssignGroup" style="display:flex;flex-direction:column;gap:6px;">
+          <label style="font-size:12px;color:var(--muted);">Assign to Command</label>
+          <select id="overlayAssignCommand" class="input" style="font-size:13px;">
+            <option value="">— None —</option>
+          </select>
+          <div style="font-size:11px;color:var(--muted-2);">When this command is used in chat, this source will trigger automatically.</div>
+        </div>
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
           <button class="btn btn-secondary" onclick="overlayCloseModal()">Cancel</button>
           <button class="btn btn-primary" onclick="overlayConfirmAdd()">Add Source</button>
@@ -1352,6 +1359,45 @@ async function overlayStop() {
   overlaySetStatus(false);
 }
 
+async function overlayLoadCommandsList() {
+  const sel = document.getElementById('overlayAssignCommand');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">— None —</option>';
+  try {
+    const [actRes, cmdRes] = await Promise.all([
+      fetch('/api/actions'),
+      fetch('/api/commands')
+    ]);
+    const actions = await actRes.json();
+    const commands = await cmdRes.json();
+    const actionKeys = Object.keys(actions || {});
+    if (actionKeys.length) {
+      const g = document.createElement('optgroup');
+      g.label = 'Actions';
+      actionKeys.forEach(k => {
+        const o = document.createElement('option');
+        o.value = '!' + k;
+        o.textContent = '!' + k;
+        g.appendChild(o);
+      });
+      sel.appendChild(g);
+    }
+    const cmdKeys = Object.keys(commands || {});
+    if (cmdKeys.length) {
+      const g = document.createElement('optgroup');
+      g.label = 'Commands';
+      cmdKeys.forEach(k => {
+        const o = document.createElement('option');
+        o.value = k;
+        o.textContent = k;
+        g.appendChild(o);
+      });
+      sel.appendChild(g);
+    }
+    if (current) sel.value = current;
+  } catch(e) {}
+}
+
 function overlayAddSource() {
   document.getElementById('overlaySourceType').value = 'image';
   document.getElementById('overlayImagePath').value = '';
@@ -1366,7 +1412,9 @@ function overlayAddSource() {
   document.getElementById('overlayVideoLoops').value = '1';
   document.getElementById('overlayDisplaySeconds').value = '3';
   document.getElementById('overlayGifLoops').value = '1';
+  document.getElementById('overlayAssignCommand').value = '';
   overlaySourceTypeChanged();
+  overlayLoadCommandsList();
   document.getElementById('overlayAddModal').style.display = 'flex';
 }
 
@@ -1477,7 +1525,8 @@ async function overlayConfirmAdd() {
     videoLoops: (type === 'video') ? (parseInt(document.getElementById('overlayVideoLoops').value) || 1) : 0,
     chromaKey: document.getElementById('overlayChromaKey').checked,
     chromaColor: document.getElementById('overlayChromaColor').value,
-    chromaThreshold: parseInt(document.getElementById('overlayChromaThreshold').value)
+    chromaThreshold: parseInt(document.getElementById('overlayChromaThreshold').value),
+    assignedCommand: document.getElementById('overlayAssignCommand').value || ''
   };
 
   overlayState.sources.push(src);
@@ -1574,6 +1623,7 @@ function overlayRenderSources() {
           <span style="font-size:10px;font-weight:600;letter-spacing:0.8px;color:var(--accent);background:var(--accent-soft);padding:2px 7px;border-radius:4px;">${typeLabel}</span>
           ${durationStr ? `<span style="font-size:11px;color:var(--muted);">${durationStr}</span>` : ''}
           ${src.chromaKey ? `<span style="font-size:10px;color:var(--green);background:var(--green-soft);padding:2px 7px;border-radius:4px;">Chroma</span>` : ''}
+          ${src.assignedCommand ? `<span style="font-size:10px;color:var(--yellow);background:rgba(245,196,0,0.12);padding:2px 7px;border-radius:4px;">⚡ ${src.assignedCommand}</span>` : ''}
         </div>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;">
@@ -1648,6 +1698,7 @@ function overlayEditSource(id) {
   document.getElementById('overlaySoundEnd').value = src.soundEnd || 0;
   document.getElementById('overlayGifLoops').value = src.gifLoops || 1;
   document.getElementById('overlayDisplaySeconds').value = src.displaySeconds !== undefined ? src.displaySeconds : 3;
+  document.getElementById('overlayAssignCommand').value = src.assignedCommand || '';
 
   // Show duration label if we have end time
   if (src.soundEnd > 0) {
@@ -1664,6 +1715,11 @@ function overlayEditSource(id) {
   const confirmBtn = document.querySelector('#overlayAddModal .btn-primary');
   confirmBtn.textContent = 'Save Changes';
   confirmBtn.onclick = () => overlayConfirmEdit(id);
+
+  const assignedCmd = src.assignedCommand || '';
+  overlayLoadCommandsList().then(() => {
+    document.getElementById('overlayAssignCommand').value = assignedCmd;
+  });
 
   document.getElementById('overlayAddModal').style.display = 'flex';
 }
@@ -1703,6 +1759,7 @@ async function overlayConfirmEdit(id) {
   src.chromaKey = document.getElementById('overlayChromaKey').checked;
   src.chromaColor = document.getElementById('overlayChromaColor').value;
   src.chromaThreshold = parseInt(document.getElementById('overlayChromaThreshold').value);
+  src.assignedCommand = document.getElementById('overlayAssignCommand').value || '';
 
   overlayRenderSources();
   overlaySaveSources();

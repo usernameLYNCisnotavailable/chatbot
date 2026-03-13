@@ -1225,6 +1225,66 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
         }
         res.json({ ok: true });
     });
+    // Trigger overlay sources assigned to a chat command
+    server.post('/api/overlay/fire-command', async (req, res) => {
+        try {
+            const { command } = req.body;
+            if (!command) return res.json({ ok: false });
+            const p = getDataPath('overlay-sources.json');
+            if (!fs.existsSync(p)) return res.json({ ok: true, triggered: 0 });
+            const sources = JSON.parse(fs.readFileSync(p, 'utf8'));
+            const matches = sources.filter(s => s.assignedCommand === command);
+            if (!matches.length) return res.json({ ok: true, triggered: 0 });
+
+            const overlayCmdPath = getDataPath('overlay-cmd.txt');
+            const overlayCmdTmp = getDataPath('overlay-cmd.tmp');
+
+            function writeOverlayCmd(line) {
+                try { fs.writeFileSync(overlayCmdTmp, line); fs.renameSync(overlayCmdTmp, overlayCmdPath); } catch(e) {}
+            }
+
+            for (const src of matches) {
+                const hasImage = src.type === 'image' || src.type === 'image+sound';
+                const hasSound = src.type === 'sound' || src.type === 'image+sound' || src.type === 'video+sound';
+                const hasVideo = src.type === 'video' || src.type === 'video+sound';
+                const isGif = hasImage && src.path && src.path.toLowerCase().endsWith('.gif');
+
+                if (hasImage && overlayProcess) {
+                    const loops = isGif ? (hasSound ? 0 : (src.gifLoops || 1)) : 1;
+                    writeOverlayCmd('LOAD ' + src.id + ' ' + loops + ' ' + src.path + '\n');
+                    if (!hasSound && !isGif && src.displaySeconds > 0) {
+                        const ms = src.displaySeconds * 1000;
+                        setTimeout(() => writeOverlayCmd('CLEAR ' + src.id + '\n'), ms);
+                    }
+                }
+
+                if (hasVideo && videoWin && !videoWin.isDestroyed()) {
+                    const loops = hasSound ? 0 : (src.videoLoops || 1);
+                    let px, py, pw, ph;
+                    if (videoPositions[src.id]) {
+                        px = videoPositions[src.id].x; py = videoPositions[src.id].y;
+                        pw = videoPositions[src.id].w; ph = videoPositions[src.id].h;
+                    }
+                    broadcastVideoCmd({ cmd: 'PLAYVID', id: src.id, path: src.videoPath, loops, x: px, y: py, w: pw, h: ph });
+                }
+
+                if (hasSound && overlayProcess) {
+                    const startMs = Math.round((src.soundStart || 0) * 1000);
+                    const endMs = Math.round((src.soundEnd || 0) * 1000);
+                    writeOverlayCmd('SOUND ' + startMs + ' ' + endMs + ' ' + src.soundPath + '\n');
+                    if ((hasImage || hasVideo) && endMs > startMs) {
+                        const displayMs = endMs - startMs;
+                        setTimeout(() => {
+                            if (hasImage && overlayProcess) writeOverlayCmd('CLEAR ' + src.id + '\n');
+                            if (hasVideo && videoWin && !videoWin.isDestroyed()) broadcastVideoCmd({ cmd: 'CLEARVID', id: src.id });
+                        }, displayMs);
+                    }
+                }
+            }
+            res.json({ ok: true, triggered: matches.length });
+        } catch(e) { res.json({ ok: false, error: e.message }); }
+    });
+
     // Clear saved position for a source (overlay handles this on REMOVE)
     server.post('/api/overlay/clearpos', (req, res) => { res.json({ ok: true }); });
     // Get saved positions

@@ -39,6 +39,20 @@ function sendToReactor(message) {
     socket.on('error', () => {});
 }
 
+function fireOverlayCommand(command) {
+    const http = require('http');
+    const body = JSON.stringify({ command });
+    const options = {
+        hostname: '127.0.0.1', port: 3000,
+        path: '/api/overlay/fire-command', method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+    };
+    const req = http.request(options, () => {});
+    req.on('error', () => {});
+    req.write(body);
+    req.end();
+}
+
 function getCommands() {
     try { return JSON.parse(fs.readFileSync(path.join(dataDir, 'commands.json'), 'utf8')); }
     catch(e) { return {}; }
@@ -274,6 +288,7 @@ client.on('message', (channel, tags, message, self) => {
             if (isOnCooldown(username, command, c.cooldown ?? 5)) return;
             setCooldown(username, command);
             client.say(channel, c.response);
+            fireOverlayCommand(command);
             return;
         }
 
@@ -286,6 +301,7 @@ client.on('message', (channel, tags, message, self) => {
             setCooldown(username, command);
             lastCommandChannel = channel;
             sendToReactor(`COMMAND:${guestActionKey}:${username}:${message}:${args}:${channel.replace('#','')}`);
+            fireOverlayCommand(command);
             return;
         }
 
@@ -298,6 +314,7 @@ client.on('message', (channel, tags, message, self) => {
             setCooldown(username, command + ':' + sub);
             lastCommandChannel = channel;
             sendToReactor(`COMMAND:${command.slice(1)}:${username}:${message}:${args}:${channel.replace('#','')}`);
+            fireOverlayCommand(command);
             return;
         }
 
@@ -310,6 +327,7 @@ client.on('message', (channel, tags, message, self) => {
             setCooldown(username, '!car:' + sub);
             lastCommandChannel = channel;
             sendToReactor(`COMMAND:car:${username}:${message}:${args}:${channel.replace('#','')}`);
+            fireOverlayCommand(command);
             return;
         }
 
@@ -352,6 +370,7 @@ client.on('message', (channel, tags, message, self) => {
         if (isOnCooldown(username, command, cd)) return;
         setCooldown(username, command);
         client.say(channel, c.response);
+        fireOverlayCommand(command);
         return;
     }
 
@@ -365,6 +384,7 @@ client.on('message', (channel, tags, message, self) => {
         setCooldown(username, command);
         lastCommandChannel = channel;
         sendToReactor(`COMMAND:${actionKey}:${username}:${message}:${args}:${config.channel}`);
+        fireOverlayCommand(command);
         return;
     }
 
@@ -378,6 +398,7 @@ client.on('message', (channel, tags, message, self) => {
         setCooldown(username, command + ':' + sub);
         lastCommandChannel = channel;
         sendToReactor(`COMMAND:${command.slice(1)}:${username}:${message}:${args}:${config.channel}`);
+        fireOverlayCommand(command);
         return;
     }
 
@@ -391,6 +412,7 @@ client.on('message', (channel, tags, message, self) => {
         setCooldown(username, '!car:' + sub);
         lastCommandChannel = channel;
         sendToReactor(`COMMAND:car:${username}:${message}:${args}:${config.channel}`);
+        fireOverlayCommand(command);
         return;
     }
 
