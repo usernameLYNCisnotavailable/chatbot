@@ -1265,7 +1265,7 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
                         px = videoPositions[src.id].x; py = videoPositions[src.id].y;
                         pw = videoPositions[src.id].w; ph = videoPositions[src.id].h;
                     }
-                    broadcastVideoCmd({ cmd: 'PLAYVID', id: src.id, path: src.videoPath, loops, x: px, y: py, w: pw, h: ph });
+                    broadcastVideoCmd({ cmd: 'PLAYVID', id: src.id, path: src.videoPath, loops, videoStart: src.videoStart || 0, videoEnd: src.videoEnd || 0, x: px, y: py, w: pw, h: ph });
                 }
 
                 if (hasSound && overlayProcess) {
@@ -1476,14 +1476,14 @@ Write-Output $sb.ToString().Trim()
     }
 
     server.post('/api/video-overlay/command', (req, res) => {
-        const { cmd, id, path: filePath, loops, x, y, w, h } = req.body;
+        const { cmd, id, path: filePath, loops, x, y, w, h, videoStart, videoEnd } = req.body;
         // Merge saved position if available
         let px = x, py = y, pw = w, ph = h;
         if (videoPositions[id] && x === undefined) {
             px = videoPositions[id].x; py = videoPositions[id].y;
             pw = videoPositions[id].w; ph = videoPositions[id].h;
         }
-        broadcastVideoCmd({ cmd, id, path: filePath, loops, x: px, y: py, w: pw, h: ph });
+        broadcastVideoCmd({ cmd, id, path: filePath, loops, videoStart: videoStart || 0, videoEnd: videoEnd || 0, x: px, y: py, w: pw, h: ph });
         res.json({ ok: true });
     });
 
