@@ -13,6 +13,9 @@ let videoWin = null;
 let videoWinMode = 'desktop';
 let videoOverlayClients = []; // SSE clients
 let videoPositions = {}; // id -> {x,y,w,h}
+let textWin = null;
+let textWinMode = 'desktop';
+let textOverlayClients = []; // SSE clients
 
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -1182,6 +1185,7 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
     setTimeout(() => {
         if (!overlayProcess) launchOverlay('desktop');
         launchVideoOverlay('desktop');
+        launchTextOverlay('desktop');
     }, 3000);
 
     server.get('/api/overlay/status', (req, res) => { res.json({ running: !!overlayProcess, mode: overlayCurrentMode }); });
@@ -1247,7 +1251,14 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
                 const hasImage = src.type === 'image' || src.type === 'image+sound';
                 const hasSound = src.type === 'sound' || src.type === 'image+sound' || src.type === 'video+sound';
                 const hasVideo = src.type === 'video' || src.type === 'video+sound';
+                const hasText  = src.type === 'text';
                 const isGif = hasImage && src.path && src.path.toLowerCase().endsWith('.gif');
+
+                if (hasText && textWin && !textWin.isDestroyed()) {
+                    broadcastTextCmd({ cmd: 'ADDTEXT', id: src.id, text: src.text, x: src.x || 100, y: src.y || 100,
+                        font: src.font, size: src.fontSize, color: src.color, bold: src.bold, italic: src.italic,
+                        shadow: src.shadow, animation: src.animation, animDuration: src.animDuration, maxW: src.maxW });
+                }
 
                 if (hasImage && overlayProcess) {
                     const loops = isGif ? (hasSound ? 0 : (src.gifLoops || 1)) : 1;
@@ -1510,6 +1521,77 @@ Write-Output $sb.ToString().Trim()
         const { id, x, y, w, h } = req.body;
         videoPositions[id] = { x, y, w, h };
         try { fs.writeFileSync(getDataPath('video-positions.json'), JSON.stringify(videoPositions)); } catch(e) {}
+        res.json({ ok: true });
+    });
+
+    // ---- ROUTES_TEXT_OVERLAY ----
+
+    function launchTextOverlay(mode) {
+        textWinMode = mode || 'desktop';
+        if (textWin && !textWin.isDestroyed()) return;
+        const { screen } = require('electron');
+        const { width, height } = screen.getPrimaryDisplay().size;
+        textWin = new BrowserWindow({
+            width, height,
+            x: 0, y: 0,
+            frame: false,
+            transparent: true,
+            alwaysOnTop: true,
+            type: 'toolbar',
+            skipTaskbar: true,
+            resizable: false,
+            focusable: false,
+            webPreferences: {
+                nodeIntegration: false,
+                contextIsolation: true,
+                offscreen: false
+            }
+        });
+        textWin.setAlwaysOnTop(true, 'screen-saver');
+        textWin.setVisibleOnAllWorkspaces(true);
+        textWin.setIgnoreMouseEvents(true, { forward: true });
+        textWin.loadURL('http://localhost:3000/text-overlay.html');
+        textWin.on('closed', () => { textWin = null; });
+    }
+
+    server.get('/api/text-overlay/status', (req, res) => {
+        res.json({ running: !!(textWin && !textWin.isDestroyed()), mode: textWinMode });
+    });
+
+    server.post('/api/text-overlay/launch', (req, res) => {
+        const mode = (req.body && req.body.mode) || 'desktop';
+        launchTextOverlay(mode);
+        res.json({ ok: true });
+    });
+
+    server.post('/api/text-overlay/stop', (req, res) => {
+        if (textWin && !textWin.isDestroyed()) textWin.destroy();
+        textWin = null;
+        res.json({ ok: true });
+    });
+
+    server.get('/api/text-overlay/stream', (req, res) => {
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.flushHeaders();
+        textOverlayClients.forEach(c => { try { c.end(); } catch(e) {} });
+        textOverlayClients = [res];
+        res.write(': connected\n\n');
+        const keepalive = setInterval(() => { try { res.write(': ping\n\n'); } catch(e) {} }, 15000);
+        req.on('close', () => {
+            clearInterval(keepalive);
+            textOverlayClients = textOverlayClients.filter(c => c !== res);
+        });
+    });
+
+    function broadcastTextCmd(payload) {
+        const data = 'data: ' + JSON.stringify(payload) + '\n\n';
+        textOverlayClients.forEach(c => { try { c.write(data); } catch(e) {} });
+    }
+
+    server.post('/api/text-overlay/command', (req, res) => {
+        broadcastTextCmd(req.body);
         res.json({ ok: true });
     });
 

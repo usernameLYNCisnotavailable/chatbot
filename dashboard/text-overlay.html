@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100vw; height: 100vh;
+    background: transparent;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .txt-source {
+    position: absolute;
+    display: none;
+    pointer-events: none;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .txt-source.visible { display: block; }
+
+  /* Animations */
+  @keyframes txt-fadein {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes txt-scroll {
+    from { transform: translateX(-110%); }
+    to   { transform: translateX(110vw); }
+  }
+</style>
+</head>
+<body>
+<script>
+const sources = {}; // id -> { el, config }
+
+function connectSSE() {
+  const es = new EventSource('http://localhost:3000/api/text-overlay/stream');
+  es.onmessage = (e) => {
+    try { handleCmd(JSON.parse(e.data)); } catch(err) {}
+  };
+  es.onerror = () => { es.close(); setTimeout(connectSSE, 2000); };
+}
+
+function handleCmd(msg) {
+  const id = String(msg.id);
+  if      (msg.cmd === 'ADDTEXT')    addText(id, msg);
+  else if (msg.cmd === 'CLEARTEXT')  clearText(id);
+  else if (msg.cmd === 'REMOVETEXT') removeText(id);
+  else if (msg.cmd === 'MOVETEXT')   moveText(id, msg.x, msg.y);
+}
+
+function addText(id, cfg) {
+  // Remove existing if re-triggering
+  if (sources[id]) removeText(id);
+
+  const el = document.createElement('div');
+  el.className = 'txt-source';
+  el.dataset.id = id;
+
+  // Styles
+  el.style.left     = (cfg.x || 100) + 'px';
+  el.style.top      = (cfg.y || 100) + 'px';
+  el.style.maxWidth = (cfg.maxW || 600) + 'px';
+  el.style.fontFamily  = cfg.font || 'Arial';
+  el.style.fontSize    = (cfg.size || 32) + 'px';
+  el.style.color       = cfg.color || '#ffffff';
+  el.style.fontWeight  = cfg.bold ? 'bold' : 'normal';
+  el.style.fontStyle   = cfg.italic ? 'italic' : 'normal';
+  el.style.textShadow  = cfg.shadow ? '2px 2px 6px rgba(0,0,0,0.8)' : 'none';
+  el.style.lineHeight  = '1.2';
+  el.textContent = cfg.text || '';
+
+  document.body.appendChild(el);
+  sources[id] = { el, cfg };
+
+  // Apply animation
+  const anim = cfg.animation || 'static';
+  el.classList.add('visible');
+
+  if (anim === 'fade') {
+    el.style.opacity = '0';
+    el.style.animation = 'txt-fadein ' + (cfg.animDuration || 1) + 's ease forwards';
+  } else if (anim === 'typewriter') {
+    const full = cfg.text || '';
+    el.textContent = '';
+    el.style.opacity = '1';
+    let i = 0;
+    const speed = cfg.animDuration ? Math.round((cfg.animDuration * 1000) / full.length) : 50;
+    const timer = setInterval(() => {
+      el.textContent = full.slice(0, ++i);
+      if (i >= full.length) clearInterval(timer);
+    }, speed);
+    sources[id].typeTimer = timer;
+  } else if (anim === 'scroll') {
+    el.style.top = (cfg.y || 100) + 'px';
+    el.style.left = '0px';
+    el.style.maxWidth = 'none';
+    el.style.whiteSpace = 'nowrap';
+    const dur = cfg.animDuration || 8;
+    el.style.animation = 'txt-scroll ' + dur + 's linear forwards';
+    // After scroll ends, snap to final X position
+    el.addEventListener('animationend', () => {
+      el.style.animation = 'none';
+      el.style.transform = 'none';
+      el.style.left = (cfg.x || 100) + 'px';
+    }, { once: true });
+  } else {
+    // static
+    el.style.opacity = '1';
+  }
+}
+
+function clearText(id) {
+  const src = sources[id];
+  if (!src) return;
+  if (src.typeTimer) clearInterval(src.typeTimer);
+  src.el.classList.remove('visible');
+  src.el.style.display = 'none';
+}
+
+function removeText(id) {
+  const src = sources[id];
+  if (!src) return;
+  if (src.typeTimer) clearInterval(src.typeTimer);
+  src.el.remove();
+  delete sources[id];
+}
+
+function moveText(id, x, y) {
+  const src = sources[id];
+  if (!src) return;
+  src.el.style.left = x + 'px';
+  src.el.style.top  = y + 'px';
+  src.cfg.x = x;
+  src.cfg.y = y;
+}
+
+connectSSE();
+</script>
+</body>
+</html>

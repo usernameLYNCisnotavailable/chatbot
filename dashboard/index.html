@@ -1134,21 +1134,22 @@
 
   <!-- Add Source Modal -->
   <div id="overlayAddModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)overlayCloseModal()">
-    <div style="background:#1c1c1e;border:1px solid var(--border);border-radius:14px;padding:24px;width:460px;max-width:90vw;">
+    <div style="background:#1c1c1e;border:1px solid var(--border);border-radius:14px;padding:24px;width:580px;max-width:96vw;max-height:92vh;display:flex;flex-direction:column;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
         <h3 style="margin:0;font-size:15px;">Add Source</h3>
         <button class="btn btn-secondary" style="padding:4px 10px" onclick="overlayCloseModal()">&#x2715;</button>
       </div>
-      <div style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;flex-direction:column;gap:14px;overflow-y:auto;flex:1;padding-right:2px;">
         <div>
-          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px;">Type</label>
-          <select id="overlaySourceType" class="input" onchange="overlaySourceTypeChanged()">
-            <option value="image">Image (PNG, JPG, GIF)</option>
-            <option value="sound">Sound only (MP3, WAV)</option>
-            <option value="image+sound">Image + Sound</option>
-            <option value="video">Video (MP4)</option>
-            <option value="video+sound">Video + Sound</option>
-          </select>
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:8px;">Source Types <span style="color:var(--muted-2);font-weight:400;">— enable any combination</span></label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button type="button" id="overlayToggleImage" onclick="overlayTypeToggle('image')" style="padding:6px 14px;font-size:12px;font-weight:600;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;transition:all 0.15s;">🖼 Image</button>
+            <button type="button" id="overlayToggleVideo" onclick="overlayTypeToggle('video')" style="padding:6px 14px;font-size:12px;font-weight:600;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;transition:all 0.15s;">🎬 Video</button>
+            <button type="button" id="overlayToggleSound" onclick="overlayTypeToggle('sound')" style="padding:6px 14px;font-size:12px;font-weight:600;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;transition:all 0.15s;">🔊 Sound</button>
+            <button type="button" id="overlayToggleText"  onclick="overlayTypeToggle('text')"  style="padding:6px 14px;font-size:12px;font-weight:600;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;transition:all 0.15s;">💬 Text</button>
+          </div>
+          <!-- hidden field keeps legacy type string for compat -->
+          <input type="hidden" id="overlaySourceType" value="image">
         </div>
         <div id="overlayImageGroup">
           <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px;">Image File</label>
@@ -1201,35 +1202,34 @@
             <input type="text" id="overlayVideoPath" class="input" placeholder="C:\path\to\file.mp4" style="flex:1;" oninput="overlayUpdateVideoRepeat();overlayOnVideoPathInput()">
             <button class="btn btn-secondary" onclick="overlayBrowse('video')">Browse</button>
           </div>
-          <div id="overlayVideoTrimGroup" style="display:none;margin-top:12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-              <span style="font-size:12px;color:var(--muted);">Trim Video</span>
-              <span id="overlayVideoDurationLabel" style="font-size:12px;color:var(--accent);">Duration: --</span>
-            </div>
-            <!-- Mini preview player -->
-            <div style="position:relative;margin-bottom:10px;border-radius:6px;overflow:hidden;background:#000;aspect-ratio:16/9;">
-              <video id="overlayVideoPreview" style="width:100%;height:100%;object-fit:contain;display:block;" preload="auto"></video>
-              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
-                <button id="overlayVideoPreviewBtn" onclick="overlayVideoPreviewToggle()" style="background:rgba(0,0,0,0.55);border:none;border-radius:50%;width:40px;height:40px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;transition:background 0.15s;" onmouseenter="this.style.background='rgba(0,0,0,0.8)'" onmouseleave="this.style.background='rgba(0,0,0,0.55)'">▶</button>
+          <div id="overlayVideoTrimGroup" style="display:none;margin-top:12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+            <!-- Video preview — plays clip, scrubs to trim position while dragging -->
+            <video id="overlayVideoPreview" preload="auto" style="width:100%;max-height:160px;display:block;background:#000;"></video>
+            <div style="padding:12px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                <span style="font-size:12px;color:var(--muted);">Trim Video</span>
+                <span id="overlayVideoDurationLabel" style="font-size:12px;color:var(--accent);">Duration: --</span>
               </div>
-            </div>
-            <div style="position:relative;height:20px;margin-bottom:10px;" id="overlayVideoSliderWrap">
-              <div style="position:absolute;top:50%;left:0;right:0;height:4px;background:var(--border);border-radius:2px;transform:translateY(-50%);"></div>
-              <div id="overlayVideoSliderRange" style="position:absolute;top:50%;height:4px;background:var(--accent);border-radius:2px;transform:translateY(-50%);left:0%;width:100%;"></div>
-              <div id="overlayVideoHandleStart" style="position:absolute;top:50%;width:14px;height:14px;background:#fff;border-radius:50%;transform:translate(-50%,-50%);cursor:pointer;left:0%;box-shadow:0 1px 4px rgba(0,0,0,0.4);"></div>
-              <div id="overlayVideoHandleEnd" style="position:absolute;top:50%;width:14px;height:14px;background:#fff;border-radius:50%;transform:translate(-50%,-50%);cursor:pointer;left:100%;box-shadow:0 1px 4px rgba(0,0,0,0.4);"></div>
-            </div>
-            <div style="display:flex;gap:12px;align-items:center;">
-              <div style="flex:1;">
-                <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">Start (s)</label>
-                <input type="number" id="overlayVideoStart" class="input" value="0" min="0" step="0.1" style="width:100%;font-size:13px;" oninput="overlayVideoTrimInputChanged()">
+              <div style="position:relative;height:20px;margin-bottom:10px;" id="overlayVideoSliderWrap">
+                <div style="position:absolute;top:50%;left:0;right:0;height:4px;background:var(--border);border-radius:2px;transform:translateY(-50%);"></div>
+                <div id="overlayVideoSliderRange" style="position:absolute;top:50%;height:4px;background:var(--accent);border-radius:2px;transform:translateY(-50%);left:0%;width:100%;"></div>
+                <!-- Playhead — thin white line showing current playback position -->
+                <div id="overlayVideoPlayhead" style="position:absolute;top:0;bottom:0;width:2px;background:#fff;border-radius:1px;transform:translateX(-50%);left:0%;pointer-events:none;opacity:0.9;"></div>
+                <div id="overlayVideoHandleStart" style="position:absolute;top:50%;width:14px;height:14px;background:#fff;border-radius:50%;transform:translate(-50%,-50%);cursor:pointer;left:0%;box-shadow:0 1px 4px rgba(0,0,0,0.4);z-index:1;"></div>
+                <div id="overlayVideoHandleEnd" style="position:absolute;top:50%;width:14px;height:14px;background:#fff;border-radius:50%;transform:translate(-50%,-50%);cursor:pointer;left:100%;box-shadow:0 1px 4px rgba(0,0,0,0.4);z-index:1;"></div>
               </div>
-              <div style="flex:1;">
-                <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">End (s)</label>
-                <input type="number" id="overlayVideoEnd" class="input" value="0" min="0" step="0.1" style="width:100%;font-size:13px;" oninput="overlayVideoTrimInputChanged()">
+              <div style="display:flex;gap:12px;align-items:center;">
+                <div style="flex:1;">
+                  <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">Start (s)</label>
+                  <input type="number" id="overlayVideoStart" class="input" value="0" min="0" step="0.1" style="width:100%;font-size:13px;" oninput="overlayVideoTrimInputChanged()">
+                </div>
+                <div style="flex:1;">
+                  <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">End (s)</label>
+                  <input type="number" id="overlayVideoEnd" class="input" value="0" min="0" step="0.1" style="width:100%;font-size:13px;" oninput="overlayVideoTrimInputChanged()">
+                </div>
               </div>
+              <div style="font-size:11px;color:var(--muted-2);margin-top:8px;">Drag handles to trim. Video scrubs to show that frame.</div>
             </div>
-            <div style="font-size:11px;color:var(--muted-2);margin-top:8px;">Video loops within this window. Leave at full duration to use the whole clip.</div>
           </div>
         </div>
         <!-- Video repeat count -->
@@ -1254,17 +1254,139 @@
             <span style="font-size:12px;color:var(--muted);">seconds &nbsp;·&nbsp; 0 = stay forever</span>
           </div>
         </div>
-        <div id="overlayAssignGroup" style="display:flex;flex-direction:column;gap:6px;">
-          <label style="font-size:12px;color:var(--muted);">Assign to Command</label>
+        <!-- Text source fields -->
+        <div id="overlayTextGroup" style="display:none;flex-direction:column;gap:10px;">
+
+          <!-- Text content -->
+          <div>
+            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px;">Text Content</label>
+            <textarea id="overlayTextContent" class="input" rows="3" placeholder="Enter your text..." style="width:100%;font-size:13px;resize:vertical;" oninput="overlayTextPreviewUpdate()"></textarea>
+          </div>
+
+          <!-- Font accordion -->
+          <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+            <button type="button" onclick="overlayTextToggleFont()" style="width:100%;background:var(--surface-raised);border:none;color:var(--text);font-size:12px;font-weight:600;padding:9px 14px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+              <span>✏️ Font &amp; Style</span>
+              <span id="overlayTextFontArrow" style="font-size:10px;color:var(--muted);transition:transform 0.15s;">▼</span>
+            </button>
+            <div id="overlayTextFontPanel" style="display:none;padding:12px;display:none;flex-direction:column;gap:10px;background:var(--surface);">
+              <!-- Font + size row -->
+              <div style="display:flex;gap:8px;">
+                <div style="flex:2;">
+                  <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">Font</label>
+                  <select id="overlayTextFontSelect" class="input" style="font-size:13px;" onchange="overlayTextFontSelectChanged();overlayTextPreviewUpdate()">
+                    <option value="Arial">Arial</option>
+                    <option value="Impact">Impact</option>
+                    <option value="Georgia">Georgia</option>
+                    <option value="Verdana">Verdana</option>
+                    <option value="Courier New">Courier New</option>
+                    <option value="Times New Roman">Times New Roman</option>
+                    <option value="Trebuchet MS">Trebuchet MS</option>
+                    <option value="Comic Sans MS">Comic Sans MS</option>
+                    <option value="custom">Custom font...</option>
+                  </select>
+                </div>
+                <div style="flex:1;">
+                  <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">Size (px)</label>
+                  <input type="number" id="overlayTextSize" class="input" value="48" min="8" max="300" step="1" style="width:100%;font-size:13px;" oninput="overlayTextPreviewUpdate()">
+                </div>
+              </div>
+              <!-- Custom font -->
+              <div id="overlayTextCustomFontGroup" style="display:none;">
+                <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">Custom font name (must be installed)</label>
+                <input type="text" id="overlayTextCustomFont" class="input" placeholder="e.g. Bebas Neue" style="width:100%;font-size:13px;" oninput="overlayTextPreviewUpdate()">
+              </div>
+              <!-- Color + checkboxes -->
+              <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+                <div>
+                  <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">Color</label>
+                  <input type="color" id="overlayTextColor" value="#ffffff" style="width:48px;height:34px;padding:2px;cursor:pointer;border-radius:6px;border:1px solid var(--border);background:none;" oninput="overlayTextPreviewUpdate()">
+                </div>
+                <div style="display:flex;gap:10px;align-items:flex-end;padding-bottom:2px;">
+                  <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;user-select:none;"><input type="checkbox" id="overlayTextBold" onchange="overlayTextPreviewUpdate()"> Bold</label>
+                  <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;user-select:none;"><input type="checkbox" id="overlayTextItalic" onchange="overlayTextPreviewUpdate()"> Italic</label>
+                  <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;user-select:none;"><input type="checkbox" id="overlayTextShadow" checked onchange="overlayTextPreviewUpdate()"> Shadow</label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Animation + timer row -->
+          <div style="display:flex;gap:8px;">
+            <div style="flex:2;">
+              <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px;">Animation</label>
+              <select id="overlayTextAnimation" class="input" style="font-size:13px;" onchange="overlayTextAnimChanged()">
+                <option value="static">Static — just appears</option>
+                <option value="fade">Fade in</option>
+                <option value="typewriter">Typewriter</option>
+                <option value="scroll">Scroll across</option>
+              </select>
+            </div>
+            <div id="overlayTextAnimDurGroup" style="flex:1;display:none;">
+              <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px;">Anim (s)</label>
+              <input type="number" id="overlayTextAnimDuration" class="input" value="1" min="0.1" step="0.1" style="width:100%;font-size:13px;">
+            </div>
+            <div style="flex:1;">
+              <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px;">Display (s)</label>
+              <input type="number" id="overlayTextDisplaySeconds" class="input" value="5" min="0" step="0.5" style="width:100%;font-size:13px;" title="0 = stay forever">
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--muted-2);margin-top:-4px;">Display 0 = stays until removed</div>
+
+        </div>
+        <!-- Shared position canvas — shows for image, video, and text (not sound-only) -->
+        <div id="overlayPosCanvasGroup" style="display:none;flex-direction:column;gap:6px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
+            <label style="font-size:12px;color:var(--muted);margin:0;" id="overlayPosCanvasLabel">
+              Position preview
+              <span style="color:var(--muted-2);font-weight:400;"> — drag to move · corner to resize</span>
+            </label>
+            <button type="button" onclick="overlayExpandCanvas()" style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;padding:2px 6px;border-radius:4px;border:1px solid var(--border);" title="Open large preview">&#x26F6; Expand</button>
+          </div>
+          <div id="overlaySharedCanvas" style="position:relative;width:100%;aspect-ratio:16/9;background:#111;border:1px solid var(--border);border-radius:6px;overflow:hidden;user-select:none;">
+            <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 10%,rgba(255,255,255,0.02) 10%,rgba(255,255,255,0.02) 10.5%),repeating-linear-gradient(90deg,transparent,transparent 17.7%,rgba(255,255,255,0.02) 17.7%,rgba(255,255,255,0.02) 18.2%);pointer-events:none;"></div>
+            <!-- Media box (image / video) -->
+            <div id="overlayMediaBox" style="display:none;position:absolute;left:10%;top:10%;width:40%;height:40%;cursor:grab;border:2px dashed rgba(145,71,255,0.7);border-radius:4px;background:rgba(145,71,255,0.08);align-items:center;justify-content:center;min-width:20px;min-height:12px;box-sizing:border-box;">
+              <span id="overlayMediaBoxLabel" style="font-size:10px;color:rgba(145,71,255,0.9);pointer-events:none;font-weight:600;letter-spacing:0.5px;">IMAGE</span>
+              <div id="overlayMediaResizeHandle" style="position:absolute;bottom:-5px;right:-5px;width:12px;height:12px;background:var(--accent);border-radius:3px;cursor:se-resize;z-index:2;"></div>
+            </div>
+            <!-- Text box -->
+            <div id="overlayTextBox" style="display:none;position:absolute;left:5.2%;top:37%;cursor:grab;min-width:32px;min-height:12px;">
+              <div id="overlayTextPreview" style="font-family:Arial;font-size:14px;color:#fff;font-weight:normal;font-style:normal;text-shadow:1px 1px 4px rgba(0,0,0,0.8);white-space:pre-wrap;word-break:break-word;line-height:1.25;padding:4px 6px;border:1px dashed rgba(145,71,255,0.6);border-radius:3px;pointer-events:none;box-sizing:border-box;width:100%;">Text preview</div>
+              <div id="overlayTextResizeHandle" style="position:absolute;bottom:-5px;right:-5px;width:14px;height:14px;background:var(--accent);border-radius:3px;cursor:se-resize;z-index:2;"></div>
+            </div>
+          </div>
+          <!-- Shared numeric grid — content changes based on type -->
+          <div id="overlayMediaCoordGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">
+            <div><label style="font-size:10px;color:var(--muted-2);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px;">X</label><input type="number" id="overlayMediaX" class="input" value="0" min="0" step="1" style="width:100%;font-size:12px;padding:5px 8px;" oninput="overlayMediaCoordsChanged()"></div>
+            <div><label style="font-size:10px;color:var(--muted-2);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px;">Y</label><input type="number" id="overlayMediaY" class="input" value="0" min="0" step="1" style="width:100%;font-size:12px;padding:5px 8px;" oninput="overlayMediaCoordsChanged()"></div>
+            <div><label id="overlayMediaWLabel" style="font-size:10px;color:var(--muted-2);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px;">W</label><input type="number" id="overlayMediaW" class="input" value="960" min="10" step="10" style="width:100%;font-size:12px;padding:5px 8px;" oninput="overlayMediaCoordsChanged()"></div>
+            <div><label id="overlayMediaHLabel" style="font-size:10px;color:var(--muted-2);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px;">H</label><input type="number" id="overlayMediaH" class="input" value="540" min="10" step="10" style="width:100%;font-size:12px;padding:5px 8px;" oninput="overlayMediaCoordsChanged()"></div>
+          </div>
+          <!-- Text-only extra row: X, Y, Size, Max Width -->
+          <div id="overlayTextCoordExtra" style="display:none;grid-template-columns:repeat(4,1fr);gap:6px;">
+            <div><label style="font-size:10px;color:var(--muted-2);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px;">X</label><input type="number" id="overlayTextX" class="input" value="100" min="0" step="1" style="width:100%;font-size:12px;padding:5px 8px;" oninput="overlayTextCoordsChanged()"></div>
+            <div><label style="font-size:10px;color:var(--muted-2);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px;">Y</label><input type="number" id="overlayTextY" class="input" value="100" min="0" step="1" style="width:100%;font-size:12px;padding:5px 8px;" oninput="overlayTextCoordsChanged()"></div>
+            <div><label style="font-size:10px;color:var(--muted-2);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px;">Font Size</label><input type="number" id="overlayTextSizeAlt" class="input" value="48" min="8" max="300" step="1" style="width:100%;font-size:12px;padding:5px 8px;" oninput="overlayTextSizeAltChanged()"></div>
+            <div><label style="font-size:10px;color:var(--muted-2);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px;">Max Width</label><input type="number" id="overlayTextMaxW" class="input" value="600" min="50" step="10" style="width:100%;font-size:12px;padding:5px 8px;" oninput="overlayTextPreviewUpdate()"></div>
+          </div>
+        </div>
+
+        <!-- Assign to command -->
+        <div>
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px;">Assign to Command</label>
           <select id="overlayAssignCommand" class="input" style="font-size:13px;">
             <option value="">— None —</option>
           </select>
-          <div style="font-size:11px;color:var(--muted-2);">When this command is used in chat, this source will trigger automatically.</div>
+          <div style="font-size:11px;color:var(--muted-2);margin-top:6px;">When this command is used in chat, this source will trigger automatically.</div>
         </div>
-        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
-          <button class="btn btn-secondary" onclick="overlayCloseModal()">Cancel</button>
-          <button class="btn btn-primary" onclick="overlayConfirmAdd()">Add Source</button>
-        </div>
+
+      </div><!-- end scroll area -->
+
+      <!-- Pinned footer — always visible, never scrolls -->
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:14px;border-top:1px solid var(--border);margin-top:12px;flex-shrink:0;">
+        <button class="btn btn-secondary" onclick="overlayCloseModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="overlayConfirmAdd()">Add Source</button>
       </div>
     </div>
   </div>
@@ -1289,9 +1411,10 @@ function overlaySetMode(mode) {
 
 async function overlayLoadSources() {
   try {
-    const [statusRes, videoStatusRes, res] = await Promise.all([
+    const [statusRes, videoStatusRes, textStatusRes, res] = await Promise.all([
       fetch('/api/overlay/status'),
       fetch('/api/video-overlay/status'),
+      fetch('/api/text-overlay/status'),
       fetch('/api/overlay/sources')
     ]);
     const statusData = await statusRes.json();
@@ -1322,7 +1445,11 @@ async function overlayLoadSources() {
       try { const pr = await fetch('/api/overlay/positions'); positions = await pr.json(); } catch(e) {}
       overlayState.sources = data.map(s => {
         const pos = positions.find(p => p.id === s.id);
-        return pos ? { ...s, x: pos.x, y: pos.y, w: pos.w, h: pos.h } : s;
+        // Restore C++ overlay pixel position into mediaX/Y/W/H, NOT x/y (those are text coords)
+        if (pos) {
+          return { ...s, mediaX: pos.x, mediaY: pos.y, mediaW: pos.w, mediaH: pos.h };
+        }
+        return s;
       });
       overlayNextId = Math.max(...data.map(s => s.id), 0) + 1;
       overlayRenderSources();
@@ -1373,6 +1500,8 @@ async function overlayLaunch() {
     fetch('/api/overlay/launch', { method: 'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ mode: overlayMode }) }),
     fetch('/api/video-overlay/launch', { method: 'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ mode: overlayMode }) }),
+    fetch('/api/text-overlay/launch', { method: 'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ mode: overlayMode }) })
   ]);
   const data = await res.json();
@@ -1384,7 +1513,8 @@ async function overlayStop() {
   videoOverlayReady = false;
   await Promise.all([
     fetch('/api/overlay/stop', { method: 'POST' }),
-    fetch('/api/video-overlay/stop', { method: 'POST' })
+    fetch('/api/video-overlay/stop', { method: 'POST' }),
+    fetch('/api/text-overlay/stop', { method: 'POST' })
   ]);
   overlaySetStatus(false);
 }
@@ -1443,43 +1573,141 @@ function overlayAddSource() {
   document.getElementById('overlayVideoStart').value = '0';
   document.getElementById('overlayVideoEnd').value = '0';
   document.getElementById('overlayVideoTrimGroup').style.display = 'none';
+  overlayHideVideoPreview();
   overlayVideoDuration = 0;
   document.getElementById('overlayDisplaySeconds').value = '3';
   document.getElementById('overlayGifLoops').value = '1';
   document.getElementById('overlayAssignCommand').value = '';
+  overlayTextResetFields();
+  overlayMediaResetPos();
+  // Reset toggles to image-only
+  overlayTypeState.image = true;
+  overlayTypeState.video = false;
+  overlayTypeState.sound = false;
+  overlayTypeState.text  = false;
+  document.getElementById('overlaySourceType').value = 'image';
   overlaySourceTypeChanged();
   overlayLoadCommandsList();
   document.getElementById('overlayAddModal').style.display = 'flex';
+  setTimeout(() => { overlayMediaUpdateBox(); overlayTextPreviewUpdate(); }, 30);
 }
 
 // overlayCloseModal defined below with edit reset logic
 
+// ---- Source type toggle system ----
+// State: which of the 4 types are active
+const overlayTypeState = { image: true, video: false, sound: false, text: false };
+
+function overlayTypeToggle(which) {
+  // Image and Video are mutually exclusive
+  if (which === 'image' && !overlayTypeState.image) {
+    overlayTypeState.image = true;
+    overlayTypeState.video = false;
+  } else if (which === 'video' && !overlayTypeState.video) {
+    overlayTypeState.video = true;
+    overlayTypeState.image = false;
+  } else if (which === 'image' || which === 'video') {
+    // clicking already-active image/video does nothing (must have at least one... or allow deselect for sound-only)
+    // allow deselect if sound or text is on
+    if (overlayTypeState.sound || overlayTypeState.text) overlayTypeState[which] = false;
+  } else {
+    // sound and text toggle freely
+    overlayTypeState[which] = !overlayTypeState[which];
+  }
+  // Keep hidden field in sync for legacy compat
+  document.getElementById('overlaySourceType').value = overlayGetType();
+  overlaySourceTypeChanged();
+}
+
+function overlayGetType() {
+  const { image, video, sound, text } = overlayTypeState;
+  // Derive legacy type string
+  if (image && sound) return 'image+sound';
+  if (video && sound) return 'video+sound';
+  if (image) return 'image';
+  if (video) return 'video';
+  if (sound) return 'sound';
+  if (text) return 'text'; // text-only (no media)
+  return 'image'; // fallback
+}
+
+function overlayTypeSetActive(image, video, sound, text) {
+  overlayTypeState.image = image;
+  overlayTypeState.video = video;
+  overlayTypeState.sound = sound;
+  overlayTypeState.text  = text;
+  document.getElementById('overlaySourceType').value = overlayGetType();
+  overlayUpdateTypeButtons();
+}
+
+function overlayUpdateTypeButtons() {
+  const btns = {
+    image: document.getElementById('overlayToggleImage'),
+    video: document.getElementById('overlayToggleVideo'),
+    sound: document.getElementById('overlayToggleSound'),
+    text:  document.getElementById('overlayToggleText'),
+  };
+  for (const [k, btn] of Object.entries(btns)) {
+    if (!btn) continue;
+    if (overlayTypeState[k]) {
+      btn.style.background = 'var(--accent)';
+      btn.style.color = '#fff';
+      btn.style.borderColor = 'var(--accent)';
+    } else {
+      btn.style.background = 'var(--surface)';
+      btn.style.color = 'var(--muted)';
+      btn.style.borderColor = 'var(--border)';
+    }
+  }
+}
+
 function overlaySourceTypeChanged() {
-  const type = document.getElementById('overlaySourceType').value;
-  const showImage = type === 'image' || type === 'image+sound';
-  const showSound = type === 'sound' || type === 'image+sound' || type === 'video+sound';
-  const showVideo = type === 'video' || type === 'video+sound';
-  document.getElementById('overlayImageGroup').style.display = showImage ? '' : 'none';
-  document.getElementById('overlayChromaGroup').style.display = showImage ? '' : 'none';
-  document.getElementById('overlaySoundGroup').style.display = showSound ? '' : 'none';
-  document.getElementById('overlayVideoGroup').style.display = showVideo ? '' : 'none';
+  overlayUpdateTypeButtons();
+  const { image, video, sound, text } = overlayTypeState;
+  const showCanvas = image || video || text;
+
+  document.getElementById('overlayImageGroup').style.display = image ? '' : 'none';
+  document.getElementById('overlayChromaGroup').style.display = image ? '' : 'none';
+  document.getElementById('overlaySoundGroup').style.display = sound ? '' : 'none';
+  document.getElementById('overlayVideoGroup').style.display = video ? '' : 'none';
+  if (!video) overlayHideVideoPreview();
+  document.getElementById('overlayTextGroup').style.display  = text  ? 'flex' : 'none';
+
+  // Shared canvas
+  document.getElementById('overlayPosCanvasGroup').style.display = showCanvas ? 'flex' : 'none';
+  const mediaBox = document.getElementById('overlayMediaBox');
+  const textBox  = document.getElementById('overlayTextBox');
+  if (mediaBox) mediaBox.style.display = (image || video) ? 'flex' : 'none';
+  if (textBox)  textBox.style.display  = text ? 'block' : 'none';
+
+  // Coord grids
+  const coordGrid = document.getElementById('overlayMediaCoordGrid');
+  const extraRow  = document.getElementById('overlayTextCoordExtra');
+  if (coordGrid) coordGrid.style.display = (image || video) ? 'grid' : 'none';
+  if (extraRow)  extraRow.style.display  = text ? 'grid' : 'none';
+
+  // Media box label
+  if (image || video) {
+    const lbl = document.getElementById('overlayMediaBoxLabel');
+    if (lbl) lbl.textContent = video ? 'VIDEO' : 'IMAGE';
+    overlayMediaUpdateBox();
+  }
+  if (text) overlayTextPreviewUpdate();
+
   overlayUpdateGifRepeat();
   overlayUpdateVideoRepeat();
 }
 
 function overlayUpdateGifRepeat() {
-  const type = document.getElementById('overlaySourceType').value;
   const imagePath = document.getElementById('overlayImagePath').value.toLowerCase();
   const isGif = imagePath.endsWith('.gif');
-  const imageOnly = type === 'image';
+  const imageOnly = overlayTypeState.image && !overlayTypeState.sound && !overlayTypeState.video;
   document.getElementById('overlayGifRepeatGroup').style.display = (isGif && imageOnly) ? '' : 'none';
-  // Duration only for non-GIF image-only
   document.getElementById('overlayDurationGroup').style.display = (!isGif && imageOnly) ? '' : 'none';
 }
 
 function overlayUpdateVideoRepeat() {
-  const type = document.getElementById('overlaySourceType').value;
-  const videoOnly = type === 'video'; // video+sound loops driven by sound
+  const videoOnly = overlayTypeState.video && !overlayTypeState.sound;
   document.getElementById('overlayVideoRepeatGroup').style.display = videoOnly ? '' : 'none';
 }
 
@@ -1504,7 +1732,7 @@ async function overlayBrowse(forType) {
   } else if (forType === 'video') {
     document.getElementById('overlayVideoPath').value = data.path;
     overlayUpdateVideoRepeat();
-    overlayFetchVideoDuration(data.path);
+    overlayLoadVideoPreview(data.path);
   } else {
     document.getElementById('overlaySoundPath').value = data.path;
     overlayFetchDuration(data.path);
@@ -1534,31 +1762,80 @@ let overlayVideoDuration = 0;
 
 function overlayOnVideoPathInput() {
   const p = document.getElementById('overlayVideoPath').value.trim();
-  if (p) overlayFetchVideoDuration(p);
+  if (p) { overlayLoadVideoPreview(p); }
+  else overlayHideVideoPreview();
 }
 
-function overlayFetchVideoDuration(filePath, presetStart, presetEnd) {
-  const video = document.createElement('video');
-  video.preload = 'metadata';
-  video.src = 'http://localhost:3000/api/localfile?path=' + encodeURIComponent(filePath);
-  video.addEventListener('loadedmetadata', () => {
-    const dur = video.duration;
+let overlayVideoPreviewLoopTimer = null;
+
+function overlayLoadVideoPreview(filePath, presetStart, presetEnd) {
+  const vid = document.getElementById('overlayVideoPreview');
+  if (!vid) return;
+
+  // Clear any existing loop timer
+  if (overlayVideoPreviewLoopTimer) { clearInterval(overlayVideoPreviewLoopTimer); overlayVideoPreviewLoopTimer = null; }
+
+  vid.src = 'http://localhost:3000/api/localfile?path=' + encodeURIComponent(filePath);
+  vid.addEventListener('loadedmetadata', () => {
+    const dur = vid.duration;
     if (!dur || !isFinite(dur)) return;
+
+    // Set duration state and update trim UI
     overlayVideoDuration = dur;
-    const durStr = dur.toFixed(1) + 's';
-    document.getElementById('overlayVideoDurationLabel').textContent = 'Duration: ' + durStr;
+    document.getElementById('overlayVideoDurationLabel').textContent = 'Duration: ' + dur.toFixed(1) + 's';
     document.getElementById('overlayVideoStart').value = presetStart !== undefined ? presetStart : '0';
-    document.getElementById('overlayVideoEnd').value = presetEnd !== undefined ? presetEnd : dur.toFixed(1);
+    document.getElementById('overlayVideoEnd').value   = presetEnd   !== undefined ? presetEnd   : dur.toFixed(1);
     document.getElementById('overlayVideoTrimGroup').style.display = '';
     overlayVideoUpdateSlider();
-    // Set preview player
-    const preview = document.getElementById('overlayVideoPreview');
-    preview.src = 'http://localhost:3000/api/localfile?path=' + encodeURIComponent(filePath);
-    preview.currentTime = presetStart !== undefined ? presetStart : 0;
-    document.getElementById('overlayVideoPreviewBtn').textContent = '▶';
-    video.src = '';
-  });
-  video.addEventListener('error', () => { video.src = ''; });
+
+    // Start playing from trim start
+    const start = parseFloat(document.getElementById('overlayVideoStart').value) || 0;
+    vid.currentTime = start;
+    vid.play().catch(() => {});
+
+    // Loop within trim window + update playhead needle on trim slider
+    overlayVideoPreviewLoopTimer = setInterval(() => {
+      const s = parseFloat(document.getElementById('overlayVideoStart').value) || 0;
+      const e = parseFloat(document.getElementById('overlayVideoEnd').value) || dur;
+
+      // Move playhead needle (position within full duration, mapped to slider %)
+      const playhead = document.getElementById('overlayVideoPlayhead');
+      if (playhead && dur > 0) {
+        const pct = (vid.currentTime / dur) * 100;
+        playhead.style.left = pct + '%';
+      }
+
+      if (vid.paused) return; // don't loop while scrubbing
+      if (vid.currentTime >= e - 0.05) {
+        vid.currentTime = s;
+        vid.play().catch(() => {});
+      }
+    }, 100);
+  }, { once: true });
+
+  vid.addEventListener('error', () => {
+    if (overlayVideoPreviewLoopTimer) { clearInterval(overlayVideoPreviewLoopTimer); overlayVideoPreviewLoopTimer = null; }
+  }, { once: true });
+}
+
+function overlayHideVideoPreview() {
+  const vid = document.getElementById('overlayVideoPreview');
+  if (overlayVideoPreviewLoopTimer) { clearInterval(overlayVideoPreviewLoopTimer); overlayVideoPreviewLoopTimer = null; }
+  if (vid) vid.src = '';
+  const ph = document.getElementById('overlayVideoPlayhead');
+  if (ph) ph.style.left = '0%';
+}
+
+// Scrub the preview to a given time (called when trim handles move)
+function overlayVideoScrubTo(t) {
+  const vid = document.getElementById('overlayVideoPreview');
+  if (!vid || !vid.src) return;
+  vid.currentTime = t;
+}
+
+// Keep overlayFetchVideoDuration as alias for compat (edit source path)
+function overlayFetchVideoDuration(filePath, presetStart, presetEnd) {
+  overlayLoadVideoPreview(filePath, presetStart, presetEnd);
 }
 
 function overlayVideoUpdateSlider() {
@@ -1576,75 +1853,29 @@ function overlayVideoUpdateSlider() {
 
 function overlayVideoTrimInputChanged() {
   overlayVideoUpdateSlider();
-  // Show start frame in preview when not playing
-  const preview = document.getElementById('overlayVideoPreview');
-  if (preview && preview.paused) {
-    const start = parseFloat(document.getElementById('overlayVideoStart').value) || 0;
-    preview.currentTime = start;
-  }
-}
-
-let overlayVideoPreviewPlaying = false;
-let overlayVideoPreviewTimer = null;
-
-function overlayVideoPreviewToggle() {
-  const preview = document.getElementById('overlayVideoPreview');
-  const btn = document.getElementById('overlayVideoPreviewBtn');
-  if (!preview || !overlayVideoDuration) return;
-  if (overlayVideoPreviewPlaying) {
-    preview.pause();
-    preview.currentTime = parseFloat(document.getElementById('overlayVideoStart').value) || 0;
-    btn.textContent = '▶';
-    overlayVideoPreviewPlaying = false;
-    if (overlayVideoPreviewTimer) { clearInterval(overlayVideoPreviewTimer); overlayVideoPreviewTimer = null; }
-  } else {
-    const start = parseFloat(document.getElementById('overlayVideoStart').value) || 0;
-    const end = parseFloat(document.getElementById('overlayVideoEnd').value) || overlayVideoDuration;
-    preview.currentTime = start;
-    preview.play().catch(() => {});
-    btn.textContent = '⏸';
-    overlayVideoPreviewPlaying = true;
-    // Poll to stop at trim end
-    overlayVideoPreviewTimer = setInterval(() => {
-      if (preview.currentTime >= end) {
-        preview.pause();
-        preview.currentTime = start;
-        btn.textContent = '▶';
-        overlayVideoPreviewPlaying = false;
-        clearInterval(overlayVideoPreviewTimer);
-        overlayVideoPreviewTimer = null;
-      }
-    }, 50);
-  }
+  // Scrub preview to whichever input was last changed (start field shows start frame)
+  const start = parseFloat(document.getElementById('overlayVideoStart').value) || 0;
+  overlayVideoScrubTo(start);
 }
 
 // Dual-handle slider drag logic for video trim
 (function() {
   let draggingHandle = null;
-  let wasPlayingBeforeDrag = false;
-
   function getHandleFromEvent(e) {
     if (e.target.id === 'overlayVideoHandleStart') return 'start';
     if (e.target.id === 'overlayVideoHandleEnd') return 'end';
     return null;
   }
-
   document.addEventListener('mousedown', (e) => {
     const h = getHandleFromEvent(e);
-    if (!h) return;
-    draggingHandle = h;
-    e.preventDefault();
-    // Pause preview temporarily while scrubbing
-    const preview = document.getElementById('overlayVideoPreview');
-    wasPlayingBeforeDrag = overlayVideoPreviewPlaying;
-    if (overlayVideoPreviewPlaying) {
-      preview.pause();
-      if (overlayVideoPreviewTimer) { clearInterval(overlayVideoPreviewTimer); overlayVideoPreviewTimer = null; }
-      overlayVideoPreviewPlaying = false;
-      document.getElementById('overlayVideoPreviewBtn').textContent = '▶';
+    if (h) {
+      draggingHandle = h;
+      // Pause video while scrubbing so frame is visible
+      const vid = document.getElementById('overlayVideoPreview');
+      if (vid && !vid.paused) vid.pause();
+      e.preventDefault();
     }
   });
-
   document.addEventListener('mousemove', (e) => {
     if (!draggingHandle || !overlayVideoDuration) return;
     const wrap = document.getElementById('overlayVideoSliderWrap');
@@ -1654,47 +1885,436 @@ function overlayVideoPreviewToggle() {
     const val = (pct * overlayVideoDuration).toFixed(1);
     if (draggingHandle === 'start') {
       const end = parseFloat(document.getElementById('overlayVideoEnd').value) || overlayVideoDuration;
-      document.getElementById('overlayVideoStart').value = Math.min(parseFloat(val), end - 0.1).toFixed(1);
+      const t = Math.min(parseFloat(val), end - 0.1);
+      document.getElementById('overlayVideoStart').value = t.toFixed(1);
+      overlayVideoScrubTo(t);
     } else {
       const start = parseFloat(document.getElementById('overlayVideoStart').value) || 0;
-      document.getElementById('overlayVideoEnd').value = Math.max(parseFloat(val), start + 0.1).toFixed(1);
+      const t = Math.max(parseFloat(val), start + 0.1);
+      document.getElementById('overlayVideoEnd').value = t.toFixed(1);
+      overlayVideoScrubTo(t);
     }
     overlayVideoUpdateSlider();
-    // Scrub preview to the relevant handle's position
-    const preview = document.getElementById('overlayVideoPreview');
-    if (preview) {
-      if (draggingHandle === 'start') {
-        preview.currentTime = parseFloat(document.getElementById('overlayVideoStart').value) || 0;
-      } else {
-        preview.currentTime = parseFloat(document.getElementById('overlayVideoEnd').value) || 0;
-      }
-    }
   });
-
   document.addEventListener('mouseup', () => {
-    if (!draggingHandle) return;
-    draggingHandle = null;
-    // Resume playback if it was playing before the drag
-    if (wasPlayingBeforeDrag) {
-      wasPlayingBeforeDrag = false;
-      overlayVideoPreviewToggle(); // resumes from current start position
+    if (draggingHandle) {
+      draggingHandle = null;
+      // Resume playback from start point after releasing handle
+      const vid = document.getElementById('overlayVideoPreview');
+      const start = parseFloat(document.getElementById('overlayVideoStart').value) || 0;
+      if (vid && vid.src) { vid.currentTime = start; vid.play().catch(() => {}); }
     }
   });
 })();
 
-async function overlayConfirmAdd() {
+// ---- Text source JS ----
+
+function overlayTextFontSelectChanged() {
+  const sel = document.getElementById('overlayTextFontSelect').value;
+  document.getElementById('overlayTextCustomFontGroup').style.display = sel === 'custom' ? '' : 'none';
+}
+
+function overlayTextToggleFont() {
+  const panel = document.getElementById('overlayTextFontPanel');
+  const arrow = document.getElementById('overlayTextFontArrow');
+  const open = panel.style.display === 'flex';
+  panel.style.display = open ? 'none' : 'flex';
+  arrow.style.transform = open ? '' : 'rotate(180deg)';
+}
+
+function overlayTextAnimChanged() {
+  const anim = document.getElementById('overlayTextAnimation').value;
+  const hasDuration = anim === 'fade' || anim === 'typewriter' || anim === 'scroll';
+  document.getElementById('overlayTextAnimDurGroup').style.display = hasDuration ? 'block' : 'none';
+}
+
+function overlayTextGetFont() {
+  const sel = document.getElementById('overlayTextFontSelect').value;
+  if (sel === 'custom') return document.getElementById('overlayTextCustomFont').value.trim() || 'Arial';
+  return sel;
+}
+
+// Keep the below-canvas Size input in sync with the accordion Size input
+function overlayTextSizeAltChanged() {
+  const val = document.getElementById('overlayTextSizeAlt').value;
+  document.getElementById('overlayTextSize').value = val;
+  overlayTextPreviewUpdate();
+}
+
+// ---- Shared canvas constants ----
+const SCREEN_W = 1920, SCREEN_H = 1080;
+const MEDIA_SCREEN_W = 1920, MEDIA_SCREEN_H = 1080;
+
+// ---- Media position canvas (image / video) ----
+function overlayMediaUpdateBox() {
+  const canvas = document.getElementById('overlaySharedCanvas');
+  const box    = document.getElementById('overlayMediaBox');
+  if (!canvas || !box) return;
+  const cw = canvas.offsetWidth || 1;
+  const ch = canvas.offsetHeight || 1;
+  const x = parseFloat(document.getElementById('overlayMediaX').value) || 0;
+  const y = parseFloat(document.getElementById('overlayMediaY').value) || 0;
+  const w = parseFloat(document.getElementById('overlayMediaW').value) || 960;
+  const h = parseFloat(document.getElementById('overlayMediaH').value) || 540;
+  box.style.left   = (x / MEDIA_SCREEN_W * cw) + 'px';
+  box.style.top    = (y / MEDIA_SCREEN_H * ch) + 'px';
+  box.style.width  = Math.max(12, w / MEDIA_SCREEN_W * cw) + 'px';
+  box.style.height = Math.max(8,  h / MEDIA_SCREEN_H * ch) + 'px';
+}
+
+function overlayMediaCoordsChanged() { overlayMediaUpdateBox(); }
+
+function overlayMediaResetPos() {
+  document.getElementById('overlayMediaX').value = '0';
+  document.getElementById('overlayMediaY').value = '0';
+  document.getElementById('overlayMediaW').value = '960';
+  document.getElementById('overlayMediaH').value = '540';
+  overlayMediaUpdateBox();
+}
+
+function overlayMediaPopulatePos(src) {
+  document.getElementById('overlayMediaX').value = src.mediaX || 0;
+  document.getElementById('overlayMediaY').value = src.mediaY || 0;
+  document.getElementById('overlayMediaW').value = src.mediaW || 960;
+  document.getElementById('overlayMediaH').value = src.mediaH || 540;
+  overlayMediaUpdateBox();
+}
+
+// Media box drag/resize IIFE
+(function() {
+  let mode = null;
+  let startX, startY, startL, startT, startW, startH;
+  function getBox()    { return document.getElementById('overlayMediaBox'); }
+  function getCanvas() { return document.getElementById('overlaySharedCanvas'); }
+  function getResize() { return document.getElementById('overlayMediaResizeHandle'); }
+
+  document.addEventListener('mousedown', (e) => {
+    const box = getBox(); const canvas = getCanvas(); const resize = getResize();
+    if (!box || !canvas || box.style.display === 'none') return;
+    if (e.target === resize) {
+      mode = 'resize'; startX = e.clientX; startY = e.clientY;
+      startW = box.offsetWidth; startH = box.offsetHeight; e.preventDefault();
+    } else if (e.target === box || (box.contains(e.target) && e.target !== resize)) {
+      mode = 'move'; startX = e.clientX; startY = e.clientY;
+      startL = parseFloat(box.style.left) || 0; startT = parseFloat(box.style.top) || 0;
+      box.style.cursor = 'grabbing'; e.preventDefault();
+    }
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!mode) return;
+    const box = getBox(); const canvas = getCanvas(); if (!box || !canvas) return;
+    const cw = canvas.offsetWidth; const ch = canvas.offsetHeight;
+    if (mode === 'move') {
+      const nl = Math.max(0, Math.min(cw - box.offsetWidth,  startL + e.clientX - startX));
+      const nt = Math.max(0, Math.min(ch - box.offsetHeight, startT + e.clientY - startY));
+      box.style.left = nl + 'px'; box.style.top = nt + 'px';
+      document.getElementById('overlayMediaX').value = Math.round(nl / cw * MEDIA_SCREEN_W);
+      document.getElementById('overlayMediaY').value = Math.round(nt / ch * MEDIA_SCREEN_H);
+    } else {
+      const nw = Math.max(12, startW + e.clientX - startX);
+      const nh = Math.max(8,  startH + e.clientY - startY);
+      box.style.width = nw + 'px'; box.style.height = nh + 'px';
+      document.getElementById('overlayMediaW').value = Math.round(nw / cw * MEDIA_SCREEN_W);
+      document.getElementById('overlayMediaH').value = Math.round(nh / ch * MEDIA_SCREEN_H);
+    }
+  });
+  document.addEventListener('mouseup', () => {
+    if (mode === 'move') { const b = getBox(); if (b) b.style.cursor = 'grab'; }
+    mode = null;
+  });
+})();
+
+// Expand canvas — opens a larger preview modal
+function overlayExpandCanvas() {
   const type = document.getElementById('overlaySourceType').value;
+  const isText = type === 'text';
+  // Build a fullscreen-ish overlay showing the canvas at larger scale
+  let existing = document.getElementById('overlayCanvasExpandModal');
+  if (existing) { existing.remove(); return; }
+  const modal = document.createElement('div');
+  modal.id = 'overlayCanvasExpandModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10001;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = `
+    <div style="width:90vw;max-width:1280px;display:flex;flex-direction:column;gap:10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span style="color:var(--muted);font-size:13px;">Position preview — actual proportions (16:9)</span>
+        <button onclick="document.getElementById('overlayCanvasExpandModal').remove()" style="background:none;border:1px solid var(--border);color:var(--text);font-size:13px;cursor:pointer;padding:4px 12px;border-radius:6px;">Close</button>
+      </div>
+      <div id="overlayExpandedCanvas" style="position:relative;width:100%;aspect-ratio:16/9;background:#0a0a0a;border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+        <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 10%,rgba(255,255,255,0.015) 10%,rgba(255,255,255,0.015) 10.5%),repeating-linear-gradient(90deg,transparent,transparent 17.7%,rgba(255,255,255,0.015) 17.7%,rgba(255,255,255,0.015) 18.2%);pointer-events:none;"></div>
+        ${isText ? `
+          <div id="overlayExpandTextBox" style="position:absolute;left:5.2%;top:37%;cursor:grab;min-width:32px;">
+            <div id="overlayExpandTextPreview" style="font-family:Arial;font-size:28px;color:#fff;white-space:pre-wrap;word-break:break-word;padding:4px 6px;border:1px dashed rgba(145,71,255,0.6);border-radius:3px;pointer-events:none;box-sizing:border-box;width:100%;">Text preview</div>
+          </div>` : `
+          <div id="overlayExpandMediaBox" style="position:absolute;cursor:grab;border:2px dashed rgba(145,71,255,0.7);border-radius:4px;background:rgba(145,71,255,0.08);display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:14px;color:rgba(145,71,255,0.9);font-weight:600;">${type.includes('video') ? 'VIDEO' : 'IMAGE'}</span>
+          </div>`}
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+
+  // Sync position into expanded view
+  setTimeout(() => {
+    const expCanvas = document.getElementById('overlayExpandedCanvas');
+    if (!expCanvas) return;
+    const cw = expCanvas.offsetWidth; const ch = expCanvas.offsetHeight;
+    if (isText) {
+      const tb = document.getElementById('overlayExpandTextBox');
+      const tp = document.getElementById('overlayExpandTextPreview');
+      if (!tb) return;
+      const x = parseFloat(document.getElementById('overlayTextX').value) || 0;
+      const y = parseFloat(document.getElementById('overlayTextY').value) || 0;
+      const mw = parseFloat(document.getElementById('overlayTextMaxW').value) || 600;
+      const sz = parseFloat(document.getElementById('overlayTextSize').value) || 48;
+      tb.style.left = (x / SCREEN_W * cw) + 'px';
+      tb.style.top  = (y / SCREEN_H * ch) + 'px';
+      tb.style.width = (mw / SCREEN_W * cw) + 'px';
+      if (tp) {
+        const scaleFont = sz / SCREEN_H * ch;
+        tp.style.fontSize = scaleFont + 'px';
+        tp.textContent = document.getElementById('overlayTextContent').value || 'Text preview';
+      }
+    } else {
+      const mb = document.getElementById('overlayExpandMediaBox');
+      if (!mb) return;
+      const x = parseFloat(document.getElementById('overlayMediaX').value) || 0;
+      const y = parseFloat(document.getElementById('overlayMediaY').value) || 0;
+      const w = parseFloat(document.getElementById('overlayMediaW').value) || 960;
+      const h = parseFloat(document.getElementById('overlayMediaH').value) || 540;
+      mb.style.left   = (x / MEDIA_SCREEN_W * cw) + 'px';
+      mb.style.top    = (y / MEDIA_SCREEN_H * ch) + 'px';
+      mb.style.width  = (w / MEDIA_SCREEN_W * cw) + 'px';
+      mb.style.height = (h / MEDIA_SCREEN_H * ch) + 'px';
+    }
+  }, 50);
+}
+
+// ---- Text canvas: move + resize box ----
+
+function overlayTextCoordsChanged() { overlayTextPreviewUpdate(); }
+
+function overlayTextPreviewUpdate() {
+  const box     = document.getElementById('overlayTextBox');
+  const preview = document.getElementById('overlayTextPreview');
+  const canvas  = document.getElementById('overlaySharedCanvas');
+  if (!box || !preview || !canvas) return;
+
+  const cw = canvas.offsetWidth || 1;
+  const ch = canvas.offsetHeight || 1;
+  const scaleX = cw / SCREEN_W;
+  const scaleY = ch / SCREEN_H;
+
+  // Position
+  const x = parseFloat(document.getElementById('overlayTextX').value) || 0;
+  const y = parseFloat(document.getElementById('overlayTextY').value) || 0;
+  box.style.left = (x * scaleX) + 'px';
+  box.style.top  = (y * scaleY) + 'px';
+
+  // Width
+  const maxW = parseFloat(document.getElementById('overlayTextMaxW').value) || 600;
+  box.style.width = Math.max(40, maxW * scaleX) + 'px';
+
+  // Preview text styling (scaled down proportionally)
+  const fontSize = parseFloat(document.getElementById('overlayTextSize').value) || 48;
+  const scaledFont = Math.max(7, Math.round(fontSize * scaleY));
+  const font    = overlayTextGetFont();
+  const color   = document.getElementById('overlayTextColor').value;
+  const bold    = document.getElementById('overlayTextBold').checked;
+  const italic  = document.getElementById('overlayTextItalic').checked;
+  const shadow  = document.getElementById('overlayTextShadow').checked;
+  const text    = document.getElementById('overlayTextContent').value || 'Text preview';
+
+  preview.style.fontFamily  = font;
+  preview.style.fontSize    = scaledFont + 'px';
+  preview.style.color       = color;
+  preview.style.fontWeight  = bold ? 'bold' : 'normal';
+  preview.style.fontStyle   = italic ? 'italic' : 'normal';
+  preview.style.textShadow  = shadow ? '1px 1px 4px rgba(0,0,0,0.85)' : 'none';
+  preview.textContent = text;
+
+  // Keep below-canvas Size alt in sync
+  const sizeAlt = document.getElementById('overlayTextSizeAlt');
+  if (sizeAlt && sizeAlt !== document.activeElement) sizeAlt.value = fontSize;
+}
+
+// Scroll over canvas to resize font size
+(function() {
+  document.addEventListener('wheel', (e) => {
+    const canvas = document.getElementById('overlaySharedCanvas');
+    if (!canvas || !canvas.contains(e.target) && e.target !== canvas) return;
+    // Only resize font when text type is active
+    const textBox = document.getElementById('overlayTextBox');
+    if (!textBox || textBox.style.display === 'none') return;
+    e.preventDefault();
+    const sizeEl    = document.getElementById('overlayTextSize');
+    const sizeAltEl = document.getElementById('overlayTextSizeAlt');
+    if (!sizeEl) return;
+    let val = parseFloat(sizeEl.value) || 48;
+    val = Math.min(300, Math.max(8, val + (e.deltaY < 0 ? 2 : -2)));
+    sizeEl.value    = val;
+    if (sizeAltEl) sizeAltEl.value = val;
+    overlayTextPreviewUpdate();
+  }, { passive: false });
+})();
+
+// Move + resize drag logic (text box)
+(function() {
+  let mode = null;
+  let startX, startY, startLeft, startTop, startW, startFontSize;
+
+  function getBox()    { return document.getElementById('overlayTextBox'); }
+  function getCanvas() { return document.getElementById('overlaySharedCanvas'); }
+  function getResize() { return document.getElementById('overlayTextResizeHandle'); }
+
+  document.addEventListener('mousedown', (e) => {
+    const box    = getBox();
+    const resize = getResize();
+    const canvas = getCanvas();
+    if (!box || !canvas || box.style.display === 'none') return;
+
+    if (e.target === resize) {
+      mode = 'resize';
+      startX = e.clientX; startY = e.clientY;
+      startW = box.offsetWidth;
+      startFontSize = parseFloat(document.getElementById('overlayTextSize').value) || 48;
+      e.preventDefault();
+    } else if (e.target === box || (box.contains(e.target) && e.target !== resize)) {
+      mode = 'move';
+      startX = e.clientX; startY = e.clientY;
+      startLeft = parseFloat(box.style.left) || 0;
+      startTop  = parseFloat(box.style.top)  || 0;
+      box.style.cursor = 'grabbing';
+      e.preventDefault();
+    }
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!mode) return;
+    const box = getBox(); const canvas = getCanvas();
+    if (!box || !canvas) return;
+    const cw = canvas.offsetWidth; const ch = canvas.offsetHeight;
+
+    if (mode === 'move') {
+      const newLeft = Math.max(0, Math.min(cw - box.offsetWidth,  startLeft + e.clientX - startX));
+      const newTop  = Math.max(0, Math.min(ch - 10, startTop + e.clientY - startY));
+      box.style.left = newLeft + 'px'; box.style.top = newTop + 'px';
+      document.getElementById('overlayTextX').value = Math.round((newLeft / cw) * SCREEN_W);
+      document.getElementById('overlayTextY').value = Math.round((newTop  / ch) * SCREEN_H);
+    } else if (mode === 'resize') {
+      // Left/right → max width
+      const newW = Math.max(40, startW + e.clientX - startX);
+      box.style.width = newW + 'px';
+      document.getElementById('overlayTextMaxW').value = Math.round((newW / cw) * SCREEN_W);
+      // Up/down → font size (drag down = bigger)
+      const newSize = Math.min(300, Math.max(8, Math.round(startFontSize + (e.clientY - startY) * 0.4)));
+      document.getElementById('overlayTextSize').value = newSize;
+      const altEl = document.getElementById('overlayTextSizeAlt');
+      if (altEl) altEl.value = newSize;
+      overlayTextPreviewUpdate();
+    }
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (mode === 'move') { const b = getBox(); if (b) b.style.cursor = 'grab'; }
+    mode = null;
+  });
+})();
+
+
+function overlayTextResetFields() {
+  document.getElementById('overlayTextContent').value = '';
+  document.getElementById('overlayTextFontSelect').value = 'Arial';
+  document.getElementById('overlayTextCustomFont').value = '';
+  document.getElementById('overlayTextCustomFontGroup').style.display = 'none';
+  document.getElementById('overlayTextSize').value = '48';
+  document.getElementById('overlayTextSizeAlt').value = '48';
+  document.getElementById('overlayTextColor').value = '#ffffff';
+  document.getElementById('overlayTextBold').checked = false;
+  document.getElementById('overlayTextItalic').checked = false;
+  document.getElementById('overlayTextShadow').checked = true;
+  document.getElementById('overlayTextAnimation').value = 'static';
+  document.getElementById('overlayTextAnimDurGroup').style.display = 'none';
+  document.getElementById('overlayTextAnimDuration').value = '1';
+  document.getElementById('overlayTextX').value = '100';
+  document.getElementById('overlayTextY').value = '100';
+  document.getElementById('overlayTextMaxW').value = '600';
+  document.getElementById('overlayTextDisplaySeconds').value = '5';
+  // Close font accordion
+  document.getElementById('overlayTextFontPanel').style.display = 'none';
+  document.getElementById('overlayTextFontArrow').style.transform = '';
+  overlayTextPreviewUpdate();
+}
+
+function overlayTextPopulateFields(src) {
+  document.getElementById('overlayTextContent').value = src.text || '';
+  const fontSel = document.getElementById('overlayTextFontSelect');
+  const knownFonts = Array.from(fontSel.options).map(o => o.value).filter(v => v !== 'custom');
+  if (knownFonts.includes(src.font)) {
+    fontSel.value = src.font;
+    document.getElementById('overlayTextCustomFontGroup').style.display = 'none';
+  } else {
+    fontSel.value = 'custom';
+    document.getElementById('overlayTextCustomFont').value = src.font || '';
+    document.getElementById('overlayTextCustomFontGroup').style.display = '';
+  }
+  const sz = src.fontSize || 48;
+  document.getElementById('overlayTextSize').value = sz;
+  document.getElementById('overlayTextSizeAlt').value = sz;
+  document.getElementById('overlayTextColor').value = src.color || '#ffffff';
+  document.getElementById('overlayTextBold').checked = !!src.bold;
+  document.getElementById('overlayTextItalic').checked = !!src.italic;
+  document.getElementById('overlayTextShadow').checked = src.shadow !== false;
+  document.getElementById('overlayTextAnimation').value = src.animation || 'static';
+  overlayTextAnimChanged();
+  document.getElementById('overlayTextAnimDuration').value = src.animDuration || 1;
+  document.getElementById('overlayTextX').value = src.x || 100;
+  document.getElementById('overlayTextY').value = src.y || 100;
+  document.getElementById('overlayTextMaxW').value = src.maxW || 600;
+  document.getElementById('overlayTextDisplaySeconds').value = src.displaySeconds !== undefined ? src.displaySeconds : 5;
+  overlayTextPreviewUpdate();
+}
+
+async function overlayTextTrigger(src) {
+  await fetch('/api/text-overlay/command', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      cmd: 'ADDTEXT', id: src.id, text: src.text,
+      x: src.x || 100, y: src.y || 100,
+      font: src.font, size: src.fontSize, color: src.color,
+      bold: src.bold, italic: src.italic, shadow: src.shadow,
+      animation: src.animation, animDuration: src.animDuration, maxW: src.maxW
+    })
+  });
+  // Auto-clear after displaySeconds (0 = forever)
+  const secs = src.displaySeconds || 0;
+  if (secs > 0) {
+    setTimeout(() => {
+      fetch('/api/text-overlay/command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cmd: 'CLEARTEXT', id: src.id })
+      });
+    }, secs * 1000);
+  }
+}
+
+async function overlayConfirmAdd() {
+  const hasImage = overlayTypeState.image;
+  const hasSound = overlayTypeState.sound;
+  const hasVideo = overlayTypeState.video;
+  const hasText  = overlayTypeState.text;
+  const type = overlayGetType();
+
   const imagePath = document.getElementById('overlayImagePath').value.trim();
   const soundPath = document.getElementById('overlaySoundPath').value.trim();
   const videoPath = document.getElementById('overlayVideoPath').value.trim();
 
-  const hasImage = type === 'image' || type === 'image+sound';
-  const hasSound = type === 'sound' || type === 'image+sound' || type === 'video+sound';
-  const hasVideo = type === 'video' || type === 'video+sound';
-
   if (hasImage && !imagePath) { alert('Please select an image file.'); return; }
   if (hasSound && !soundPath) { alert('Please select a sound file.'); return; }
   if (hasVideo && !videoPath) { alert('Please select a video file.'); return; }
+  if (hasText && !document.getElementById('overlayTextContent').value.trim()) { alert('Please enter text content.'); return; }
 
   const soundStart = parseFloat(document.getElementById('overlaySoundStart').value) || 0;
   const soundEnd = parseFloat(document.getElementById('overlaySoundEnd').value) || 0;
@@ -1704,7 +2324,7 @@ async function overlayConfirmAdd() {
   const src = {
     id: overlayNextId++,
     type,
-    path: hasImage ? imagePath : (hasVideo ? videoPath : soundPath),
+    path: hasImage ? imagePath : (hasVideo ? videoPath : (hasText ? null : soundPath)),
     videoPath: hasVideo ? videoPath : null,
     soundPath: hasSound ? soundPath : null,
     soundStart: hasSound ? soundStart : 0,
@@ -1717,7 +2337,26 @@ async function overlayConfirmAdd() {
     chromaKey: document.getElementById('overlayChromaKey').checked,
     chromaColor: document.getElementById('overlayChromaColor').value,
     chromaThreshold: parseInt(document.getElementById('overlayChromaThreshold').value),
-    assignedCommand: document.getElementById('overlayAssignCommand').value || ''
+    assignedCommand: document.getElementById('overlayAssignCommand').value || '',
+    // Media position (image / video)
+    mediaX: (hasImage || hasVideo) ? (parseInt(document.getElementById('overlayMediaX').value) || 0) : null,
+    mediaY: (hasImage || hasVideo) ? (parseInt(document.getElementById('overlayMediaY').value) || 0) : null,
+    mediaW: (hasImage || hasVideo) ? (parseInt(document.getElementById('overlayMediaW').value) || 960) : null,
+    mediaH: (hasImage || hasVideo) ? (parseInt(document.getElementById('overlayMediaH').value) || 540) : null,
+    // Text fields
+    text:       hasText ? document.getElementById('overlayTextContent').value : null,
+    font:       hasText ? overlayTextGetFont() : null,
+    fontSize:   hasText ? (parseInt(document.getElementById('overlayTextSize').value) || 48) : null,
+    color:      hasText ? document.getElementById('overlayTextColor').value : null,
+    bold:       hasText ? document.getElementById('overlayTextBold').checked : false,
+    italic:     hasText ? document.getElementById('overlayTextItalic').checked : false,
+    shadow:     hasText ? document.getElementById('overlayTextShadow').checked : false,
+    animation:  hasText ? document.getElementById('overlayTextAnimation').value : null,
+    animDuration: hasText ? (parseFloat(document.getElementById('overlayTextAnimDuration').value) || 1) : null,
+    x:          hasText ? (parseInt(document.getElementById('overlayTextX').value) || 100) : null,
+    y:          hasText ? (parseInt(document.getElementById('overlayTextY').value) || 100) : null,
+    maxW:       hasText ? (parseInt(document.getElementById('overlayTextMaxW').value) || 600) : null,
+    displaySeconds: hasText ? (parseFloat(document.getElementById('overlayTextDisplaySeconds').value) || 0) : null,
   };
 
   overlayState.sources.push(src);
@@ -1732,32 +2371,37 @@ async function overlayConfirmAdd() {
 
 // Trigger a source: load image/video and/or play sound, then auto-hide after duration
 async function overlayTriggerSource(src) {
-  const hasImage = src.type === 'image' || src.type === 'image+sound';
-  const hasSound = src.type === 'sound' || src.type === 'image+sound' || src.type === 'video+sound';
-  const hasVideo = src.type === 'video' || src.type === 'video+sound';
-  const isGif = hasImage && src.path.toLowerCase().endsWith('.gif');
+  // Derive component flags from the saved type string
+  // Also handle the new combined types where text may be stored separately
+  const t = src.type || 'image';
+  const hasImage = t === 'image' || t === 'image+sound';
+  const hasSound = t === 'sound' || t === 'image+sound' || t === 'video+sound';
+  const hasVideo = t === 'video' || t === 'video+sound';
+  // Text is present if src.text is set (works for combined and text-only sources)
+  const hasText  = !!(src.text);
+  const isGif = hasImage && src.path && src.path.toLowerCase().endsWith('.gif');
 
   if (hasImage) {
     const loops = isGif ? (hasSound ? 0 : (src.gifLoops || 1)) : 1;
     await fetch('/api/overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ cmd: 'LOAD', id: src.id, path: src.path, loops }) });
+      body: JSON.stringify({ cmd: 'LOAD', id: src.id, path: src.path, loops,
+        x: src.mediaX || 0, y: src.mediaY || 0, w: src.mediaW || null, h: src.mediaH || null }) });
 
-    // Image-only auto-hide after displaySeconds (0 = unlimited)
     if (!hasSound && !isGif) {
       const ms = (src.displaySeconds || 0) * 1000;
-      if (ms > 0) {
-        setTimeout(() => {
-          fetch('/api/overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ cmd: 'CLEAR', id: src.id }) });
-        }, ms);
-      }
+      if (ms > 0) setTimeout(() => {
+        fetch('/api/overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ cmd: 'CLEAR', id: src.id }) });
+      }, ms);
     }
   }
 
   if (hasVideo) {
     const loops = hasSound ? 0 : (src.videoLoops || 1);
     await fetch('/api/video-overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ cmd: 'PLAYVID', id: src.id, path: src.videoPath, loops, videoStart: src.videoStart || 0, videoEnd: src.videoEnd || 0 }) });
+      body: JSON.stringify({ cmd: 'PLAYVID', id: src.id, path: src.videoPath, loops,
+        videoStart: src.videoStart || 0, videoEnd: src.videoEnd || 0,
+        x: src.mediaX || 0, y: src.mediaY || 0, w: src.mediaW || null, h: src.mediaH || null }) });
   }
 
   if (hasSound) {
@@ -1766,7 +2410,6 @@ async function overlayTriggerSource(src) {
     await fetch('/api/overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ cmd: 'SOUND', startMs, endMs, path: src.soundPath }) });
 
-    // Auto-hide image/video after sound finishes
     if ((hasImage || hasVideo) && endMs > startMs) {
       const displayMs = endMs - startMs;
       setTimeout(() => {
@@ -1776,6 +2419,11 @@ async function overlayTriggerSource(src) {
           body: JSON.stringify({ cmd: 'CLEARVID', id: src.id }) });
       }, displayMs);
     }
+  }
+
+  // Text fires alongside image/video — not exclusive
+  if (hasText) {
+    await overlayTextTrigger(src);
   }
 }
 
@@ -1789,12 +2437,13 @@ function overlayRenderSources() {
     const hasImage = src.type === 'image' || src.type === 'image+sound';
     const hasSound = src.type === 'sound' || src.type === 'image+sound' || src.type === 'video+sound';
     const hasVideo = src.type === 'video' || src.type === 'video+sound';
+    const hasText  = src.type === 'text';
     const isGif = hasImage && src.path && src.path.toLowerCase().endsWith('.gif');
-    const name = src.path.split(/[\\/]/).pop();
+    const name = hasText ? (src.text && src.text.length > 30 ? src.text.slice(0, 30) + '\u2026' : (src.text || 'Text')) : src.path.split(/[\\/]/).pop();
     const soundName = (hasSound && src.soundPath) ? src.soundPath.split(/[\\/]/).pop() : null;
-    const typeLabel = hasVideo ? (hasSound ? 'MP4 + Audio' : 'MP4') : (src.type === 'image+sound' ? 'GIF/IMG + Audio' : (hasImage ? (isGif ? 'GIF' : 'IMAGE') : 'AUDIO'));
-    const thumbBg = hasVideo ? '#1a1a2e' : (isGif ? '#1a2e1a' : (hasImage ? '#1a1a2e' : '#2e1a1a'));
-    const thumbIcon = hasVideo ? '🎬' : (isGif ? '🎞' : (hasImage ? '🖼' : '🔊'));
+    const typeLabel = hasText ? 'TEXT' : (hasVideo ? (hasSound ? 'MP4 + Audio' : 'MP4') : (src.type === 'image+sound' ? 'GIF/IMG + Audio' : (hasImage ? (isGif ? 'GIF' : 'IMAGE') : 'AUDIO')));
+    const thumbBg = hasText ? '#1e1a2e' : (hasVideo ? '#1a1a2e' : (isGif ? '#1a2e1a' : (hasImage ? '#1a1a2e' : '#2e1a1a')));
+    const thumbIcon = hasText ? '\uD835\uDC13' : (hasVideo ? '🎬' : (isGif ? '🎞' : (hasImage ? '🖼' : '🔊')));
 
     let durationStr = '';
     if (hasSound && src.soundEnd > 0) durationStr = src.soundStart.toFixed(1) + 's – ' + src.soundEnd.toFixed(1) + 's';
@@ -1813,7 +2462,7 @@ function overlayRenderSources() {
         <div style="display:flex;align-items:center;gap:6px;margin-top:3px;">
           <span style="font-size:10px;font-weight:600;letter-spacing:0.8px;color:var(--accent);background:var(--accent-soft);padding:2px 7px;border-radius:4px;">${typeLabel}</span>
           ${durationStr ? `<span style="font-size:11px;color:var(--muted);">${durationStr}</span>` : ''}
-          ${src.chromaKey ? `<span style="font-size:10px;color:var(--green);background:var(--green-soft);padding:2px 7px;border-radius:4px;">Chroma</span>` : ''}
+          ${(!hasText && src.chromaKey) ? `<span style="font-size:10px;color:var(--green);background:var(--green-soft);padding:2px 7px;border-radius:4px;">Chroma</span>` : ''}
           ${src.assignedCommand ? `<span style="font-size:10px;color:var(--yellow);background:rgba(245,196,0,0.12);padding:2px 7px;border-radius:4px;">⚡ ${src.assignedCommand}</span>` : ''}
         </div>
       </div>
@@ -1859,13 +2508,18 @@ async function overlayRemoveSource(id) {
   if (overlayState.running && src) {
     const hasVideo = src.type === 'video' || src.type === 'video+sound';
     const hasImage = src.type === 'image' || src.type === 'image+sound';
-    if (hasImage || (!hasVideo && !hasImage)) {
+    const hasText  = src.type === 'text';
+    if (hasImage || (!hasVideo && !hasImage && !hasText)) {
       await fetch('/api/overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ cmd: 'REMOVE', id: src.id }) });
     }
     if (hasVideo) {
       await fetch('/api/video-overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ cmd: 'REMOVEVID', id: src.id }) });
+    }
+    if (hasText) {
+      await fetch('/api/text-overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ cmd: 'REMOVETEXT', id: src.id }) });
     }
   }
 }
@@ -1874,13 +2528,20 @@ function overlayEditSource(id) {
   const src = overlayState.sources.find(s => s.id === id);
   if (!src) return;
 
+  // Set toggle state from saved src.type
+  const t = src.type || 'image';
+  overlayTypeState.image = t === 'image' || t === 'image+sound';
+  overlayTypeState.video = t === 'video' || t === 'video+sound';
+  overlayTypeState.sound = t === 'sound' || t === 'image+sound' || t === 'video+sound';
+  overlayTypeState.text  = !!(src.text);
+  document.getElementById('overlaySourceType').value = t;
+
   // Pre-fill modal with existing values
-  document.getElementById('overlaySourceType').value = src.type;
-  document.getElementById('overlayImagePath').value = (src.type === 'image' || src.type === 'image+sound') ? src.path : '';
+  document.getElementById('overlayImagePath').value = overlayTypeState.image ? (src.path || '') : '';
   document.getElementById('overlaySoundPath').value = src.soundPath || '';
   document.getElementById('overlayVideoPath').value = src.videoPath || '';
   if (src.videoPath) {
-    overlayFetchVideoDuration(src.videoPath, src.videoStart || 0, src.videoEnd || undefined);
+    overlayLoadVideoPreview(src.videoPath, src.videoStart || 0, src.videoEnd || undefined);
   } else {
     document.getElementById('overlayVideoTrimGroup').style.display = 'none';
     overlayVideoDuration = 0;
@@ -1908,6 +2569,17 @@ function overlayEditSource(id) {
     document.getElementById('overlayTrimGroup').style.display = 'none';
   }
 
+  if (src.text) overlayTextPopulateFields(src);
+  const _hasImg = overlayTypeState.image;
+  const _hasVid = overlayTypeState.video;
+  if (_hasImg || _hasVid) {
+    // Set values now, redraw after modal is visible (canvas has 0 width while hidden)
+    document.getElementById('overlayMediaX').value = src.mediaX || 0;
+    document.getElementById('overlayMediaY').value = src.mediaY || 0;
+    document.getElementById('overlayMediaW').value = src.mediaW || 960;
+    document.getElementById('overlayMediaH').value = src.mediaH || 540;
+  }
+
   overlaySourceTypeChanged();
 
   // Change confirm button to save edits
@@ -1921,17 +2593,16 @@ function overlayEditSource(id) {
   });
 
   document.getElementById('overlayAddModal').style.display = 'flex';
+  // Redraw canvas AFTER modal is visible so offsetWidth is real
+  setTimeout(() => {
+    if (_hasImg || _hasVid) overlayMediaUpdateBox();
+    if (src.text) overlayTextPreviewUpdate();
+  }, 30);
 }
 
 function overlayCloseModal() {
   document.getElementById('overlayAddModal').style.display = 'none';
-  // Stop preview player
-  const preview = document.getElementById('overlayVideoPreview');
-  if (preview) { preview.pause(); preview.src = ''; }
-  if (overlayVideoPreviewTimer) { clearInterval(overlayVideoPreviewTimer); overlayVideoPreviewTimer = null; }
-  overlayVideoPreviewPlaying = false;
-  const btn = document.getElementById('overlayVideoPreviewBtn');
-  if (btn) btn.textContent = '▶';
+  overlayHideVideoPreview();
   // Reset confirm button back to Add Source
   const confirmBtn = document.querySelector('#overlayAddModal .btn-primary');
   if (confirmBtn) { confirmBtn.textContent = 'Add Source'; confirmBtn.onclick = overlayConfirmAdd; }
@@ -1941,20 +2612,23 @@ async function overlayConfirmEdit(id) {
   const src = overlayState.sources.find(s => s.id === id);
   if (!src) return;
 
-  const type = document.getElementById('overlaySourceType').value;
+  const hasImage = overlayTypeState.image;
+  const hasSound = overlayTypeState.sound;
+  const hasVideo = overlayTypeState.video;
+  const hasText  = overlayTypeState.text;
+  const type = overlayGetType();
+
   const imagePath = document.getElementById('overlayImagePath').value.trim();
   const soundPath = document.getElementById('overlaySoundPath').value.trim();
   const videoPath = document.getElementById('overlayVideoPath').value.trim();
-  const hasImage = type === 'image' || type === 'image+sound';
-  const hasSound = type === 'sound' || type === 'image+sound' || type === 'video+sound';
-  const hasVideo = type === 'video' || type === 'video+sound';
 
   if (hasImage && !imagePath) { alert('Please select an image file.'); return; }
   if (hasSound && !soundPath) { alert('Please select a sound file.'); return; }
   if (hasVideo && !videoPath) { alert('Please select a video file.'); return; }
+  if (hasText && !document.getElementById('overlayTextContent').value.trim()) { alert('Please enter text content.'); return; }
 
   src.type = type;
-  src.path = hasImage ? imagePath : (hasVideo ? videoPath : soundPath);
+  src.path = hasImage ? imagePath : (hasVideo ? videoPath : (hasText ? null : soundPath));
   src.videoPath = hasVideo ? videoPath : null;
   src.soundPath = hasSound ? soundPath : null;
   src.soundStart = parseFloat(document.getElementById('overlaySoundStart').value) || 0;
@@ -1968,12 +2642,33 @@ async function overlayConfirmEdit(id) {
   src.chromaColor = document.getElementById('overlayChromaColor').value;
   src.chromaThreshold = parseInt(document.getElementById('overlayChromaThreshold').value);
   src.assignedCommand = document.getElementById('overlayAssignCommand').value || '';
+  if (hasImage || hasVideo) {
+    src.mediaX = parseInt(document.getElementById('overlayMediaX').value) || 0;
+    src.mediaY = parseInt(document.getElementById('overlayMediaY').value) || 0;
+    src.mediaW = parseInt(document.getElementById('overlayMediaW').value) || 960;
+    src.mediaH = parseInt(document.getElementById('overlayMediaH').value) || 540;
+  }
+  if (hasText) {
+    src.text        = document.getElementById('overlayTextContent').value;
+    src.font        = overlayTextGetFont();
+    src.fontSize    = parseInt(document.getElementById('overlayTextSize').value) || 48;
+    src.color       = document.getElementById('overlayTextColor').value;
+    src.bold        = document.getElementById('overlayTextBold').checked;
+    src.italic      = document.getElementById('overlayTextItalic').checked;
+    src.shadow      = document.getElementById('overlayTextShadow').checked;
+    src.animation   = document.getElementById('overlayTextAnimation').value;
+    src.animDuration = parseFloat(document.getElementById('overlayTextAnimDuration').value) || 1;
+    src.x           = parseInt(document.getElementById('overlayTextX').value) || 100;
+    src.y           = parseInt(document.getElementById('overlayTextY').value) || 100;
+    src.maxW        = parseInt(document.getElementById('overlayTextMaxW').value) || 600;
+    src.displaySeconds = parseFloat(document.getElementById('overlayTextDisplaySeconds').value) || 0;
+  }
 
   overlayRenderSources();
   overlaySaveSources();
   overlayCloseModal();
 
-  if (overlayState.running && src.visible) {
+  if (overlayState.running) {
     await overlayTriggerSource(src);
   }
 }
