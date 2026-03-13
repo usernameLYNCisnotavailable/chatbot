@@ -1599,6 +1599,18 @@ Write-Output $sb.ToString().Trim()
         res.json({ ok: true });
     });
 
+    let cachedVoices = [];
+    server.post('/api/text-overlay/voices', (req, res) => {
+        cachedVoices = req.body.voices || [];
+        res.json({ ok: true });
+    });
+    server.get('/api/text-overlay/voices', (req, res) => {
+        if (cachedVoices.length === 0 && textWin && !textWin.isDestroyed()) {
+            broadcastTextCmd({ cmd: 'GETVOICES' });
+        }
+        res.json({ voices: cachedVoices });
+    });
+
     // ---- STATIC (must be last) ----
     server.use(express.static(path.join(appDir, 'dashboard'), { index: false }));
 

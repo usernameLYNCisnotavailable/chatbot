@@ -19,7 +19,6 @@
   }
   .txt-source.visible { display: block; }
 
-  /* Animations */
   @keyframes txt-fadein {
     from { opacity: 0; }
     to   { opacity: 1; }
@@ -32,8 +31,33 @@
 </head>
 <body>
 <script>
-const sources = {}; // id -> { el, config }
+const sources = {};
 
+// ---- Voice setup ----
+let voicesLoaded = [];
+function loadVoices() {
+  voicesLoaded = window.speechSynthesis.getVoices();
+}
+loadVoices();
+window.speechSynthesis.onvoiceschanged = loadVoices;
+
+function getVoice(name) {
+  if (!name) return null;
+  return voicesLoaded.find(v => v.name === name) || null;
+}
+
+function speak(text, voiceName, rate, pitch, volume) {
+  window.speechSynthesis.cancel();
+  const utt = new SpeechSynthesisUtterance(text);
+  const v = getVoice(voiceName);
+  if (v) utt.voice = v;
+  utt.rate   = rate   || 1;
+  utt.pitch  = pitch  || 1;
+  utt.volume = (volume !== undefined && !isNaN(volume)) ? Math.min(1, Math.max(0, volume)) : 1;
+  window.speechSynthesis.speak(utt);
+}
+
+// ---- SSE ----
 function connectSSE() {
   const es = new EventSource('http://localhost:3000/api/text-overlay/stream');
   es.onmessage = (e) => {
@@ -48,24 +72,32 @@ function handleCmd(msg) {
   else if (msg.cmd === 'CLEARTEXT')  clearText(id);
   else if (msg.cmd === 'REMOVETEXT') removeText(id);
   else if (msg.cmd === 'MOVETEXT')   moveText(id, msg.x, msg.y);
+  else if (msg.cmd === 'GETVOICES')  sendVoices();
+}
+
+function sendVoices() {
+  const voices = voicesLoaded.map(v => ({ name: v.name, lang: v.lang }));
+  fetch('http://localhost:3000/api/text-overlay/voices', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ voices })
+  }).catch(() => {});
 }
 
 function addText(id, cfg) {
-  // Remove existing if re-triggering
   if (sources[id]) removeText(id);
 
   const el = document.createElement('div');
   el.className = 'txt-source';
   el.dataset.id = id;
 
-  // Styles
-  el.style.left     = (cfg.x || 100) + 'px';
-  el.style.top      = (cfg.y || 100) + 'px';
-  el.style.maxWidth = (cfg.maxW || 600) + 'px';
+  el.style.left        = (cfg.x || 100) + 'px';
+  el.style.top         = (cfg.y || 100) + 'px';
+  el.style.maxWidth    = (cfg.maxW || 600) + 'px';
   el.style.fontFamily  = cfg.font || 'Arial';
   el.style.fontSize    = (cfg.size || 32) + 'px';
   el.style.color       = cfg.color || '#ffffff';
-  el.style.fontWeight  = cfg.bold ? 'bold' : 'normal';
+  el.style.fontWeight  = cfg.bold   ? 'bold'   : 'normal';
   el.style.fontStyle   = cfg.italic ? 'italic' : 'normal';
   el.style.textShadow  = cfg.shadow ? '2px 2px 6px rgba(0,0,0,0.8)' : 'none';
   el.style.lineHeight  = '1.2';
@@ -74,7 +106,7 @@ function addText(id, cfg) {
   document.body.appendChild(el);
   sources[id] = { el, cfg };
 
-  // Apply animation
+  // Animation
   const anim = cfg.animation || 'static';
   el.classList.add('visible');
 
@@ -99,15 +131,28 @@ function addText(id, cfg) {
     el.style.whiteSpace = 'nowrap';
     const dur = cfg.animDuration || 8;
     el.style.animation = 'txt-scroll ' + dur + 's linear forwards';
-    // After scroll ends, snap to final X position
     el.addEventListener('animationend', () => {
       el.style.animation = 'none';
       el.style.transform = 'none';
       el.style.left = (cfg.x || 100) + 'px';
     }, { once: true });
   } else {
-    // static
     el.style.opacity = '1';
+  }
+
+  // TTS — speak the text if enabled
+  if (cfg.speak && cfg.text) {
+    window.speechSynthesis.cancel();
+    const utt = new SpeechSynthesisUtterance(cfg.text);
+    const v = getVoice(cfg.voice);
+    if (v) utt.voice = v;
+    utt.rate   = cfg.ttsRate   || 1;
+    utt.pitch  = cfg.ttsPitch  || 1;
+    utt.volume = (cfg.ttsVolume !== undefined && !isNaN(cfg.ttsVolume)) ? Math.min(1, Math.max(0, cfg.ttsVolume)) : 1;
+    // Always clear the text element once speech finishes
+    utt.onend = () => { clearText(id); };
+    window.speechSynthesis.speak(utt);
+    sources[id].utt = utt;
   }
 }
 
@@ -115,6 +160,8 @@ function clearText(id) {
   const src = sources[id];
   if (!src) return;
   if (src.typeTimer) clearInterval(src.typeTimer);
+  // Cancel TTS if this source was speaking
+  if (src.cfg.speak) window.speechSynthesis.cancel();
   src.el.classList.remove('visible');
   src.el.style.display = 'none';
 }
@@ -123,6 +170,7 @@ function removeText(id) {
   const src = sources[id];
   if (!src) return;
   if (src.typeTimer) clearInterval(src.typeTimer);
+  if (src.cfg.speak) window.speechSynthesis.cancel();
   src.el.remove();
   delete sources[id];
 }

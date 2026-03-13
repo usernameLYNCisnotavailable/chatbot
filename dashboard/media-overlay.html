@@ -55,7 +55,7 @@ function handleCmd(msg) {
   const id = String(msg.id);
   const { cmd, x, y, w, h } = msg;
 
-  if      (cmd === 'PLAYVID')  playVid(id, msg.path, msg.loops||1, x, y, w, h, msg.videoStart||0, msg.videoEnd||0);
+  if      (cmd === 'PLAYVID')  playVid(id, msg.path, msg.loops||1, x, y, w, h, msg.videoStart||0, msg.videoEnd||0, msg.volume ?? 1);
   else if (cmd === 'CLEARVID') clearSource(id);
   else if (cmd === 'REMOVEVID') removeSource(id);
   else if (cmd === 'MOVEVID')  moveSource(id, x, y);
@@ -65,20 +65,21 @@ function handleCmd(msg) {
   else if (cmd === 'REMOVEIMG') removeSource(id);
   else if (cmd === 'MOVEIMG')  moveSource(id, x, y);
   else if (cmd === 'SIZEIMG')  sizeSource(id, w, h);
-  else if (cmd === 'PLAYSOUND') playSound(msg.path, msg.startMs || 0, msg.endMs || 0, msg.id || msg.path);
+  else if (cmd === 'PLAYSOUND') playSound(msg.path, msg.startMs || 0, msg.endMs || 0, msg.id || msg.path, msg.volume ?? 1);
   else if (cmd === 'STOPSOUND') stopSound(String(msg.id));
   else if (cmd === 'STOPALL')  stopAll();
 }
 
 const activeSounds = {}; // id -> Audio — track per source to stop previous before replay
 
-function playSound(filePath, startMs, endMs, id) {
+function playSound(filePath, startMs, endMs, id, volume) {
   id = id !== undefined ? String(id) : undefined;
   // Stop any existing sound for this id
   const existing = activeSounds[id];
   if (existing) { try { existing.pause(); } catch(e) {} delete activeSounds[id]; }
 
   const audio = new Audio('http://localhost:3000/api/localfile?path=' + encodeURIComponent(filePath));
+  audio.volume = (volume !== undefined && !isNaN(volume)) ? Math.min(1, Math.max(0, volume)) : 1;
   if (id) activeSounds[id] = audio;
   audio.currentTime = startMs / 1000;
   audio.play().catch(() => {});
@@ -137,7 +138,7 @@ function createSourceEl(id, kind, x, y, w, h) {
 }
 
 // ---- Video playback ----
-function playVid(id, filePath, loops, x, y, w, h, videoStart, videoEnd) {
+function playVid(id, filePath, loops, x, y, w, h, videoStart, videoEnd, volume) {
   let src = sources[id];
   if (src && src.kind !== 'video') { removeSource(id); src = null; }
 
@@ -187,6 +188,7 @@ function playVid(id, filePath, loops, x, y, w, h, videoStart, videoEnd) {
   if (h !== undefined) src.h = h;
 
   src.mediaEl.src = 'http://localhost:3000/api/localfile?path=' + encodeURIComponent(filePath);
+  src.mediaEl.volume = (volume !== undefined && !isNaN(volume)) ? Math.min(1, Math.max(0, volume)) : 1;
   applyPos(src);
   src.el.style.display = 'block';
   src.el.classList.add('visible');
