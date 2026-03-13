@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100vw; height: 100vh;
+    background: transparent;
+    overflow: hidden;
+  }
+  .media-source {
+    position: absolute;
+    overflow: hidden;
+    display: none;
+  }
+  .media-source video,
+  .media-source img {
+    width: 100%; height: 100%;
+    object-fit: fill;
+    display: block;
+  }
+  .media-source .resize-handle {
+    position: absolute;
+    bottom: 0; right: 0;
+    width: 20px; height: 20px;
+    background: rgba(255,255,255,0.8);
+    cursor: se-resize;
+  }
+  .media-source.visible {
+    outline: 1.5px solid rgba(255,255,255,0.55);
+  }
+</style>
+</head>
+<body>
+<script>
+const sources = {};
+// id -> { el, mediaEl, kind ('video'|'image'), loopsTotal, loopsDone, clearTimer, x, y, w, h,
+//         videoStart, videoEnd }
+
+let dragging = null, resizing = null;
+let dragOffX = 0, dragOffY = 0;
+
+// ---- SSE connection ----
+function connectSSE() {
+  const es = new EventSource('http://localhost:3000/api/media-overlay/stream');
+  es.onmessage = (e) => {
+    try { handleCmd(JSON.parse(e.data)); } catch(err) {}
+  };
+  es.onerror = () => { es.close(); setTimeout(connectSSE, 2000); };
+}
+
+function handleCmd(msg) {
+  const id = String(msg.id);
+  const { cmd, x, y, w, h } = msg;
+
+  if      (cmd === 'PLAYVID')  playVid(id, msg.path, msg.loops||1, x, y, w, h, msg.videoStart||0, msg.videoEnd||0);
+  else if (cmd === 'CLEARVID') clearSource(id);
+  else if (cmd === 'REMOVEVID') removeSource(id);
+  else if (cmd === 'MOVEVID')  moveSource(id, x, y);
+  else if (cmd === 'SIZEVID')  sizeSource(id, w, h);
+  else if (cmd === 'PLAYIMG')  playImg(id, msg.path, msg.loops||1, x, y, w, h, msg.displaySeconds||0);
+  else if (cmd === 'CLEARIMG') clearSource(id);
+  else if (cmd === 'REMOVEIMG') removeSource(id);
+  else if (cmd === 'MOVEIMG')  moveSource(id, x, y);
+  else if (cmd === 'SIZEIMG')  sizeSource(id, w, h);
+}
+
+// ---- Shared element creation ----
+function createSourceEl(id, kind, x, y, w, h) {
+  const el = document.createElement('div');
+  el.className = 'media-source';
+  el.dataset.id = id;
+
+  const mediaEl = document.createElement(kind === 'video' ? 'video' : 'img');
+  if (kind === 'video') mediaEl.preload = 'auto';
+  el.appendChild(mediaEl);
+
+  const handle = document.createElement('div');
+  handle.className = 'resize-handle';
+  el.appendChild(handle);
+
+  document.body.appendChild(el);
+
+  const src = sources[id] = {
+    el, mediaEl, kind,
+    loopsTotal: 1, loopsDone: 0,
+    clearTimer: null,
+    videoStart: 0, videoEnd: 0,
+    x: x||200, y: y||200, w: w||400, h: h||300
+  };
+
+  el.addEventListener('mousedown', (e) => {
+    if (e.target === handle) return;
+    dragging = id;
+    dragOffX = e.clientX - src.x;
+    dragOffY = e.clientY - src.y;
+    e.preventDefault();
+  });
+  handle.addEventListener('mousedown', (e) => {
+    resizing = id;
+    e.preventDefault();
+    e.stopPropagation();
+  });
+
+  return src;
+}
+
+// ---- Video playback ----
+function playVid(id, filePath, loops, x, y, w, h, videoStart, videoEnd) {
+  let src = sources[id];
+  if (src && src.kind !== 'video') { removeSource(id); src = null; }
+
+  if (src) {
+    src.mediaEl.pause();
+    src.mediaEl.src = '';
+    src.loopsDone = 0;
+  } else {
+    src = createSourceEl(id, 'video', x, y, w, h);
+
+    // Loop handler — trim window
+    src.mediaEl.addEventListener('timeupdate', () => {
+      const end = src.videoEnd;
+      if (end > 0 && src.mediaEl.currentTime >= end) {
+        src.loopsDone++;
+        if (src.loopsTotal === 0 || src.loopsDone < src.loopsTotal) {
+          src.mediaEl.currentTime = src.videoStart || 0;
+          src.mediaEl.play();
+        } else {
+          clearSource(id);
+          notifyDone(id);
+        }
+      }
+    });
+
+    src.mediaEl.addEventListener('ended', () => {
+      if (src.videoEnd > 0) return; // timeupdate handles trimmed
+      src.loopsDone++;
+      if (src.loopsTotal === 0 || src.loopsDone < src.loopsTotal) {
+        src.mediaEl.currentTime = src.videoStart || 0;
+        src.mediaEl.play();
+      } else {
+        clearSource(id);
+        notifyDone(id);
+      }
+    });
+  }
+
+  src.loopsTotal = loops;
+  src.loopsDone = 0;
+  src.videoStart = videoStart || 0;
+  src.videoEnd = videoEnd || 0;
+  if (x !== undefined) src.x = x;
+  if (y !== undefined) src.y = y;
+  if (w !== undefined) src.w = w;
+  if (h !== undefined) src.h = h;
+
+  src.mediaEl.src = 'http://localhost:3000/api/localfile?path=' + encodeURIComponent(filePath);
+  applyPos(src);
+  src.el.style.display = 'block';
+  src.el.classList.add('visible');
+
+  if (src.videoStart > 0) {
+    src.mediaEl.addEventListener('loadedmetadata', function onMeta() {
+      src.mediaEl.removeEventListener('loadedmetadata', onMeta);
+      src.mediaEl.currentTime = src.videoStart;
+      src.mediaEl.play().catch(() => {});
+    });
+  } else {
+    src.mediaEl.currentTime = 0;
+    src.mediaEl.play().catch(() => {});
+  }
+}
+
+// ---- Image/GIF playback ----
+function playImg(id, filePath, loops, x, y, w, h, displaySeconds) {
+  let src = sources[id];
+  if (src && src.kind !== 'image') { removeSource(id); src = null; }
+
+  if (src) {
+    if (src.clearTimer) { clearTimeout(src.clearTimer); src.clearTimer = null; }
+    src.loopsDone = 0;
+  } else {
+    src = createSourceEl(id, 'image', x, y, w, h);
+  }
+
+  src.loopsTotal = loops;
+  src.loopsDone = 0;
+  if (x !== undefined) src.x = x;
+  if (y !== undefined) src.y = y;
+  if (w !== undefined) src.w = w;
+  if (h !== undefined) src.h = h;
+
+  // Load via HTTP (file:/// blocked by Electron security)
+  src.mediaEl.src = 'http://localhost:3000/api/localfile?path=' + encodeURIComponent(filePath);
+  applyPos(src);
+  src.el.style.display = 'block';
+  src.el.classList.add('visible');
+
+  // GIF auto-clear. loops===0 = show forever.
+  // Browser loops GIFs natively — we can't hook per-loop events.
+  // Use displaySeconds as total time, or loops*3s as fallback.
+  if (loops !== 0) {
+    const totalMs = displaySeconds > 0 ? displaySeconds * 1000 : loops * 3000;
+    src.clearTimer = setTimeout(() => {
+      clearSource(id);
+      notifyDone(id);
+    }, totalMs);
+  }
+}
+
+// ---- Shared clear / remove / move / size ----
+function clearSource(id) {
+  const src = sources[id];
+  if (!src) return;
+  if (src.clearTimer) { clearTimeout(src.clearTimer); src.clearTimer = null; }
+  if (src.kind === 'video') { src.mediaEl.pause(); src.mediaEl.src = ''; }
+  else { src.mediaEl.src = ''; }
+  src.el.style.display = 'none';
+  src.el.classList.remove('visible');
+}
+
+function removeSource(id) {
+  const src = sources[id];
+  if (!src) return;
+  clearSource(id);
+  src.el.remove();
+  delete sources[id];
+}
+
+function moveSource(id, x, y) {
+  const src = sources[id];
+  if (!src) return;
+  src.x = x; src.y = y;
+  applyPos(src);
+  savePos(id);
+}
+
+function sizeSource(id, w, h) {
+  const src = sources[id];
+  if (!src) return;
+  src.w = w; src.h = h;
+  applyPos(src);
+  savePos(id);
+}
+
+function applyPos(src) {
+  src.el.style.left   = src.x + 'px';
+  src.el.style.top    = src.y + 'px';
+  src.el.style.width  = src.w + 'px';
+  src.el.style.height = src.h + 'px';
+}
+
+function savePos(id) {
+  const src = sources[id];
+  if (!src) return;
+  fetch('http://localhost:3000/api/media-overlay/savepos', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, x: src.x, y: src.y, w: src.w, h: src.h })
+  }).catch(() => {});
+}
+
+function notifyDone(id) {
+  fetch('http://localhost:3000/api/media-overlay/done', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id })
+  }).catch(() => {});
+}
+
+// ---- Mouse passthrough ----
+let mouseOverSource = false;
+
+document.addEventListener('mousemove', (e) => {
+  const overSource = Object.values(sources).some(src => {
+    if (src.el.style.display === 'none') return false;
+    const r = src.el.getBoundingClientRect();
+    return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+  });
+
+  if (overSource !== mouseOverSource) {
+    mouseOverSource = overSource;
+    fetch('http://localhost:3000/api/media-overlay/mouse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ignore: !overSource })
+    }).catch(() => {});
+  }
+
+  if (dragging !== null) {
+    const src = sources[dragging];
+    if (src) { src.x = e.clientX - dragOffX; src.y = e.clientY - dragOffY; applyPos(src); }
+  } else if (resizing !== null) {
+    const src = sources[resizing];
+    if (src) { src.w = Math.max(50, e.clientX - src.x); src.h = Math.max(50, e.clientY - src.y); applyPos(src); }
+  }
+});
+
+document.addEventListener('mouseup', () => {
+  if (dragging !== null) { savePos(dragging); dragging = null; }
+  if (resizing !== null) { savePos(resizing); resizing = null; }
+});
+
+// Signal ready
+fetch('http://localhost:3000/api/media-overlay/done', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ type: 'ready' })
+}).catch(() => {});
+
+connectSSE();
+</script>
+</body>
+</html>

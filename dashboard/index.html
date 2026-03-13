@@ -1411,14 +1411,14 @@ function overlaySetMode(mode) {
 
 async function overlayLoadSources() {
   try {
-    const [statusRes, videoStatusRes, textStatusRes, res] = await Promise.all([
+    const [statusRes, mediaStatusRes, textStatusRes, res] = await Promise.all([
       fetch('/api/overlay/status'),
-      fetch('/api/video-overlay/status'),
+      fetch('/api/media-overlay/status'),
       fetch('/api/text-overlay/status'),
       fetch('/api/overlay/sources')
     ]);
     const statusData = await statusRes.json();
-    const videoStatusData = await videoStatusRes.json();
+    const mediaStatusData = await mediaStatusRes.json();
     overlaySetStatus(statusData.running);
     if (statusData.mode) overlaySetMode(statusData.mode);
 
@@ -1435,9 +1435,9 @@ async function overlayLoadSources() {
       }, 500);
     }
 
-    // Video overlay ready comes via SSE READY event — handled in overlayStartVideoSSE
+    // Media overlay ready comes via SSE READY event — handled in overlayStartMediaSSE
     // If already running, mark ready immediately
-    if (videoStatusData.running) videoOverlayReady = true;
+    if (mediaStatusData.running) mediaOverlayReady = true;
 
     const data = await res.json();
     if (Array.isArray(data) && data.length) {
@@ -1458,23 +1458,22 @@ async function overlayLoadSources() {
 }
 
 // Listen for video done events (video finished all loops)
-let videoOverlayReady = false;
+let mediaOverlayReady = false;
 
-function overlayStartVideoSSE() {
-  const es = new EventSource('/api/video-overlay/events');
+function overlayStartMediaSSE() {
+  const es = new EventSource('/api/media-overlay/events');
   es.onmessage = (e) => {
     try {
       const msg = JSON.parse(e.data);
       if (msg.cmd === 'READY') {
-        videoOverlayReady = true;
-        console.log('[video-overlay] ready');
-      } else if (msg.cmd === 'VIDDONE') {
+        mediaOverlayReady = true;
+      } else if (msg.cmd === 'MEDIADONE' || msg.cmd === 'VIDDONE' || msg.cmd === 'IMGDONE') {
         const src = overlayState.sources.find(s => s.id === msg.id);
         if (src) { src.visible = false; overlayRenderSources(); }
       }
     } catch(err) {}
   };
-  es.onerror = () => { es.close(); setTimeout(overlayStartVideoSSE, 3000); };
+  es.onerror = () => { es.close(); setTimeout(overlayStartMediaSSE, 3000); };
 }
 
 async function overlaySaveSources() {
@@ -1499,7 +1498,7 @@ async function overlayLaunch() {
   const [res] = await Promise.all([
     fetch('/api/overlay/launch', { method: 'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ mode: overlayMode }) }),
-    fetch('/api/video-overlay/launch', { method: 'POST', headers:{'Content-Type':'application/json'},
+    fetch('/api/media-overlay/launch', { method: 'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ mode: overlayMode }) }),
     fetch('/api/text-overlay/launch', { method: 'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ mode: overlayMode }) })
@@ -1510,10 +1509,10 @@ async function overlayLaunch() {
 }
 
 async function overlayStop() {
-  videoOverlayReady = false;
+  mediaOverlayReady = false;
   await Promise.all([
     fetch('/api/overlay/stop', { method: 'POST' }),
-    fetch('/api/video-overlay/stop', { method: 'POST' }),
+    fetch('/api/media-overlay/stop', { method: 'POST' }),
     fetch('/api/text-overlay/stop', { method: 'POST' })
   ]);
   overlaySetStatus(false);
@@ -2551,35 +2550,42 @@ async function overlayTriggerSource(src) {
   const isGif = hasImage && src.path && src.path.toLowerCase().endsWith('.gif');
 
   if (hasImage) {
+    if (!mediaOverlayReady) {
+      await new Promise((resolve, reject) => {
+        let waited = 0;
+        const check = setInterval(() => {
+          waited += 100;
+          if (mediaOverlayReady) { clearInterval(check); resolve(); }
+          else if (waited >= 5000) { clearInterval(check); reject(); }
+        }, 100);
+      }).catch(() => { alert('Media overlay not ready. Try clicking Launch again.'); });
+      if (!mediaOverlayReady) return;
+    }
     const loops = isGif ? (hasSound ? 0 : (src.gifLoops || 1)) : 1;
-    await fetch('/api/overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ cmd: 'LOAD', id: src.id, path: src.path, loops }) });
-
-    // Apply dashboard position — LOAD restores from positions file, so override with MOVE+SIZE
-    if (src.mediaX != null || src.mediaY != null) {
-      await fetch('/api/overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ cmd: 'MOVE', id: src.id, x: src.mediaX || 0, y: src.mediaY || 0 }) });
-    }
-    if (src.mediaW != null || src.mediaH != null) {
-      await fetch('/api/overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ cmd: 'SIZE', id: src.id, w: src.mediaW || 960, h: src.mediaH || 540 }) });
-    }
-
-    if (!hasSound && !isGif) {
-      const ms = (src.displaySeconds || 0) * 1000;
-      if (ms > 0) setTimeout(() => {
-        fetch('/api/overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ cmd: 'CLEAR', id: src.id }) });
-      }, ms);
-    }
+    const displaySeconds = (!hasSound && !isGif) ? (src.displaySeconds || 0) : 0;
+    await fetch('/api/media-overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ cmd: 'PLAYIMG', id: src.id, path: src.path, loops,
+        x: src.mediaX || 0, y: src.mediaY || 0, w: src.mediaW || 960, h: src.mediaH || 540,
+        displaySeconds }) });
   }
 
   if (hasVideo) {
     const loops = hasSound ? 0 : (src.videoLoops || 1);
-    await fetch('/api/video-overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
+    if (!mediaOverlayReady) {
+      await new Promise((resolve, reject) => {
+        let waited = 0;
+        const check = setInterval(() => {
+          waited += 100;
+          if (mediaOverlayReady) { clearInterval(check); resolve(); }
+          else if (waited >= 5000) { clearInterval(check); reject(); }
+        }, 100);
+      }).catch(() => { alert('Media overlay not ready. Try clicking Launch again.'); });
+      if (!mediaOverlayReady) return;
+    }
+    await fetch('/api/media-overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ cmd: 'PLAYVID', id: src.id, path: src.videoPath, loops,
         videoStart: src.videoStart || 0, videoEnd: src.videoEnd || 0,
-        x: src.mediaX || 0, y: src.mediaY || 0, w: src.mediaW || null, h: src.mediaH || null }) });
+        x: src.mediaX || 0, y: src.mediaY || 0, w: src.mediaW || 960, h: src.mediaH || 540 }) });
   }
 
   if (hasSound) {
@@ -2591,9 +2597,9 @@ async function overlayTriggerSource(src) {
     if ((hasImage || hasVideo) && endMs > startMs) {
       const displayMs = endMs - startMs;
       setTimeout(() => {
-        if (hasImage) fetch('/api/overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ cmd: 'CLEAR', id: src.id }) });
-        if (hasVideo) fetch('/api/video-overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
+        if (hasImage) fetch('/api/media-overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ cmd: 'CLEARIMG', id: src.id }) });
+        if (hasVideo) fetch('/api/media-overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ cmd: 'CLEARVID', id: src.id }) });
       }, displayMs);
     }
@@ -2687,12 +2693,12 @@ async function overlayRemoveSource(id) {
     const hasVideo = src.type === 'video' || src.type === 'video+sound';
     const hasImage = src.type === 'image' || src.type === 'image+sound';
     const hasText  = src.type === 'text';
-    if (hasImage || (!hasVideo && !hasImage && !hasText)) {
-      await fetch('/api/overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ cmd: 'REMOVE', id: src.id }) });
+    if (hasImage) {
+      await fetch('/api/media-overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ cmd: 'REMOVEIMG', id: src.id }) });
     }
     if (hasVideo) {
-      await fetch('/api/video-overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
+      await fetch('/api/media-overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ cmd: 'REMOVEVID', id: src.id }) });
     }
     if (hasText) {
@@ -3216,7 +3222,7 @@ async function overlayConfirmEdit(id) {
     if (nav) { nav.classList.add('active'); openNavGroupFor(name); }
     if (name === 'groups') refreshGroupSelects();
     if (name === 'mod-view') loadModChannels();
-    if (name === 'overlay') { overlayLoadSources(); overlayStartVideoSSE(); }
+    if (name === 'overlay') { overlayLoadSources(); overlayStartMediaSSE(); }
     if (name === 'actions' && inlineEditor) setTimeout(() => inlineEditor.layout(), 50);
   }
 
