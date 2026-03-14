@@ -2176,26 +2176,46 @@ async function saveHotkeys() {
 
 let overlayVideoDuration = 0;
 
+let overlayVideoPathDebounce = null;
 function overlayOnVideoPathInput() {
+  if (overlayVideoPathDebounce) { clearTimeout(overlayVideoPathDebounce); overlayVideoPathDebounce = null; }
   const p = document.getElementById('overlayVideoPath').value.trim();
-  if (p) { overlayLoadVideoPreview(p); }
-  else overlayHideVideoPreview();
+  if (!p) { overlayHideVideoPreview(); return; }
+  overlayVideoPathDebounce = setTimeout(() => {
+    overlayVideoPathDebounce = null;
+    overlayLoadVideoPreview(p);
+  }, 400); // wait 400ms after last keystroke before loading
 }
 
 let overlayVideoPreviewLoopTimer = null;
 let overlayVideoPreviewCancelled = false;
 
+// AbortController for cancelling stale loadedmetadata listeners
+let overlayVideoPreviewAbort = null;
+
 function overlayLoadVideoPreview(filePath, presetStart, presetEnd) {
   const vid = document.getElementById('overlayVideoPreview');
   if (!vid) return;
+
+  // Cancel any previous pending loadedmetadata listener
+  if (overlayVideoPreviewAbort) { overlayVideoPreviewAbort.abort(); overlayVideoPreviewAbort = null; }
+  const ac = new AbortController();
+  overlayVideoPreviewAbort = ac;
 
   overlayVideoPreviewCancelled = false;
   // Clear any existing loop timer
   if (overlayVideoPreviewLoopTimer) { clearInterval(overlayVideoPreviewLoopTimer); overlayVideoPreviewLoopTimer = null; }
 
+  // Pause and clear before setting new src to release old buffer
+  vid.pause();
+  vid.src = '';
+  vid.load();
+
   vid.src = 'http://localhost:3000/api/localfile?path=' + encodeURIComponent(filePath);
+
   vid.addEventListener('loadedmetadata', () => {
-    if (overlayVideoPreviewCancelled) return;
+    if (ac.signal.aborted || overlayVideoPreviewCancelled) return;
+    overlayVideoPreviewAbort = null;
     const dur = vid.duration;
     if (!dur || !isFinite(dur)) return;
 
@@ -2213,11 +2233,13 @@ function overlayLoadVideoPreview(filePath, presetStart, presetEnd) {
     vid.play().catch(() => {});
 
     // Loop within trim window + update playhead needle on trim slider
+    if (overlayVideoPreviewLoopTimer) { clearInterval(overlayVideoPreviewLoopTimer); overlayVideoPreviewLoopTimer = null; }
     overlayVideoPreviewLoopTimer = setInterval(() => {
+      if (ac.signal.aborted) { clearInterval(overlayVideoPreviewLoopTimer); overlayVideoPreviewLoopTimer = null; return; }
       const s = parseFloat(document.getElementById('overlayVideoStart').value) || 0;
       const e = parseFloat(document.getElementById('overlayVideoEnd').value) || dur;
 
-      // Move playhead needle (position within full duration, mapped to slider %)
+      // Move playhead needle
       const playhead = document.getElementById('overlayVideoPlayhead');
       if (playhead && dur > 0) {
         const pct = (vid.currentTime / dur) * 100;
@@ -2230,18 +2252,19 @@ function overlayLoadVideoPreview(filePath, presetStart, presetEnd) {
         vid.play().catch(() => {});
       }
     }, 100);
-  }, { once: true });
+  }, { signal: ac.signal });
 
   vid.addEventListener('error', () => {
     if (overlayVideoPreviewLoopTimer) { clearInterval(overlayVideoPreviewLoopTimer); overlayVideoPreviewLoopTimer = null; }
-  }, { once: true });
+  }, { once: true, signal: ac.signal });
 }
 
 function overlayHideVideoPreview() {
   overlayVideoPreviewCancelled = true;
-  const vid = document.getElementById('overlayVideoPreview');
+  if (overlayVideoPreviewAbort) { overlayVideoPreviewAbort.abort(); overlayVideoPreviewAbort = null; }
   if (overlayVideoPreviewLoopTimer) { clearInterval(overlayVideoPreviewLoopTimer); overlayVideoPreviewLoopTimer = null; }
-  if (vid) { vid.pause(); vid.src = ''; }
+  const vid = document.getElementById('overlayVideoPreview');
+  if (vid) { vid.pause(); vid.src = ''; vid.load(); }
   const ph = document.getElementById('overlayVideoPlayhead');
   if (ph) ph.style.left = '0%';
 }

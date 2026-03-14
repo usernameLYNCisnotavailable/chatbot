@@ -174,12 +174,13 @@ function createSourceEl(id, kind, x, y, w, h) {
   el.appendChild(canvas);
   const ctx = canvas.getContext('2d');
 
-  // Off-screen media element (not appended to DOM — used only as drawImage source)
+  // Media element — for video without chroma, displayed directly inside el (no canvas overhead).
+  // For video with chroma or static images, used as drawImage source into canvas.
   const mediaEl = document.createElement(kind === 'video' ? 'video' : 'img');
-  mediaEl.style.display = 'none';
+  mediaEl.style.cssText = 'display:none;position:absolute;top:0;left:0;width:100%;height:100%;object-fit:fill;';
   mediaEl.crossOrigin = 'anonymous';
   if (kind === 'video') { mediaEl.preload = 'auto'; }
-  document.body.appendChild(mediaEl); // must be in DOM for video.play() to work
+  el.appendChild(mediaEl); // inside el so it sizes with the container
 
   const handle = document.createElement('div');
   handle.className = 'resize-handle';
@@ -231,31 +232,28 @@ function playVid(id, filePath, loops, x, y, w, h, videoStart, videoEnd, volume, 
   let src = sources[id];
   if (src && src.kind !== 'video') { removeSource(id); src = null; }
 
+  // Always recreate mediaEl on re-trigger to avoid stale listener accumulation
   if (src) {
     stopRaf(src);
     src.mediaEl.pause();
     src.mediaEl.src = '';
+    src.mediaEl.load();
+    src.mediaEl.remove();
+    const newMedia = document.createElement('video');
+    newMedia.style.cssText = 'display:none;position:absolute;top:0;left:0;width:100%;height:100%;object-fit:fill;';
+    newMedia.crossOrigin = 'anonymous';
+    newMedia.preload = 'auto';
+    src.el.appendChild(newMedia);
+    src.mediaEl = newMedia;
     src.loopsDone = 0;
   } else {
     src = createSourceEl(id, 'video', x, y, w, h);
+  }
 
-    // Loop / trim handler
-    src.mediaEl.addEventListener('timeupdate', () => {
-      const end = src.videoEnd;
-      if (end > 0 && src.mediaEl.currentTime >= end) {
-        src.loopsDone++;
-        if (src.loopsTotal === 0 || src.loopsDone < src.loopsTotal) {
-          src.mediaEl.currentTime = src.videoStart || 0;
-          src.mediaEl.play();
-        } else {
-          stopRaf(src);
-          clearSource(id);
-          notifyDone(id);
-        }
-      }
-    });
-
-    src.mediaEl.addEventListener('ended', () => {
+  // Trim / loop handler (timeupdate only needed for trim; ended handles normal loop)
+  src.mediaEl.addEventListener('timeupdate', () => {
+    const end = src.videoEnd;
+    if (end > 0 && src.mediaEl.currentTime >= end) {
       src.loopsDone++;
       if (src.loopsTotal === 0 || src.loopsDone < src.loopsTotal) {
         src.mediaEl.currentTime = src.videoStart || 0;
@@ -265,14 +263,20 @@ function playVid(id, filePath, loops, x, y, w, h, videoStart, videoEnd, volume, 
         clearSource(id);
         notifyDone(id);
       }
-    });
+    }
+  });
 
-    // When chroma is OFF, use a simple per-frame draw via timeupdate for display
-    // When chroma is ON, videoChromaLoop handles drawing via rAF
-    src.mediaEl.addEventListener('timeupdate', () => {
-      if (!src.chromaKey && !src.rafId) drawFrame(src);
-    });
-  }
+  src.mediaEl.addEventListener('ended', () => {
+    src.loopsDone++;
+    if (src.loopsTotal === 0 || src.loopsDone < src.loopsTotal) {
+      src.mediaEl.currentTime = src.videoStart || 0;
+      src.mediaEl.play();
+    } else {
+      stopRaf(src);
+      clearSource(id);
+      notifyDone(id);
+    }
+  });
 
   applyChroma(src, chroma);
   src.loopsTotal = loops;
@@ -292,9 +296,15 @@ function playVid(id, filePath, loops, x, y, w, h, videoStart, videoEnd, volume, 
 
   const startPlay = () => {
     if (src.chromaKey) {
+      // Chroma ON: hide video element, show canvas, run rAF pixel-scan loop
+      src.mediaEl.style.display = 'none';
+      src.canvas.style.display = 'block';
       videoChromaLoop(id);
+    } else {
+      // Chroma OFF: show video element directly — no canvas overhead at all
+      src.canvas.style.display = 'none';
+      src.mediaEl.style.display = 'block';
     }
-    // else timeupdate draws frames
   };
 
   if (src.videoStart > 0) {
