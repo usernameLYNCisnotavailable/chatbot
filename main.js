@@ -1678,6 +1678,116 @@ Write-Output $sb.ToString().Trim()
         res.json({ voices: cachedVoices });
     });
 
+    // ---- ROUTES_TTS_MONSTER ----
+
+    server.get('/api/tts/config', (req, res) => {
+        try {
+            const cfg = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
+            res.json({ configured: !!(cfg.ttsMonsterKey) });
+        } catch(e) { res.json({ configured: false }); }
+    });
+
+    server.post('/api/tts/config', (req, res) => {
+        try {
+            const { key } = req.body;
+            if (!key) return res.status(400).json({ ok: false, error: 'key required' });
+            const p = getDataPath('config.json');
+            const cfg = fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : {};
+            cfg.ttsMonsterKey = key;
+            fs.writeFileSync(p, JSON.stringify(cfg, null, 2));
+            res.json({ ok: true });
+        } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+    });
+
+    server.delete('/api/tts/config', (req, res) => {
+        try {
+            const p = getDataPath('config.json');
+            const cfg = fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : {};
+            delete cfg.ttsMonsterKey;
+            fs.writeFileSync(p, JSON.stringify(cfg, null, 2));
+            res.json({ ok: true });
+        } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+    });
+
+    server.get('/api/tts/monster-voices', async (req, res) => {
+        try {
+            const cfg = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
+            if (!cfg.ttsMonsterKey) return res.json({ ok: false, voices: [], customVoices: [] });
+            const https = require('https');
+            const data = await new Promise((resolve, reject) => {
+                const r = https.request('https://api.console.tts.monster/voices', {
+                    method: 'POST',
+                    headers: { 'Authorization': cfg.ttsMonsterKey }
+                }, (resp) => {
+                    let body = '';
+                    resp.on('data', d => body += d);
+                    resp.on('end', () => { try { resolve(JSON.parse(body)); } catch(e) { reject(e); } });
+                });
+                r.on('error', reject);
+                r.end();
+            });
+            res.json({ ok: true, voices: data.voices || [], customVoices: data.customVoices || [] });
+        } catch(e) { res.status(500).json({ ok: false, voices: [], customVoices: [], error: e.message }); }
+    });
+
+    server.post('/api/tts/speak', async (req, res) => {
+        try {
+            const { text, voice, ttsVolume, id, clearMediaId, clearMediaKind } = req.body;
+            if (!text) return res.status(400).json({ ok: false, error: 'No text provided' });
+            const cfg = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
+            if (!cfg.ttsMonsterKey) return res.status(503).json({ ok: false, error: 'TTS Monster not configured' });
+            const https = require('https');
+            const voiceId = (voice || '').replace(/^ttsm:/, '');
+            const genBody = JSON.stringify({ voice_id: voiceId || undefined, message: text.slice(0, 500) });
+            const genResult = await new Promise((resolve, reject) => {
+                const r = https.request('https://api.console.tts.monster/generate', {
+                    method: 'POST',
+                    headers: { 'Authorization': cfg.ttsMonsterKey, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(genBody) }
+                }, (resp) => {
+                    let body = '';
+                    resp.on('data', d => body += d);
+                    resp.on('end', () => { try { resolve({ status: resp.statusCode, data: JSON.parse(body) }); } catch(e) { reject(new Error('Bad JSON: ' + body)); } });
+                });
+                r.on('error', reject);
+                r.write(genBody);
+                r.end();
+            });
+            if (genResult.status !== 200 || !genResult.data.url) {
+                const msg = genResult.status === 401 ? 'TTS Monster: Invalid API key'
+                          : genResult.status === 402 ? 'TTS Monster: Character quota exceeded'
+                          : genResult.status === 429 ? 'TTS Monster: Rate limit hit'
+                          : `TTS Monster error ${genResult.status}: ${JSON.stringify(genResult.data)}`;
+                return res.status(500).json({ ok: false, error: msg });
+            }
+            const audioChunks = await new Promise((resolve, reject) => {
+                https.get(genResult.data.url, (resp) => {
+                    const chunks = [];
+                    resp.on('data', d => chunks.push(d));
+                    resp.on('end', () => resolve(chunks));
+                }).on('error', reject);
+            });
+            const tmpDir = getDataPath('tts-tmp');
+            if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
+            const tmpFile = path.join(tmpDir, `tts_${Date.now()}.wav`);
+            fs.writeFileSync(tmpFile, Buffer.concat(audioChunks));
+            try {
+                const files = fs.readdirSync(tmpDir).filter(f => f.startsWith('tts_') && f.endsWith('.wav'))
+                    .map(f => ({ f, t: fs.statSync(path.join(tmpDir, f)).mtimeMs })).sort((a, b) => b.t - a.t);
+                files.slice(10).forEach(({ f }) => { try { fs.unlinkSync(path.join(tmpDir, f)); } catch(e) {} });
+            } catch(e) {}
+            const volume = (ttsVolume !== undefined && !isNaN(ttsVolume)) ? Math.min(1, Math.max(0, ttsVolume)) : 1;
+            if (videoWin && !videoWin.isDestroyed()) {
+                broadcastVideoCmd({ cmd: 'PLAYSOUND', id: id ? String(id) : ('tts_' + Date.now()), path: tmpFile,
+                    startMs: 0, endMs: 0, volume, isTTS: true, ttsSourceId: id ? String(id) : null,
+                    clearMediaId: clearMediaId || null, clearMediaKind: clearMediaKind || null });
+            }
+            res.json({ ok: true });
+        } catch(e) {
+            console.error('[TTS Monster error]', e.message);
+            res.status(500).json({ ok: false, error: e.message });
+        }
+    });
+
     // ---- STATIC (must be last) ----
     server.use(express.static(path.join(appDir, 'dashboard'), { index: false }));
 

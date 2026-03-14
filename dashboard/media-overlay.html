@@ -114,14 +114,14 @@ function handleCmd(msg) {
   else if (cmd === 'REMOVEIMG') removeSource(id);
   else if (cmd === 'MOVEIMG')   moveSource(id, x, y);
   else if (cmd === 'SIZEIMG')   sizeSource(id, w, h);
-  else if (cmd === 'PLAYSOUND') playSound(msg.path, msg.startMs || 0, msg.endMs || 0, msg.id || msg.path, msg.volume ?? 1);
+  else if (cmd === 'PLAYSOUND') playSound(msg.path, msg.startMs || 0, msg.endMs || 0, msg.id || msg.path, msg.volume ?? 1, msg.isTTS || false, msg.ttsSourceId || null, msg.clearMediaId || null, msg.clearMediaKind || null);
   else if (cmd === 'STOPSOUND') stopSound(String(msg.id));
   else if (cmd === 'STOPALL')   stopAll();
 }
 
 const activeSounds = {};
 
-function playSound(filePath, startMs, endMs, id, volume) {
+function playSound(filePath, startMs, endMs, id, volume, isTTS, ttsSourceId, clearMediaId, clearMediaKind) {
   id = id !== undefined ? String(id) : undefined;
   const existing = activeSounds[id];
   if (existing) { try { existing.pause(); } catch(e) {} delete activeSounds[id]; }
@@ -131,17 +131,30 @@ function playSound(filePath, startMs, endMs, id, volume) {
   if (id) activeSounds[id] = audio;
   audio.currentTime = startMs / 1000;
   audio.play().catch(() => {});
+
+  function onSoundDone() {
+    if (id) delete activeSounds[id];
+    if (isTTS && ttsSourceId) {
+      // Notify server that TTS audio finished — server broadcasts TEXTDONE to dashboard
+      fetch('http://localhost:3000/api/video-overlay/done', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cmd: 'TEXTDONE', id: ttsSourceId, clearMediaId: clearMediaId || null, clearMediaKind: clearMediaKind || null })
+      }).catch(() => {});
+    }
+  }
+
   if (endMs > startMs) {
     const checkInterval = setInterval(() => {
       if (audio.currentTime >= endMs / 1000) {
         audio.pause();
-        if (id) delete activeSounds[id];
         clearInterval(checkInterval);
+        onSoundDone();
       }
     }, 50);
-    audio.addEventListener('ended', () => { clearInterval(checkInterval); if (id) delete activeSounds[id]; });
+    audio.addEventListener('ended', () => { clearInterval(checkInterval); onSoundDone(); });
   } else {
-    audio.addEventListener('ended', () => { if (id) delete activeSounds[id]; });
+    audio.addEventListener('ended', onSoundDone);
   }
 }
 

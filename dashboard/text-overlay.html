@@ -142,38 +142,66 @@ function addText(id, cfg) {
 
   // TTS — speak the text if enabled
   if (cfg.speak && cfg.text) {
-    window.speechSynthesis.cancel();
-    const utt = new SpeechSynthesisUtterance(cfg.text);
-    const v = getVoice(cfg.voice);
-    if (v) utt.voice = v;
-    utt.rate   = cfg.ttsRate   || 1;
-    utt.pitch  = cfg.ttsPitch  || 1;
-    utt.volume = (cfg.ttsVolume !== undefined && !isNaN(cfg.ttsVolume)) ? Math.min(1, Math.max(0, cfg.ttsVolume)) : 1;
+    const isTTSMonster = (cfg.voice || '').startsWith('ttsm:');
 
-    const onDone = () => {
-      if (!sources[id]) return; // already cleared
-      clearText(id);
-      // Notify dashboard that TTS finished — dashboard decides whether to clear media
-      fetch('http://localhost:3000/api/video-overlay/done', {
+    if (isTTSMonster) {
+      // TTS Monster — server generates WAV, media-overlay plays it and fires TEXTDONE
+      fetch('http://localhost:3000/api/tts/speak', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cmd: 'TEXTDONE', id: cfg.id })
-      }).catch(() => {});
-    };
+        body: JSON.stringify({
+          text:           cfg.text,
+          voice:          cfg.voice,
+          ttsVolume:      cfg.ttsVolume ?? 1,
+          id:             cfg.id,
+          clearMediaId:   cfg.clearMediaId   || null,
+          clearMediaKind: cfg.clearMediaKind || null
+        })
+      }).then(r => r.json()).then(data => {
+        if (!data.ok) {
+          // API failed — clear text after 3s so it doesn't stick on screen
+          setTimeout(() => { if (sources[id]) clearText(id); }, 3000);
+        }
+        // On success: media-overlay owns playback + fires TEXTDONE when done
+      }).catch(() => {
+        setTimeout(() => { if (sources[id]) clearText(id); }, 3000);
+      });
 
-    utt.onend = onDone;
-    window.speechSynthesis.speak(utt);
-    sources[id].utt = utt;
+    } else {
+      // Windows speechSynthesis — voice stored as "win:<name>" or plain name (legacy)
+      window.speechSynthesis.cancel();
+      const voiceName = (cfg.voice || '').replace(/^win:/, '');
+      const utt = new SpeechSynthesisUtterance(cfg.text);
+      const v = getVoice(voiceName);
+      if (v) utt.voice = v;
+      utt.rate   = cfg.ttsRate   || 1;
+      utt.pitch  = cfg.ttsPitch  || 1;
+      utt.volume = (cfg.ttsVolume !== undefined && !isNaN(cfg.ttsVolume)) ? Math.min(1, Math.max(0, cfg.ttsVolume)) : 1;
 
-    // Polling fallback — onend doesn't always fire on Windows
-    const poll = setInterval(() => {
-      if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
-        clearInterval(poll);
-        if (sources[id]) sources[id].pollInterval = null;
-        onDone();
-      }
-    }, 200);
-    sources[id].pollInterval = poll;
+      const onDone = () => {
+        if (!sources[id]) return;
+        clearText(id);
+        fetch('http://localhost:3000/api/video-overlay/done', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cmd: 'TEXTDONE', id: cfg.id })
+        }).catch(() => {});
+      };
+
+      utt.onend = onDone;
+      window.speechSynthesis.speak(utt);
+      sources[id].utt = utt;
+
+      // Polling fallback — onend doesn't always fire on Windows
+      const poll = setInterval(() => {
+        if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
+          clearInterval(poll);
+          if (sources[id]) sources[id].pollInterval = null;
+          onDone();
+        }
+      }, 200);
+      sources[id].pollInterval = poll;
+    }
   }
 }
 

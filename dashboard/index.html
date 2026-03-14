@@ -563,7 +563,7 @@
         <span class="nav-group-chevron">▶</span>
       </div>
       <div class="nav-group-children" id="navgc-botsettings">
-        <div class="nav-item" id="nav-botsettings" onclick="showPage('botsettings')">General</div>
+        <div class="nav-item" id="nav-botsettings" onclick="showPage('botsettings');ttsCheckKey()">General</div>
         <div class="nav-item" id="nav-cooldowns" onclick="showPage('cooldowns')">Cooldowns</div>
       </div>
     </div>
@@ -1298,10 +1298,10 @@
           </div>
         </div>
         <div id="overlayGifRepeatGroup" style="display:none;">
-          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px;">Repeat</label>
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px;">Display Duration</label>
           <div style="display:flex;align-items:center;gap:10px;">
-            <input type="number" id="overlayGifLoops" class="input" value="1" min="1" step="1" style="width:80px;font-size:13px;">
-            <span style="font-size:12px;color:var(--muted);">times, then disappear</span>
+            <input type="number" id="overlayGifLoops" class="input" value="3" min="0" step="0.5" style="width:80px;font-size:13px;">
+            <span style="font-size:12px;color:var(--muted);">seconds &nbsp;·&nbsp; 0 = loop forever</span>
           </div>
         </div>
         <div id="overlayDurationGroup" style="display:none;">
@@ -2407,18 +2407,75 @@ function overlayTTSEnabledChanged() {
 async function overlayTTSLoadVoices() {
   const sel = document.getElementById('overlayTTSVoice');
   const current = sel.value;
+  sel.innerHTML = '<option value="">Default voice (Windows)</option>';
+
+  // Windows voices — from text-overlay window via existing route
   try {
     const r = await fetch('/api/text-overlay/voices');
     const data = await r.json();
-    sel.innerHTML = '<option value="">Default voice</option>';
-    (data.voices || []).forEach(v => {
-      const opt = document.createElement('option');
-      opt.value = v.name;
-      opt.textContent = v.name + (v.lang ? ' (' + v.lang + ')' : '');
-      sel.appendChild(opt);
-    });
-    if (current) sel.value = current;
+    if ((data.voices || []).length > 0) {
+      const grp = document.createElement('optgroup');
+      grp.label = 'Windows Voices';
+      (data.voices || []).forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = 'win:' + v.name;
+        opt.textContent = v.name + (v.lang ? ' (' + v.lang + ')' : '');
+        grp.appendChild(opt);
+      });
+      sel.appendChild(grp);
+    }
   } catch(e) {}
+
+  // TTS Monster voices — from server (key stored securely in config.json)
+  try {
+    const r2 = await fetch('/api/tts/monster-voices');
+    const data2 = await r2.json();
+    const all = [...(data2.voices || []), ...(data2.customVoices || [])];
+    if (all.length > 0) {
+      const grp2 = document.createElement('optgroup');
+      grp2.label = 'TTS Monster Voices';
+      all.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = 'ttsm:' + v.voice_id;
+        opt.textContent = v.name + (v.metadata ? ' — ' + v.metadata : '');
+        grp2.appendChild(opt);
+      });
+      sel.appendChild(grp2);
+    }
+  } catch(e) {}
+
+  if (current) sel.value = current;
+}
+
+// ---- TTS Monster settings ----
+async function ttsCheckKey() {
+  try {
+    const r = await fetch('/api/tts/config');
+    const d = await r.json();
+    const el = document.getElementById('ttsKeyStatus');
+    if (el) el.textContent = d.configured ? '✅ API key is saved' : 'No key saved yet';
+  } catch(e) {}
+}
+
+async function ttsSaveKey() {
+  const key = document.getElementById('ttsMonsterKeyInput').value.trim();
+  const el = document.getElementById('ttsKeyStatus');
+  if (!key) { if (el) el.textContent = 'Enter a key first'; return; }
+  const r = await fetch('/api/tts/config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key })
+  });
+  const d = await r.json();
+  document.getElementById('ttsMonsterKeyInput').value = '';
+  if (el) el.textContent = d.ok ? '✅ Key saved' : '❌ ' + (d.error || 'Failed');
+}
+
+async function ttsRemoveKey() {
+  const r = await fetch('/api/tts/config', { method: 'DELETE' });
+  const d = await r.json();
+  const el = document.getElementById('ttsKeyStatus');
+  if (el) el.textContent = d.ok ? 'Key removed' : '❌ ' + (d.error || 'Failed');
 }
 
 function overlayTTSReset() {
@@ -3068,8 +3125,11 @@ async function overlayTriggerSource(src) {
   const isGif = hasImage && src.path && src.path.toLowerCase().endsWith('.gif');
 
   if (hasImage) {
-    const loops = src.clearWithTTS ? 0 : (isGif ? (hasSound ? 0 : (src.gifLoops || 1)) : 1);
-    const displaySeconds = (src.clearWithTTS || hasSound || isGif) ? 0 : (src.displaySeconds || 0);
+    const loops = src.clearWithTTS ? 0 : (isGif ? 0 : 1);
+    const displaySeconds = src.clearWithTTS ? 0
+                         : isGif ? (hasSound ? 0 : (src.gifLoops || 0))
+                         : hasSound ? 0
+                         : (src.displaySeconds || 0);
     await fetch('/api/video-overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ cmd: 'PLAYIMG', id: src.id, path: src.path, loops, displaySeconds,
         x: src.mediaX || 0, y: src.mediaY || 0, w: src.mediaW || null, h: src.mediaH || null,
@@ -3598,11 +3658,16 @@ async function overlayConfirmEdit(id) {
         <div class="cmd-sub">Global bot behaviour and defaults</div>
       </div>
     </div>
-    <div style="padding:0 28px;flex:1;display:flex;align-items:center;justify-content:center;">
-      <div style="text-align:center;opacity:0.3;">
-        <div style="font-size:2rem;margin-bottom:12px;">⚙</div>
-        <div style="font-size:0.75rem;color:var(--muted);">Bot Settings coming soon</div>
-        <div style="font-size:0.65rem;color:var(--muted-2);margin-top:6px;">Command prefix · hourly bonus toggle · unknown command response</div>
+    <div style="padding:28px;flex:1;overflow-y:auto;">
+      <div style="max-width:520px;">
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px;">TTS Monster API Key</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Powers TTS Monster voices in the overlay. Get your key at <a href="https://console.tts.monster" target="_blank" style="color:var(--accent);">console.tts.monster</a> → Profile icon (bottom left) → API Token.</div>
+        <input type="text" id="ttsMonsterKeyInput" placeholder="ttsm_xxxx-xxxxxxxx" autocomplete="off" style="display:block;width:100%;height:36px;padding:0 12px;font-size:13px;background:var(--surface-raised);border:1px solid var(--border);border-radius:6px;color:var(--text);outline:none;box-sizing:border-box;margin-bottom:8px;">
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-primary" onclick="ttsSaveKey()" style="white-space:nowrap;">Save Key</button>
+          <button class="btn btn-secondary" onclick="ttsRemoveKey()" style="white-space:nowrap;">Remove</button>
+        </div>
+        <div id="ttsKeyStatus" style="margin-top:8px;font-size:12px;color:var(--muted);"></div>
       </div>
     </div>
   </div>
