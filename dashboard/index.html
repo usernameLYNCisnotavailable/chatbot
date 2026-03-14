@@ -1087,48 +1087,85 @@
 
 <div class="page" id="page-overlay">
 
-  <!-- Top bar: status + mode + actions -->
-  <div style="display:flex;align-items:center;gap:12px;padding:20px 28px 0;">
-    <div style="flex:1;">
-      <div style="font-family:'Syne',sans-serif;font-size:1.75rem;font-weight:700;color:var(--text);letter-spacing:-0.5px;">Overlay</div>
-      <div style="font-size:12px;color:var(--muted);margin-top:2px;">Drag sources directly on your screen · Stream mode hides from monitor, visible in OBS only</div>
+  <!-- Top bar -->
+  <div style="display:flex;align-items:center;padding:14px 20px;border-bottom:1px solid var(--border);gap:12px;">
+    <div style="display:flex;align-items:center;gap:14px;flex-shrink:0;">
+      <div style="font-size:16px;font-weight:600;color:var(--text);">Overlay</div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <div id="overlayStatusDot" style="width:7px;height:7px;border-radius:50%;background:var(--muted-2);flex-shrink:0;transition:background 0.3s;"></div>
+        <span id="overlayStatusText" style="font-size:12px;color:var(--muted);">Not running</span>
+      </div>
     </div>
-    <div style="display:flex;align-items:center;gap:8px;">
-      <!-- Status pill -->
-      <div style="display:flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:6px 14px;">
-        <div id="overlayStatusDot" style="width:8px;height:8px;border-radius:50%;background:var(--muted-2);flex-shrink:0;transition:all 0.3s;"></div>
-        <span id="overlayStatusText" style="font-size:12px;color:var(--muted);white-space:nowrap;">Not running</span>
+    <div style="flex:1;display:flex;justify-content:center;">
+      <div id="overlayModeGroup" style="display:flex;background:var(--surface);border:1px solid var(--border);border-radius:7px;overflow:hidden;">
+        <button id="overlayModeDesktop" onclick="overlaySetMode('desktop')" style="font-size:12px;padding:5px 16px;border:none;cursor:pointer;background:var(--accent);color:#fff;font-weight:500;transition:all 0.15s;white-space:nowrap;">Desktop</button>
+        <button id="overlayModeStream" onclick="overlaySetMode('stream')" style="font-size:12px;padding:5px 16px;border:none;cursor:pointer;background:transparent;color:var(--muted);transition:all 0.15s;white-space:nowrap;">Stream only</button>
       </div>
-      <!-- Mode toggle -->
-      <div id="overlayModeGroup" style="display:flex;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:3px;gap:2px;">
-        <button id="overlayModeDesktop" onclick="overlaySetMode('desktop')" style="font-size:12px;padding:5px 14px;border-radius:6px;border:none;cursor:pointer;background:var(--accent);color:#fff;font-weight:500;transition:all 0.2s;">Desktop</button>
-        <button id="overlayModeStream" onclick="overlaySetMode('stream')" style="font-size:12px;padding:5px 14px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--muted);transition:all 0.2s;">Stream only</button>
-      </div>
-      <button class="btn btn-primary" id="overlayLaunchBtn" onclick="overlayLaunch()" style="padding:7px 18px;font-size:13px;">Launch Overlay</button>
-      <button class="btn btn-danger" id="overlayStopBtn" onclick="overlayStop()" style="display:none;padding:7px 18px;font-size:13px;">Stop Overlay</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+      <button class="btn btn-primary" id="overlayLaunchBtn" onclick="overlayLaunch()" style="padding:5px 16px;font-size:12px;white-space:nowrap;">Launch Overlay</button>
+      <button class="btn btn-danger" id="overlayStopBtn" onclick="overlayStop()" style="display:none;padding:5px 16px;font-size:12px;white-space:nowrap;">Stop Overlay</button>
     </div>
   </div>
 
-  <!-- Info bar -->
-  <div style="margin:14px 28px 0;background:var(--accent-soft);border:1px solid rgba(10,132,255,0.2);border-radius:10px;padding:10px 16px;font-size:12px;color:var(--muted);line-height:1.5;">
-    <strong style="color:var(--text);">Desktop mode:</strong> overlay sits above everything on your monitor. &nbsp;·&nbsp;
-    <strong style="color:var(--text);">Stream mode:</strong> invisible on screen — add a Window Capture in OBS pointed at "ChatCommander Overlay". &nbsp;·&nbsp;
-    Drag <strong style="color:var(--text);">center</strong> to move · <strong style="color:var(--text);">bottom-right</strong> to resize · <strong style="color:var(--text);">right-click</strong> to remove.
-  </div>
+  <!-- Body: Sources left, Controls right -->
+  <div style="display:grid;grid-template-columns:1fr 320px;height:calc(100% - 57px);">
 
-  <!-- Sources section -->
-  <div style="padding:20px 28px 0;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-      <div style="font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);">Sources</div>
-      <button class="btn btn-secondary" onclick="overlayAddSource()" style="font-size:12px;padding:6px 16px;display:flex;align-items:center;gap:6px;">
-        <span style="font-size:16px;line-height:1;">+</span> Add Source
-      </button>
+    <!-- Left: Sources -->
+    <div style="padding:18px 20px;border-right:1px solid var(--border);overflow-y:auto;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div style="font-size:10px;font-weight:600;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);">Sources</div>
+        <button class="btn btn-secondary" onclick="overlayAddSource()" style="font-size:11px;padding:4px 12px;">+ Add source</button>
+      </div>
+      <div id="overlaySourcesList">
+        <div id="overlayEmpty" style="color:var(--muted);font-size:13px;padding:48px 24px;text-align:center;border:1px dashed var(--border);border-radius:10px;">
+          No sources yet — click <strong style="color:var(--text);">+ Add source</strong> to get started.
+        </div>
+      </div>
     </div>
 
-    <div id="overlaySourcesList">
-      <div id="overlayEmpty" style="color:var(--muted);font-size:13px;padding:40px 24px;text-align:center;background:var(--surface);border:1px dashed var(--border);border-radius:12px;">
-        No sources yet — click <strong style="color:var(--text);">+ Add Source</strong> to get started.
+    <!-- Right: Hotkeys + Quick Actions -->
+    <div style="padding:18px 16px;overflow-y:auto;display:flex;flex-direction:column;gap:24px;">
+
+      <!-- Hotkeys -->
+      <div>
+        <div style="font-size:10px;font-weight:600;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Hotkeys</div>
+
+        <!-- Recording panel (hidden by default) -->
+        <div id="hotkeyRecordRow" style="display:none;background:var(--surface-raised);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;">
+          <div style="font-size:12px;color:var(--accent);font-weight:500;margin-bottom:8px;" id="hotkeyRecordLabel">Press a key (F1–F12, numpad, letters)…</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div id="hotkeyRecordKey" style="font-size:14px;font-family:monospace;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 12px;text-align:center;color:var(--muted);">—</div>
+            <select id="hotkeyRecordSource" class="input" style="font-size:12px;width:100%;">
+              <option value="">Select source…</option>
+            </select>
+            <select id="hotkeyRecordAction" class="input" style="font-size:12px;width:100%;">
+              <option value="trigger">Trigger</option>
+              <option value="stop">Stop</option>
+            </select>
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-primary" style="flex:1;font-size:12px;padding:5px 0;" onclick="hotkeyConfirmRecord()">Save</button>
+              <button class="btn btn-secondary" style="flex:1;font-size:12px;padding:5px 0;" onclick="hotkeyCancelRecording()">Cancel</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="hotkeyEmpty" style="color:var(--muted);font-size:12px;padding:14px;text-align:center;border:1px dashed var(--border);border-radius:8px;">No hotkeys yet</div>
+        <div id="hotkeyList" style="display:none;flex-direction:column;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:0;"></div>
+        <button id="hotkeyAddBtn" onclick="hotkeyStartRecording()" style="width:100%;margin-top:8px;font-size:12px;padding:7px;border-radius:7px;border:1px dashed var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all 0.15s;" onmouseenter="this.style.borderColor='var(--border-strong)';this.style.color='var(--text)'" onmouseleave="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">+ Add hotkey</button>
       </div>
+
+      <!-- Quick Actions -->
+      <div>
+        <div style="font-size:10px;font-weight:600;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Quick Actions</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;">
+          <button class="btn btn-secondary" style="font-size:11px;padding:8px 6px;" onclick="overlayStopAll()">Stop all</button>
+          <button class="btn btn-secondary" style="font-size:11px;padding:8px 6px;" onclick="overlayHideAll()">Hide all</button>
+          <button class="btn btn-secondary" style="font-size:11px;padding:8px 6px;" onclick="overlayRelaunch()">Relaunch</button>
+          <button class="btn btn-secondary" style="font-size:11px;padding:8px 6px;" onclick="overlayResetPositions()">Reset pos</button>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -1218,7 +1255,7 @@
           </div>
           <div id="overlayVideoTrimGroup" style="display:none;margin-top:12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
             <!-- Video preview — plays clip, scrubs to trim position while dragging -->
-            <video id="overlayVideoPreview" preload="auto" muted style="width:100%;max-height:160px;display:block;background:#000;"></video>
+            <video id="overlayVideoPreview" preload="auto" style="width:100%;max-height:160px;display:block;background:#000;"></video>
             <div style="padding:12px;">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
                 <span style="font-size:12px;color:var(--muted);">Trim Video</span>
@@ -1261,10 +1298,10 @@
           </div>
         </div>
         <div id="overlayGifRepeatGroup" style="display:none;">
-          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px;">Display Duration</label>
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px;">Repeat</label>
           <div style="display:flex;align-items:center;gap:10px;">
-            <input type="number" id="overlayGifLoops" class="input" value="0" min="0" step="1" style="width:80px;font-size:13px;">
-            <span style="font-size:12px;color:var(--muted);">seconds &nbsp;·&nbsp; 0 = loop forever</span>
+            <input type="number" id="overlayGifLoops" class="input" value="1" min="1" step="1" style="width:80px;font-size:13px;">
+            <span style="font-size:12px;color:var(--muted);">times, then disappear</span>
           </div>
         </div>
         <div id="overlayDurationGroup" style="display:none;">
@@ -1970,6 +2007,171 @@ function overlaySoundStopPreview() {
 async function overlayStopAll() {
   await fetch('/api/video-overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ cmd: 'STOPALL' }) }).catch(() => {});
+}
+
+async function overlayHideAll() {
+  for (const src of overlayState.sources) {
+    await fetch('/api/video-overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ cmd: src.videoPath ? 'CLEARVID' : 'CLEARIMG', id: src.id }) }).catch(() => {});
+  }
+}
+
+async function overlayRelaunch() {
+  await fetch('/api/overlay/stop', { method:'POST' }).catch(() => {});
+  await fetch('/api/video-overlay/stop', { method:'POST' }).catch(() => {});
+  await fetch('/api/text-overlay/stop', { method:'POST' }).catch(() => {});
+  setTimeout(async () => {
+    const mode = document.getElementById('overlayModeDesktop').style.background.includes('9147ff') ? 'desktop' : 'stream';
+    await fetch('/api/overlay/launch', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ mode }) }).catch(() => {});
+    await fetch('/api/video-overlay/launch', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ mode }) }).catch(() => {});
+    await fetch('/api/text-overlay/launch', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ mode }) }).catch(() => {});
+  }, 1000);
+}
+
+async function overlayResetPositions() {
+  await fetch('/api/overlay/clearpos', { method:'POST' }).catch(() => {});
+  showToast('Positions reset — relaunch overlay to apply');
+}
+
+// ---- Hotkeys ----
+let hotkeyData = [];
+let hotkeyRecording = false;
+let hotkeyRecordedKey = null;
+let hotkeyKeyListener = null;
+
+async function loadHotkeys() {
+  try {
+    const r = await fetch('/api/hotkeys');
+    hotkeyData = await r.json();
+  } catch(e) { hotkeyData = []; }
+  renderHotkeys();
+}
+
+function renderHotkeys() {
+  const list = document.getElementById('hotkeyList');
+  const empty = document.getElementById('hotkeyEmpty');
+  if (!list) return;
+  list.innerHTML = '';
+  if (!hotkeyData.length) {
+    if (empty) empty.style.display = '';
+    list.style.cssText = 'display:none;border:1px solid var(--border);border-radius:8px;overflow:hidden;';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+  list.style.cssText = 'display:flex;flex-direction:column;border:1px solid var(--border);border-radius:8px;overflow:hidden;';
+  hotkeyData.forEach((hk, i) => {
+    const src = overlayState.sources.find(s => String(s.id) === String(hk.sourceId));
+    const srcName = src ? (src.path || src.videoPath || src.soundPath || '').split(/[/\\]/).pop() || (src.text ? src.text.slice(0,18) : 'Source') : '(deleted)';
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--border);background:transparent;';
+    const keySpan = '<span style="font-size:11px;font-weight:600;font-family:monospace;background:var(--surface);border:1px solid var(--border-strong);border-radius:4px;padding:2px 7px;color:var(--text);white-space:nowrap;flex-shrink:0;">' + hk.key + '</span>';
+    row.innerHTML = keySpan
+      + '<div style="flex:1;min-width:0;overflow:hidden;">'
+      + '<div style="font-size:11px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + srcName + '</div>'
+      + '<div style="font-size:10px;color:var(--muted);">' + (hk.action === 'stop' ? 'Stop' : 'Trigger') + '</div>'
+      + '</div>'
+      + '<button style="font-size:10px;padding:2px 6px;border-radius:4px;border:1px solid rgba(235,4,0,0.3);background:transparent;color:var(--red);cursor:pointer;flex-shrink:0;" onclick="hotkeyRemove(' + i + ')">✕</button>';
+    list.appendChild(row);
+  });
+}
+
+function hotkeyStartRecording() {
+  hotkeyRecording = true;
+  hotkeyRecordedKey = null;
+  document.getElementById('hotkeyRecordRow').style.display = '';
+  document.getElementById('hotkeyRecordKey').textContent = '—';
+  document.getElementById('hotkeyRecordLabel').textContent = 'Press a key (F1–F12, numpad, letters)…';
+  document.getElementById('hotkeyAddBtn').style.display = 'none';
+
+  // Populate source dropdown
+  const sel = document.getElementById('hotkeyRecordSource');
+  sel.innerHTML = '<option value="">Select source…</option>';
+  overlayState.sources.forEach(src => {
+    const name = (src.path || src.videoPath || src.soundPath || '').split(/[\\/]/).pop() || src.text?.slice(0,20) || 'Source ' + src.id;
+    const opt = document.createElement('option');
+    opt.value = src.id;
+    opt.textContent = name;
+    sel.appendChild(opt);
+  });
+
+  hotkeyKeyListener = (e) => {
+    if (!hotkeyRecording) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Convert keydown event to Electron accelerator format
+    const key = hotkeyEventToAccelerator(e);
+    if (!key) return;
+    hotkeyRecordedKey = key;
+    document.getElementById('hotkeyRecordKey').textContent = key;
+    document.getElementById('hotkeyRecordLabel').textContent = 'Key captured — pick a source and action:';
+  };
+  window.addEventListener('keydown', hotkeyKeyListener, true);
+}
+
+function hotkeyEventToAccelerator(e) {
+  // Only allow keys that won't conflict with OS/app shortcuts
+  // F1-F12, numpad 0-9, and standalone letter/number keys
+  const code = e.code;
+  if (code.startsWith('F') && parseInt(code.slice(1)) >= 1 && parseInt(code.slice(1)) <= 12) {
+    return code; // F1-F12
+  }
+  if (code.startsWith('Numpad')) {
+    const num = code.slice(6);
+    if (!isNaN(num)) return 'num' + num; // Electron: num0-num9
+    const ops = { Add: 'numadd', Subtract: 'numsub', Multiply: 'nummult', Divide: 'numdiv', Decimal: 'numdec' };
+    if (ops[num]) return ops[num];
+  }
+  // Single letters (no modifiers)
+  if (code.startsWith('Key') && !e.ctrlKey && !e.altKey && !e.metaKey) {
+    return code.slice(3); // A-Z
+  }
+  // Single digits (no modifiers)
+  if (code.startsWith('Digit') && !e.ctrlKey && !e.altKey && !e.metaKey) {
+    return code.slice(5); // 0-9
+  }
+  return null; // ignore everything else
+}
+
+function hotkeyCancelRecording() {
+  hotkeyRecording = false;
+  hotkeyRecordedKey = null;
+  if (hotkeyKeyListener) { window.removeEventListener('keydown', hotkeyKeyListener, true); hotkeyKeyListener = null; }
+  document.getElementById('hotkeyRecordRow').style.display = 'none';
+  document.getElementById('hotkeyAddBtn').style.display = '';
+}
+
+async function hotkeyConfirmRecord() {
+  if (!hotkeyRecordedKey) { showToast('Press a key first'); return; }
+  const sourceId = document.getElementById('hotkeyRecordSource').value;
+  if (!sourceId) { showToast('Select a source'); return; }
+  const action = document.getElementById('hotkeyRecordAction').value;
+
+  // Check for duplicate key
+  if (hotkeyData.find(hk => hk.key === hotkeyRecordedKey)) {
+    showToast('Key already in use — remove the existing one first');
+    return;
+  }
+
+  hotkeyData.push({ key: hotkeyRecordedKey, sourceId: parseInt(sourceId), action });
+  await saveHotkeys();
+  hotkeyCancelRecording();
+  renderHotkeys();
+  showToast('Hotkey saved');
+}
+
+async function hotkeyRemove(index) {
+  hotkeyData.splice(index, 1);
+  await saveHotkeys();
+  renderHotkeys();
+}
+
+async function saveHotkeys() {
+  await fetch('/api/hotkeys', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(hotkeyData)
+  }).catch(() => {});
 }
 
 let overlayVideoDuration = 0;
@@ -2866,13 +3068,11 @@ async function overlayTriggerSource(src) {
   const isGif = hasImage && src.path && src.path.toLowerCase().endsWith('.gif');
 
   if (hasImage) {
-    // GIFs: browser loops natively, gifLoops = display seconds (0 = forever)
-    // Static images: displaySeconds controls duration
-    const loops = 0;
-    const displaySeconds = src.clearWithTTS ? 0 : (isGif ? (src.gifLoops || 0) : (src.displaySeconds || 0));
+    const loops = src.clearWithTTS ? 0 : (isGif ? (hasSound ? 0 : (src.gifLoops || 1)) : 1);
+    const displaySeconds = (src.clearWithTTS || hasSound || isGif) ? 0 : (src.displaySeconds || 0);
     await fetch('/api/video-overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ cmd: 'PLAYIMG', id: src.id, path: src.path, loops, displaySeconds,
-        x: src.mediaX || 0, y: src.mediaY || 0, w: src.mediaW || 400, h: src.mediaH || 300,
+        x: src.mediaX || 0, y: src.mediaY || 0, w: src.mediaW || null, h: src.mediaH || null,
         chromaKey: src.chromaKey || false, chromaColor: src.chromaColor || '#00ff00', chromaThreshold: src.chromaThreshold ?? 40 }) });
   }
 
@@ -2882,7 +3082,7 @@ async function overlayTriggerSource(src) {
       body: JSON.stringify({ cmd: 'PLAYVID', id: src.id, path: src.videoPath, loops,
         videoStart: src.videoStart || 0, videoEnd: src.videoEnd || 0,
         volume: src.videoVolume ?? 1,
-        x: src.mediaX || 0, y: src.mediaY || 0, w: src.mediaW || 400, h: src.mediaH || 300,
+        x: src.mediaX || 0, y: src.mediaY || 0, w: src.mediaW || null, h: src.mediaH || null,
         chromaKey: src.chromaKey || false, chromaColor: src.chromaColor || '#00ff00', chromaThreshold: src.chromaThreshold ?? 40 }) });
   }
 
@@ -2921,50 +3121,72 @@ async function overlayTriggerSource(src) {
 function overlayRenderSources() {
   const list = document.getElementById('overlaySourcesList');
   const empty = document.getElementById('overlayEmpty');
-  list.querySelectorAll('.overlay-src-row').forEach(r => r.remove());
-  if (!overlayState.sources.length) { empty.style.display = ''; return; }
+  list.querySelectorAll('.overlay-src-card').forEach(r => r.remove());
+  // Remove add-card placeholder if exists
+  const addCard = list.querySelector('.overlay-add-card');
+  if (addCard) addCard.remove();
+
+  if (!overlayState.sources.length) { empty.style.display = ''; list.style.display = 'block'; return; }
   empty.style.display = 'none';
+
+  // Wrap in grid
+  list.style.display = 'grid';
+  list.style.gridTemplateColumns = 'repeat(auto-fill,minmax(190px,1fr))';
+  list.style.gap = '8px';
+
   overlayState.sources.forEach(src => {
     const hasImage = src.type === 'image' || src.type === 'image+sound';
     const hasSound = src.type === 'sound' || src.type === 'image+sound' || src.type === 'video+sound';
     const hasVideo = src.type === 'video' || src.type === 'video+sound';
-    const hasText  = src.type === 'text';
+    const hasText  = !!(src.text);
     const isGif = hasImage && src.path && src.path.toLowerCase().endsWith('.gif');
-    const name = hasText ? (src.text && src.text.length > 30 ? src.text.slice(0, 30) + '\u2026' : (src.text || 'Text')) : (src.path || src.soundPath || src.videoPath || '').split(/[\\/]/).pop();
-    const soundName = (hasSound && src.soundPath) ? src.soundPath.split(/[\\/]/).pop() : null;
-    const typeLabel = hasText ? 'TEXT' : (hasVideo ? (hasSound ? 'MP4 + Audio' : 'MP4') : (src.type === 'image+sound' ? 'GIF/IMG + Audio' : (hasImage ? (isGif ? 'GIF' : 'IMAGE') : 'AUDIO')));
-    const thumbBg = hasText ? '#1e1a2e' : (hasVideo ? '#1a1a2e' : (isGif ? '#1a2e1a' : (hasImage ? '#1a1a2e' : '#2e1a1a')));
-    const thumbIcon = hasText ? '\uD835\uDC13' : (hasVideo ? '🎬' : (isGif ? '🎞' : (hasImage ? '🖼' : '🔊')));
+    const name = hasText ? (src.text && src.text.length > 28 ? src.text.slice(0,28) + '\u2026' : (src.text || 'Text')) : (src.path || src.soundPath || src.videoPath || '').split(/[\\/]/).pop();
+    const typeLabel = hasText ? 'TEXT' : (hasVideo ? (hasSound ? 'MP4+Audio' : 'MP4') : (hasImage ? (isGif ? 'GIF' : 'IMAGE') : 'AUDIO'));
+    const iconBg = hasText ? 'rgba(30,26,46,0.7)' : (hasVideo ? 'rgba(26,26,46,0.7)' : (isGif ? 'rgba(26,46,26,0.7)' : (hasImage ? 'rgba(26,26,46,0.7)' : 'rgba(46,26,26,0.7)')));
+    const icon = hasText ? '\uD835\uDC13' : (hasVideo ? '\uD83C\uDFAC' : (isGif ? '\uD83C\uDF9E' : (hasImage ? '\uD83D\uDDBC' : '\uD83D\uDD0A')));
 
-    let durationStr = '';
-    if (hasSound && src.soundEnd > 0) durationStr = src.soundStart.toFixed(1) + 's – ' + src.soundEnd.toFixed(1) + 's';
-    else if (hasImage && !isGif && !hasSound) durationStr = src.displaySeconds > 0 ? src.displaySeconds + 's' : 'Forever';
-    else if (hasVideo && !hasSound) durationStr = (src.videoLoops || 1) + 'x';
+    let durBadge = '';
+    if (hasImage && !isGif && src.displaySeconds > 0) durBadge = src.displaySeconds + 's';
+    else if (isGif && src.gifLoops > 0) durBadge = src.gifLoops + 's';
+    else if (hasVideo && !hasSound) durBadge = (src.videoLoops || 1) + 'x';
 
-    const row = document.createElement('div');
-    row.className = 'overlay-src-row';
-    row.style = 'display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;margin-bottom:8px;transition:border-color 0.15s;';
-    row.onmouseenter = () => row.style.borderColor = 'var(--border-strong)';
-    row.onmouseleave = () => row.style.borderColor = 'var(--border)';
-    row.innerHTML = `
-      <div style="width:44px;height:44px;border-radius:8px;background:${thumbBg};display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">${thumbIcon}</div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}${soundName ? ' <span style="color:var(--muted);">+ ' + soundName + '</span>' : ''}</div>
-        <div style="display:flex;align-items:center;gap:6px;margin-top:3px;">
-          <span style="font-size:10px;font-weight:600;letter-spacing:0.8px;color:var(--accent);background:var(--accent-soft);padding:2px 7px;border-radius:4px;">${typeLabel}</span>
-          ${durationStr ? `<span style="font-size:11px;color:var(--muted);">${durationStr}</span>` : ''}
-          ${(!hasText && src.chromaKey) ? `<span style="font-size:10px;color:var(--green);background:var(--green-soft);padding:2px 7px;border-radius:4px;">Chroma</span>` : ''}
-          ${src.assignedCommand ? `<span style="font-size:10px;color:var(--yellow);background:rgba(245,196,0,0.12);padding:2px 7px;border-radius:4px;">⚡ ${src.assignedCommand}</span>` : ''}
-        </div>
-      </div>
-      <div style="display:flex;gap:6px;flex-shrink:0;">
-        <button class="btn btn-secondary" style="font-size:12px;padding:5px 14px;" onclick="overlayShowSource(${src.id})">Trigger</button>
-        <button class="btn btn-secondary" style="font-size:12px;padding:5px 14px;" onclick="overlayStopSource(${src.id})">Stop</button>
-        <button class="btn btn-secondary" style="font-size:12px;padding:5px 14px;" onclick="overlayEditSource(${src.id})">Edit</button>
-        <button class="btn btn-danger" style="font-size:12px;padding:5px 10px;" onclick="overlayRemoveSource(${src.id})">✕</button>
-      </div>`;
-    list.appendChild(row);
+    const card = document.createElement('div');
+    card.className = 'overlay-src-card';
+    card.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px;transition:border-color 0.15s;';
+    card.onmouseenter = () => card.style.borderColor = 'var(--border-strong)';
+    card.onmouseleave = () => card.style.borderColor = 'var(--border)';
+    card.innerHTML =
+      '<div style="display:flex;align-items:flex-start;gap:8px;">'
+      + '<div style="width:30px;height:30px;border-radius:6px;background:' + iconBg + ';display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">' + icon + '</div>'
+      + '<div style="flex:1;min-width:0;">'
+      + '<div style="font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + name + '</div>'
+      + '<div style="display:flex;gap:4px;margin-top:3px;flex-wrap:wrap;align-items:center;">'
+      + '<span style="font-size:10px;font-weight:600;letter-spacing:0.5px;color:var(--accent);background:var(--accent-soft);padding:1px 6px;border-radius:3px;">' + typeLabel + '</span>'
+      + (durBadge ? '<span style="font-size:10px;color:var(--muted);">' + durBadge + '</span>' : '')
+      + ((!hasText && src.chromaKey) ? '<span style="font-size:10px;color:var(--green);background:var(--green-soft);padding:1px 5px;border-radius:3px;">Chroma</span>' : '')
+      + (src.assignedCommand ? '<span style="font-size:10px;color:var(--yellow);background:rgba(245,196,0,0.1);padding:1px 5px;border-radius:3px;">\u26A1 ' + src.assignedCommand + '</span>' : '')
+      + (src.clearWithTTS ? '<span style="font-size:10px;color:var(--muted);background:var(--surface-raised);padding:1px 5px;border-radius:3px;">TTS clear</span>' : '')
+      + '</div></div></div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:4px;">'
+      + '<button class="btn btn-secondary" style="font-size:11px;padding:5px 0;text-align:center;color:var(--accent);border-color:rgba(145,71,255,0.25);" onclick="overlayShowSource(' + src.id + ')">Trigger</button>'
+      + '<button class="btn btn-secondary" style="font-size:11px;padding:5px 0;text-align:center;" onclick="overlayStopSource(' + src.id + ')">Stop</button>'
+      + '<button class="btn btn-secondary" style="font-size:11px;padding:5px 0;text-align:center;" onclick="overlayEditSource(' + src.id + ')">Edit</button>'
+      + '<button class="btn btn-danger" style="font-size:11px;padding:5px 8px;" onclick="overlayRemoveSource(' + src.id + ')">\u2715</button>'
+      + '</div>';
+    list.appendChild(card);
   });
+
+  // Dashed add card at end
+  const addC = document.createElement('div');
+  addC.className = 'overlay-add-card';
+  addC.onclick = overlayAddSource;
+  addC.style.cssText = 'border:1px dashed var(--border);border-radius:10px;padding:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;min-height:80px;transition:border-color 0.15s;';
+  addC.onmouseenter = () => addC.style.borderColor = 'var(--border-strong)';
+  addC.onmouseleave = () => addC.style.borderColor = 'var(--border)';
+  addC.innerHTML = '<div style="font-size:18px;color:var(--muted);">+</div><div style="font-size:11px;color:var(--muted);">Add source</div>';
+  list.appendChild(addC);
+
+  if (typeof renderHotkeys === 'function') renderHotkeys();
 }
 
 function overlayHexToRgb(hex) {
@@ -3569,7 +3791,7 @@ async function overlayConfirmEdit(id) {
     if (nav) { nav.classList.add('active'); openNavGroupFor(name); }
     if (name === 'groups') refreshGroupSelects();
     if (name === 'mod-view') loadModChannels();
-    if (name === 'overlay') { overlayLoadSources(); overlayStartVideoSSE(); }
+    if (name === 'overlay') { overlayLoadSources(); overlayStartVideoSSE(); loadHotkeys(); }
     if (name === 'actions' && inlineEditor) setTimeout(() => inlineEditor.layout(), 50);
   }
 

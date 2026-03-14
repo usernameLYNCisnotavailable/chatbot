@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell, dialog } = require('electron');
+const { app, BrowserWindow, shell, dialog, globalShortcut } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
@@ -1146,6 +1146,68 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
         } catch (e) { res.json({ success: false, error: e.message }); }
     });
 
+    // ---- ROUTES_HOTKEYS ----
+    function getHotkeys() {
+        try {
+            const p = getDataPath('hotkeys.json');
+            if (!fs.existsSync(p)) return [];
+            return JSON.parse(fs.readFileSync(p, 'utf8'));
+        } catch(e) { return []; }
+    }
+
+    function saveHotkeys(hotkeys) {
+        fs.writeFileSync(getDataPath('hotkeys.json'), JSON.stringify(hotkeys, null, 2));
+    }
+
+    function registerHotkeys() {
+        globalShortcut.unregisterAll();
+        const hotkeys = getHotkeys();
+        hotkeys.forEach(hk => {
+            if (!hk.key || !hk.sourceId) return;
+            try {
+                globalShortcut.register(hk.key, () => {
+                    try {
+                        const sourcesPath = getDataPath('overlay-sources.json');
+                        if (!fs.existsSync(sourcesPath)) return;
+                        const sources = JSON.parse(fs.readFileSync(sourcesPath, 'utf8'));
+                        const src = sources.find(s => String(s.id) === String(hk.sourceId));
+                        if (!src) return;
+                        const action = hk.action || 'trigger';
+                        const axios2 = require('axios');
+                        if (action === 'stop') {
+                            if (src.path) axios2.post('http://localhost:3000/api/video-overlay/command', { cmd: 'CLEARIMG', id: src.id }).catch(()=>{});
+                            if (src.videoPath) axios2.post('http://localhost:3000/api/video-overlay/command', { cmd: 'CLEARVID', id: src.id }).catch(()=>{});
+                            if (src.soundPath) axios2.post('http://localhost:3000/api/video-overlay/command', { cmd: 'STOPSOUND', id: src.id }).catch(()=>{});
+                            if (src.text) axios2.post('http://localhost:3000/api/text-overlay/command', { cmd: 'CLEARTEXT', id: src.id }).catch(()=>{});
+                        } else {
+                            // Trigger — use fire-source route which handles full source triggering by id
+                            axios2.post('http://localhost:3000/api/overlay/fire-source', { sourceId: src.id }).catch(()=>{});
+                        }
+                    } catch(e) {}
+                });
+            } catch(e) { console.log('[hotkey] failed to register', hk.key, e.message); }
+        });
+    }
+
+    server.get('/api/hotkeys', (req, res) => {
+        res.json(getHotkeys());
+    });
+
+    server.post('/api/hotkeys', (req, res) => {
+        try {
+            saveHotkeys(req.body);
+            registerHotkeys();
+            res.json({ ok: true });
+        } catch(e) { res.json({ ok: false, error: e.message }); }
+    });
+
+    // Dashboard calls this when a hotkey fires a trigger
+    server.post('/api/overlay/hotkey-trigger', (req, res) => {
+        // Broadcast to dashboard SSE so it can run overlayTriggerSource
+        broadcastToDashboard({ type: 'hotkey-trigger', sourceId: req.body.sourceId });
+        res.json({ ok: true });
+    });
+
     // ---- ROUTES_OVERLAY ----
     server.get('/api/overlay/sources', (req, res) => {
         try {
@@ -1619,10 +1681,77 @@ Write-Output $sb.ToString().Trim()
     // ---- STATIC (must be last) ----
     server.use(express.static(path.join(appDir, 'dashboard'), { index: false }));
 
+    // Fire a specific source by id (used by hotkeys)
+    server.post('/api/overlay/fire-source', async (req, res) => {
+        try {
+            const { sourceId } = req.body;
+            const p = getDataPath('overlay-sources.json');
+            if (!fs.existsSync(p)) return res.json({ ok: false });
+            const sources = JSON.parse(fs.readFileSync(p, 'utf8'));
+            const src = sources.find(s => String(s.id) === String(sourceId));
+            if (!src) return res.json({ ok: false, error: 'source not found' });
+
+            const hasImage = src.type === 'image' || src.type === 'image+sound';
+            const hasSound = src.type === 'sound' || src.type === 'image+sound' || src.type === 'video+sound';
+            const hasVideo = src.type === 'video' || src.type === 'video+sound';
+            const hasText  = !!(src.text);
+            const isGif = hasImage && src.path && src.path.toLowerCase().endsWith('.gif');
+
+            const overlayCmdPath = getDataPath('overlay-cmd.txt');
+            const overlayCmdTmp  = getDataPath('overlay-cmd.tmp');
+            function writeOverlayCmd(line) {
+                try { fs.writeFileSync(overlayCmdTmp, line); fs.renameSync(overlayCmdTmp, overlayCmdPath); } catch(e) {}
+            }
+
+            if (hasImage && videoWin && !videoWin.isDestroyed()) {
+                const loops = src.clearWithTTS ? 0 : 0;
+                const displaySeconds = src.clearWithTTS ? 0 : (isGif ? (src.gifLoops || 0) : (src.displaySeconds || 0));
+                broadcastVideoCmd({ cmd: 'PLAYIMG', id: src.id, path: src.path, loops, displaySeconds,
+                    x: src.mediaX || 0, y: src.mediaY || 0, w: src.mediaW || 400, h: src.mediaH || 300,
+                    chromaKey: src.chromaKey || false, chromaColor: src.chromaColor || '#00ff00', chromaThreshold: src.chromaThreshold ?? 40 });
+            }
+            if (hasVideo && videoWin && !videoWin.isDestroyed()) {
+                const loops = src.clearWithTTS ? 0 : (hasSound ? 0 : (src.videoLoops || 1));
+                broadcastVideoCmd({ cmd: 'PLAYVID', id: src.id, path: src.videoPath, loops,
+                    videoStart: src.videoStart || 0, videoEnd: src.videoEnd || 0, volume: src.videoVolume ?? 1,
+                    x: src.mediaX || 0, y: src.mediaY || 0, w: src.mediaW || 400, h: src.mediaH || 300,
+                    chromaKey: src.chromaKey || false, chromaColor: src.chromaColor || '#00ff00', chromaThreshold: src.chromaThreshold ?? 40 });
+            }
+            if (hasSound && videoWin && !videoWin.isDestroyed()) {
+                const startMs = Math.round((src.soundStart || 0) * 1000);
+                const endMs   = Math.round((src.soundEnd   || 0) * 1000);
+                broadcastVideoCmd({ cmd: 'PLAYSOUND', id: src.id, path: src.soundPath, startMs, endMs, volume: src.soundVolume ?? 1 });
+                if ((hasImage || hasVideo) && endMs > startMs) {
+                    const displayMs = endMs - startMs;
+                    setTimeout(() => {
+                        if (hasImage) broadcastVideoCmd({ cmd: 'CLEARIMG', id: src.id });
+                        if (hasVideo) broadcastVideoCmd({ cmd: 'CLEARVID', id: src.id });
+                    }, displayMs);
+                }
+            }
+            if (hasText && textWin && !textWin.isDestroyed()) {
+                const clearMediaId = (src.clearWithTTS && (hasImage || hasVideo)) ? src.id : null;
+                const clearMediaKind = clearMediaId ? (hasImage ? 'image' : 'video') : null;
+                broadcastTextCmd({ cmd: 'ADDTEXT', id: src.id, text: src.text,
+                    x: src.x || 100, y: src.y || 100, font: src.font, size: src.fontSize, color: src.color,
+                    bold: src.bold, italic: src.italic, shadow: src.shadow, animation: src.animation,
+                    animDuration: src.animDuration, maxW: src.maxW,
+                    speak: src.speak || false, voice: src.voice || null,
+                    ttsRate: src.ttsRate || 1, ttsPitch: src.ttsPitch || 1, ttsVolume: src.ttsVolume ?? 1,
+                    clearMediaId, clearMediaKind });
+                if ((src.displaySeconds || 0) > 0 && !src.speak) {
+                    setTimeout(() => broadcastTextCmd({ cmd: 'CLEARTEXT', id: src.id }), src.displaySeconds * 1000);
+                }
+            }
+            res.json({ ok: true });
+        } catch(e) { res.json({ ok: false, error: e.message }); }
+    });
+
     server.listen(3000, () => {
         console.log('Server running on port 3000');
         global.broadcastChat = server.broadcastChat;
         if (mainWindow) mainWindow.loadURL('http://localhost:3000');
+        registerHotkeys();
     });
 }
 
@@ -1675,6 +1804,10 @@ app.whenReady().then(() => {
     startBot();
     createWindow();
     autoUpdater.checkForUpdatesAndNotify();
+});
+
+app.on('will-quit', () => {
+    globalShortcut.unregisterAll();
 });
 
 app.on('window-all-closed', () => {
