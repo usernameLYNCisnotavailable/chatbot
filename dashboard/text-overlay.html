@@ -149,10 +149,31 @@ function addText(id, cfg) {
     utt.rate   = cfg.ttsRate   || 1;
     utt.pitch  = cfg.ttsPitch  || 1;
     utt.volume = (cfg.ttsVolume !== undefined && !isNaN(cfg.ttsVolume)) ? Math.min(1, Math.max(0, cfg.ttsVolume)) : 1;
-    // Always clear the text element once speech finishes
-    utt.onend = () => { clearText(id); };
+
+    const onDone = () => {
+      if (!sources[id]) return; // already cleared
+      clearText(id);
+      // Notify dashboard that TTS finished — dashboard decides whether to clear media
+      fetch('http://localhost:3000/api/video-overlay/done', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cmd: 'TEXTDONE', id: cfg.id })
+      }).catch(() => {});
+    };
+
+    utt.onend = onDone;
     window.speechSynthesis.speak(utt);
     sources[id].utt = utt;
+
+    // Polling fallback — onend doesn't always fire on Windows
+    const poll = setInterval(() => {
+      if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
+        clearInterval(poll);
+        if (sources[id]) sources[id].pollInterval = null;
+        onDone();
+      }
+    }, 200);
+    sources[id].pollInterval = poll;
   }
 }
 
@@ -160,6 +181,7 @@ function clearText(id) {
   const src = sources[id];
   if (!src) return;
   if (src.typeTimer) clearInterval(src.typeTimer);
+  if (src.pollInterval) { clearInterval(src.pollInterval); src.pollInterval = null; }
   // Cancel TTS if this source was speaking
   if (src.cfg.speak) window.speechSynthesis.cancel();
   src.el.classList.remove('visible');
@@ -170,6 +192,7 @@ function removeText(id) {
   const src = sources[id];
   if (!src) return;
   if (src.typeTimer) clearInterval(src.typeTimer);
+  if (src.pollInterval) { clearInterval(src.pollInterval); src.pollInterval = null; }
   if (src.cfg.speak) window.speechSynthesis.cancel();
   src.el.remove();
   delete sources[id];

@@ -1510,7 +1510,12 @@ Write-Output $sb.ToString().Trim()
         res.json({ ok: true });
     });
     server.post('/api/video-overlay/done', (req, res) => {
-        broadcastVideoDashboard({ cmd: 'VIDDONE', id: req.body.id });
+        const body = req.body;
+        if (body.type === 'ready') {
+            broadcastVideoDashboard({ cmd: 'READY' });
+        } else {
+            broadcastVideoDashboard({ cmd: body.cmd || 'VIDDONE', id: body.id });
+        }
         res.json({ ok: true });
     });
 
