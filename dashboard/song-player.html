@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Song Requests</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0e0e10;
+    --surface: #18181b;
+    --surface-raised: #1f1f23;
+    --border: #2a2a35;
+    --text: #efeff1;
+    --muted: #adadb8;
+    --muted-2: #6b6b7a;
+    --accent: #9147ff;
+    --accent-hover: #a970ff;
+    --green: #00c853;
+    --red: #eb0400;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, 'Segoe UI', sans-serif;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* Drag region for moving the window */
+  #titlebar {
+    height: 32px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    -webkit-app-region: drag;
+    flex-shrink: 0;
+  }
+
+  #titlebar span {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted-2);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  #main {
+    display: flex;
+    flex-direction: column;
+    height: calc(100% - 32px);
+    overflow: hidden;
+  }
+
+  /* Hidden YouTube iframe */
+  #yt-container {
+    position: absolute;
+    width: 1px; height: 1px;
+    opacity: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  /* Now playing section */
+  #now-playing {
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  #np-label {
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted-2);
+    margin-bottom: 6px;
+  }
+
+  #np-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+  }
+
+  #np-requester {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* Progress bar */
+  #progress-wrap {
+    margin-top: 10px;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  #progress-bar {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.5s linear;
+  }
+
+  /* Controls */
+  #controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .ctrl-btn {
+    -webkit-app-region: no-drag;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 12px;
+    transition: opacity 0.15s;
+  }
+
+  .ctrl-btn:active { opacity: 0.7; }
+
+  #btn-skip {
+    background: var(--surface-raised);
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+
+  #btn-skip:hover { color: var(--text); }
+
+  #volume-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    -webkit-app-region: no-drag;
+  }
+
+  #volume-wrap span {
+    font-size: 11px;
+    color: var(--muted-2);
+  }
+
+  #vol-slider {
+    -webkit-appearance: none;
+    width: 64px;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+    -webkit-app-region: no-drag;
+  }
+
+  #vol-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+  }
+
+  /* Empty state */
+  #empty-state {
+    padding: 14px 16px;
+    font-size: 12px;
+    color: var(--muted-2);
+    display: none;
+  }
+
+  /* Queue list */
+  #queue-section {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  #queue-section::-webkit-scrollbar { width: 4px; }
+  #queue-section::-webkit-scrollbar-track { background: transparent; }
+  #queue-section::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  #queue-header {
+    padding: 10px 16px 6px;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted-2);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  #queue-count {
+    font-size: 10px;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .queue-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    border-bottom: 1px solid rgba(42,42,53,0.5);
+    transition: background 0.1s;
+  }
+
+  .queue-item:hover { background: var(--surface); }
+
+  .queue-pos {
+    font-size: 10px;
+    color: var(--muted-2);
+    min-width: 14px;
+    text-align: center;
+  }
+
+  .queue-thumb {
+    width: 36px;
+    height: 26px;
+    border-radius: 3px;
+    object-fit: cover;
+    background: var(--surface-raised);
+    flex-shrink: 0;
+  }
+
+  .queue-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .queue-title {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .queue-requester {
+    font-size: 10px;
+    color: var(--muted-2);
+    margin-top: 1px;
+  }
+
+  .queue-remove {
+    background: none;
+    border: none;
+    color: var(--muted-2);
+    cursor: pointer;
+    font-size: 13px;
+    padding: 2px 4px;
+    border-radius: 3px;
+    -webkit-app-region: no-drag;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 0.1s;
+  }
+
+  .queue-item:hover .queue-remove { opacity: 1; }
+  .queue-remove:hover { color: var(--red); }
+
+  #queue-empty {
+    padding: 20px 16px;
+    font-size: 11px;
+    color: var(--muted-2);
+    text-align: center;
+  }
+
+  /* Status dot */
+  #status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--muted-2);
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  #status-dot.playing { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  #status-dot.paused  { background: var(--accent); }
+</style>
+</head>
+<body>
+
+<div id="titlebar">
+  <span>🎵 Song Requests</span>
+  <div id="status-dot"></div>
+</div>
+
+<div id="main">
+  <!-- Hidden YouTube player -->
+  <div id="yt-container">
+    <div id="yt-player"></div>
+  </div>
+
+  <!-- Now playing -->
+  <div id="now-playing">
+    <div id="np-label">Now Playing</div>
+    <div id="np-title" style="color:var(--muted-2);">Nothing playing</div>
+    <div id="np-requester"></div>
+    <div id="progress-wrap" style="display:none;">
+      <div id="progress-bar"></div>
+    </div>
+    <div id="controls">
+      <button class="ctrl-btn" id="btn-skip" onclick="skip()">⏭ Skip</button>
+      <div id="volume-wrap">
+        <span>🔊</span>
+        <input type="range" id="vol-slider" min="0" max="100" value="80" oninput="setVolume(this.value)">
+      </div>
+    </div>
+  </div>
+
+  <!-- Queue -->
+  <div id="queue-header">
+    <span>Up Next</span>
+    <span id="queue-count"></span>
+  </div>
+  <div id="queue-section">
+    <div id="queue-list"></div>
+    <div id="queue-empty">Queue is empty</div>
+  </div>
+</div>
+
+<!-- YouTube IFrame API -->
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+  let player = null;
+  let currentSong = null;
+  let progressInterval = null;
+  let volume = 80;
+
+  // ── YouTube IFrame API ready ─────────────────────────────────────────────
+  function onYouTubeIframeAPIReady() {
+    player = new YT.Player('yt-player', {
+      width: '1', height: '1',
+      playerVars: { autoplay: 0, controls: 0, disablekb: 1 },
+      events: {
+        onReady: () => {
+          player.setVolume(volume);
+          connectSSE();
+        },
+        onStateChange: (e) => {
+          if (e.data === YT.PlayerState.ENDED) {
+            songDone();
+          }
+          if (e.data === YT.PlayerState.PLAYING) {
+            document.getElementById('status-dot').className = 'playing';
+            startProgress();
+          }
+          if (e.data === YT.PlayerState.PAUSED || e.data === YT.PlayerState.BUFFERING) {
+            document.getElementById('status-dot').className = 'paused';
+          }
+        }
+      }
+    });
+  }
+
+  // ── SSE connection to server ─────────────────────────────────────────────
+  function connectSSE() {
+    const es = new EventSource('/api/songs/stream');
+    es.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg.cmd === 'PLAY')   playSong(msg);
+        if (msg.cmd === 'SKIP')   stopCurrent();
+        if (msg.cmd === 'QUEUE')  renderQueue(msg.queue);
+        if (msg.cmd === 'CLEAR')  { stopCurrent(); renderQueue([]); }
+      } catch(err) {}
+    };
+    es.onerror = () => setTimeout(connectSSE, 3000);
+
+    // Also load initial state
+    fetch('/api/songs/queue').then(r => r.json()).then(data => {
+      renderQueue(data.queue || []);
+      if (data.current) {
+        currentSong = data.current;
+        updateNowPlaying(data.current);
+        if (player && player.loadVideoById) {
+          player.loadVideoById({ videoId: data.current.videoId });
+          player.setVolume(volume);
+        }
+      }
+    }).catch(() => {});
+  }
+
+  // ── Play ─────────────────────────────────────────────────────────────────
+  function playSong(song) {
+    currentSong = song;
+    if (!player || !player.loadVideoById) return;
+    player.loadVideoById({ videoId: song.videoId });
+    player.setVolume(volume);
+    updateNowPlaying(song);
+    document.getElementById('progress-wrap').style.display = 'block';
+  }
+
+  function updateNowPlaying(song) {
+    document.getElementById('np-title').style.color = '';
+    document.getElementById('np-title').textContent = song.title || song.videoId;
+    document.getElementById('np-requester').textContent = 'requested by ' + song.requester;
+    document.getElementById('status-dot').className = 'playing';
+  }
+
+  function stopCurrent() {
+    currentSong = null;
+    if (player && player.stopVideo) player.stopVideo();
+    document.getElementById('np-title').textContent = 'Nothing playing';
+    document.getElementById('np-title').style.color = 'var(--muted-2)';
+    document.getElementById('np-requester').textContent = '';
+    document.getElementById('status-dot').className = '';
+    document.getElementById('progress-wrap').style.display = 'none';
+    document.getElementById('progress-bar').style.width = '0%';
+    stopProgress();
+  }
+
+  // ── Progress bar ─────────────────────────────────────────────────────────
+  function startProgress() {
+    stopProgress();
+    progressInterval = setInterval(() => {
+      if (!player || !player.getCurrentTime) return;
+      const cur = player.getCurrentTime() || 0;
+      const dur = player.getDuration() || 0;
+      if (dur > 0) {
+        document.getElementById('progress-bar').style.width = ((cur / dur) * 100) + '%';
+      }
+    }, 500);
+  }
+
+  function stopProgress() {
+    if (progressInterval) { clearInterval(progressInterval); progressInterval = null; }
+  }
+
+  // ── Song ended naturally ─────────────────────────────────────────────────
+  function songDone() {
+    stopProgress();
+    document.getElementById('status-dot').className = '';
+    fetch('/api/songs/done', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => {});
+  }
+
+  // ── Skip button ──────────────────────────────────────────────────────────
+  function skip() {
+    fetch('/api/songs/skip', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => {});
+  }
+
+  // ── Volume ───────────────────────────────────────────────────────────────
+  function setVolume(v) {
+    volume = parseInt(v);
+    if (player && player.setVolume) player.setVolume(volume);
+  }
+
+  // ── Queue render ─────────────────────────────────────────────────────────
+  function renderQueue(queue) {
+    const list = document.getElementById('queue-list');
+    const empty = document.getElementById('queue-empty');
+    const count = document.getElementById('queue-count');
+
+    count.textContent = queue.length ? queue.length + ' song' + (queue.length !== 1 ? 's' : '') : '';
+
+    if (!queue.length) {
+      list.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+
+    empty.style.display = 'none';
+    list.innerHTML = queue.map((s, i) => `
+      <div class="queue-item">
+        <span class="queue-pos">${i + 1}</span>
+        <img class="queue-thumb" src="https://img.youtube.com/vi/${s.videoId}/default.jpg" onerror="this.style.display='none'">
+        <div class="queue-info">
+          <div class="queue-title">${escHtml(s.title || s.videoId)}</div>
+          <div class="queue-requester">${escHtml(s.requester)}</div>
+        </div>
+        <button class="queue-remove" onclick="removeFromQueue(${i})" title="Remove">✕</button>
+      </div>
+    `).join('');
+  }
+
+  function removeFromQueue(index) {
+    fetch('/api/songs/queue/' + index, { method: 'DELETE' }).catch(() => {});
+  }
+
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+</body>
+</html>

@@ -454,6 +454,154 @@ client.on('message', (channel, tags, message, self) => {
         return;
     }
 
+    // !sr — song request
+    if (command === '!sr') {
+        if (defaults['!sr'] === false) return;
+        const url = args.trim();
+        if (!url) {
+            client.say(channel, `@${username} Usage: !sr <youtube url>`);
+            return;
+        }
+        const ytPattern = /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]{11})/;
+        const m = url.match(ytPattern);
+        if (!m) {
+            client.say(channel, `@${username} Please provide a valid YouTube URL.`);
+            return;
+        }
+        const videoId = m[1];
+        const http = require('http');
+        const body = JSON.stringify({ videoId, requester: username });
+        const req2 = http.request({
+            hostname: '127.0.0.1', port: 3000, path: '/api/songs/queue', method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+        }, (resp) => {
+            let data = '';
+            resp.on('data', d => data += d);
+            resp.on('end', () => {
+                try {
+                    const result = JSON.parse(data);
+                    if (result.ok) {
+                        const pos = result.position;
+                        const title = result.title || videoId;
+                        if (pos === 0) {
+                            client.say(channel, `🎵 Now playing: ${title} (requested by @${username})`);
+                        } else {
+                            client.say(channel, `🎵 Added to queue at #${pos}: ${title} (requested by @${username})`);
+                        }
+                    } else {
+                        client.say(channel, `@${username} Couldn't add that song.`);
+                    }
+                } catch(e) {}
+            });
+        });
+        req2.on('error', () => {});
+        req2.write(body);
+        req2.end();
+        return;
+    }
+
+    // !skip — mods/streamer/admins only
+    if (command === '!skip') {
+        const isMod = tags.mod || false;
+        const isBroadcaster = username === homeChannel;
+        if (!isMod && !isBroadcaster && !isAdmin(username)) return;
+        const http = require('http');
+        const req2 = http.request({
+            hostname: '127.0.0.1', port: 3000, path: '/api/songs/skip', method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Content-Length': 2 }
+        }, () => {});
+        req2.on('error', () => {});
+        req2.write('{}');
+        req2.end();
+        client.say(channel, '⏭ Skipped.');
+        return;
+    }
+
+    // !currentsong / !song
+    if (command === '!currentsong' || command === '!song') {
+        const http = require('http');
+        const req2 = http.request({ hostname: '127.0.0.1', port: 3000, path: '/api/songs/queue', method: 'GET' }, (resp) => {
+            let data = '';
+            resp.on('data', d => data += d);
+            resp.on('end', () => {
+                try {
+                    const result = JSON.parse(data);
+                    if (result.current) {
+                        client.say(channel, `🎵 Now playing: ${result.current.title} (by @${result.current.requester})`);
+                    } else {
+                        client.say(channel, 'No song currently playing.');
+                    }
+                } catch(e) {}
+            });
+        });
+        req2.on('error', () => {});
+        req2.end();
+        return;
+    }
+
+    // !queue — show next 3
+    if (command === '!queue') {
+        const http = require('http');
+        const req2 = http.request({ hostname: '127.0.0.1', port: 3000, path: '/api/songs/queue', method: 'GET' }, (resp) => {
+            let data = '';
+            resp.on('data', d => data += d);
+            resp.on('end', () => {
+                try {
+                    const result = JSON.parse(data);
+                    const q = result.queue || [];
+                    if (!q.length) {
+                        client.say(channel, 'Queue is empty. Use !sr <youtube url> to add a song!');
+                    } else {
+                        const preview = q.slice(0, 3).map((s, i) => `${i+1}. ${s.title}`).join(' | ');
+                        client.say(channel, `🎵 Up next: ${preview}${q.length > 3 ? ` (+${q.length-3} more)` : ''}`);
+                    }
+                } catch(e) {}
+            });
+        });
+        req2.on('error', () => {});
+        req2.end();
+        return;
+    }
+
+    // !removesong — remove your own last request; mods can pass a position number
+    if (command === '!removesong') {
+        const isMod = tags.mod || false;
+        const isBroadcaster = username === homeChannel;
+        const http = require('http');
+        const req2 = http.request({ hostname: '127.0.0.1', port: 3000, path: '/api/songs/queue', method: 'GET' }, (resp) => {
+            let data = '';
+            resp.on('data', d => data += d);
+            resp.on('end', () => {
+                try {
+                    const result = JSON.parse(data);
+                    const q = result.queue || [];
+                    let idx = -1;
+                    if ((isMod || isBroadcaster || isAdmin(username)) && args.trim()) {
+                        const pos = parseInt(args.trim()) - 1;
+                        if (pos >= 0 && pos < q.length) idx = pos;
+                    } else {
+                        for (let i = q.length - 1; i >= 0; i--) {
+                            if (q[i].requester === username) { idx = i; break; }
+                        }
+                    }
+                    if (idx === -1) {
+                        client.say(channel, `@${username} No song found to remove.`);
+                        return;
+                    }
+                    const delReq = http.request({
+                        hostname: '127.0.0.1', port: 3000, path: '/api/songs/queue/' + idx, method: 'DELETE'
+                    }, () => {});
+                    delReq.on('error', () => {});
+                    delReq.end();
+                    client.say(channel, `@${username} Removed from queue.`);
+                } catch(e) {}
+            });
+        });
+        req2.on('error', () => {});
+        req2.end();
+        return;
+    }
+
     // !commands
     if (msgLower === '!commands') {
         if (defaults['!commands'] === false) return;

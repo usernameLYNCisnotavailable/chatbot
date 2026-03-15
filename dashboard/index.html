@@ -3624,11 +3624,46 @@ async function overlayConfirmEdit(id) {
         <div class="cmd-sub">Let viewers queue YouTube tracks with !sr</div>
       </div>
     </div>
-    <div style="padding:0 28px;flex:1;display:flex;align-items:center;justify-content:center;">
-      <div style="text-align:center;opacity:0.3;">
-        <div style="font-size:2rem;margin-bottom:12px;">🎵</div>
-        <div style="font-size:0.75rem;color:var(--muted);">Song Requests coming soon</div>
-        <div style="font-size:0.65rem;color:var(--muted-2);margin-top:6px;">YouTube queue · !sr · !skip · !queue · !currentsong</div>
+    <div style="padding:20px 28px;flex:1;overflow-y:auto;">
+
+      <!-- Controls row -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="fetch('/api/songs/open').catch(()=>{})">
+          🎵 Open Player
+        </button>
+        <button class="btn" style="background:var(--surface-raised);border:1px solid var(--border);color:var(--muted);" onclick="if(confirm('Clear the entire queue?'))fetch('/api/songs/clear',{method:'POST'}).then(()=>loadSongsPage())">
+          🗑 Clear Queue
+        </button>
+        <div style="margin-left:auto;font-size:11px;color:var(--muted-2);">
+          <code style="background:var(--surface-raised);padding:2px 6px;border-radius:4px;font-size:10px;">!sr</code>
+          <code style="background:var(--surface-raised);padding:2px 6px;border-radius:4px;font-size:10px;">!skip</code>
+          <code style="background:var(--surface-raised);padding:2px 6px;border-radius:4px;font-size:10px;">!queue</code>
+          <code style="background:var(--surface-raised);padding:2px 6px;border-radius:4px;font-size:10px;">!currentsong</code>
+          <code style="background:var(--surface-raised);padding:2px 6px;border-radius:4px;font-size:10px;">!removesong</code>
+        </div>
+      </div>
+
+      <!-- Now Playing card -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px;">
+        <div style="font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted-2);margin-bottom:8px;">Now Playing</div>
+        <div id="dash-np-title" style="font-size:14px;font-weight:600;color:var(--muted-2);">Nothing playing</div>
+        <div id="dash-np-requester" style="font-size:11px;color:var(--muted);margin-top:3px;"></div>
+        <div style="margin-top:10px;">
+          <button class="btn" style="background:var(--surface-raised);border:1px solid var(--border);color:var(--muted);font-size:11px;padding:4px 12px;"
+            onclick="fetch('/api/songs/skip',{method:'POST'}).then(()=>loadSongsPage())">⏭ Skip</button>
+        </div>
+      </div>
+
+      <!-- Queue list -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+        <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted-2);">Up Next</span>
+          <span id="dash-queue-count" style="font-size:11px;color:var(--accent);font-weight:600;"></span>
+        </div>
+        <div id="dash-queue-list"></div>
+        <div id="dash-queue-empty" style="padding:24px;text-align:center;font-size:12px;color:var(--muted-2);">
+          Queue is empty — viewers can use <code style="background:var(--surface-raised);padding:2px 6px;border-radius:4px;">!sr &lt;youtube url&gt;</code>
+        </div>
       </div>
     </div>
   </div>
@@ -3880,7 +3915,58 @@ async function overlayConfirmEdit(id) {
     if (name === 'groups') refreshGroupSelects();
     if (name === 'mod-view') loadModChannels();
     if (name === 'overlay') { overlayLoadSources(); overlayStartVideoSSE(); loadHotkeys(); }
+    if (name === 'songs') loadSongsPage();
     if (name === 'actions' && inlineEditor) setTimeout(() => inlineEditor.layout(), 50);
+  }
+
+  function loadSongsPage() {
+    fetch('/api/songs/queue').then(r => r.json()).then(data => {
+      const cur = data.current;
+      const queue = data.queue || [];
+      const npTitle = document.getElementById('dash-np-title');
+      const npReq = document.getElementById('dash-np-requester');
+      if (npTitle) {
+        if (cur) {
+          npTitle.textContent = cur.title || cur.videoId;
+          npTitle.style.color = '';
+          npReq.textContent = 'requested by @' + cur.requester;
+        } else {
+          npTitle.textContent = 'Nothing playing';
+          npTitle.style.color = 'var(--muted-2)';
+          npReq.textContent = '';
+        }
+      }
+      const countEl = document.getElementById('dash-queue-count');
+      if (countEl) countEl.textContent = queue.length ? queue.length + ' song' + (queue.length !== 1 ? 's' : '') : '';
+      const listEl = document.getElementById('dash-queue-list');
+      const emptyEl = document.getElementById('dash-queue-empty');
+      if (!listEl) return;
+      if (!queue.length) {
+        listEl.innerHTML = '';
+        if (emptyEl) emptyEl.style.display = 'block';
+        return;
+      }
+      if (emptyEl) emptyEl.style.display = 'none';
+      listEl.innerHTML = queue.map((s, i) => `
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid rgba(42,42,53,0.5);">
+          <span style="font-size:11px;color:var(--muted-2);min-width:16px;text-align:center;">${i+1}</span>
+          <img src="https://img.youtube.com/vi/${s.videoId}/default.jpg" style="width:40px;height:28px;border-radius:3px;object-fit:cover;background:var(--surface-raised);" onerror="this.style.display='none'">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtmlSongs(s.title || s.videoId)}</div>
+            <div style="font-size:10px;color:var(--muted-2);margin-top:1px;">@${escHtmlSongs(s.requester)}</div>
+          </div>
+          <button onclick="removeSongFromDash(${i})" style="background:none;border:none;color:var(--muted-2);cursor:pointer;font-size:13px;padding:2px 6px;border-radius:3px;" title="Remove">✕</button>
+        </div>
+      `).join('');
+    }).catch(() => {});
+  }
+
+  function removeSongFromDash(idx) {
+    fetch('/api/songs/queue/' + idx, { method: 'DELETE' }).then(() => loadSongsPage()).catch(() => {});
+  }
+
+  function escHtmlSongs(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
   function toggleNavGroup(id) {

@@ -16,6 +16,10 @@ let videoPositions = {}; // id -> {x,y,w,h}
 let textWin = null;
 let textWinMode = 'desktop';
 let textOverlayClients = []; // SSE clients
+let songWin = null;
+let songQueue = []; // { videoId, title, requester, addedAt }
+let songCurrent = null; // currently playing song
+let songClients = []; // SSE clients for song-player.html
 
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -1243,11 +1247,141 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
         } catch(e) { console.error('[overlay] launch error:', e.message); }
     }
 
+    // ---- ROUTES_SONGS ----
+    function launchSongPlayer() {
+        if (songWin && !songWin.isDestroyed()) return;
+        songWin = new BrowserWindow({
+            width: 320,
+            height: 500,
+            minWidth: 260,
+            minHeight: 300,
+            frame: false,
+            transparent: false,
+            resizable: true,
+            skipTaskbar: false,
+            title: 'Song Requests',
+            backgroundColor: '#0e0e10',
+            webPreferences: { nodeIntegration: false, contextIsolation: true }
+        });
+        songWin.loadURL('http://localhost:3000/song-player.html');
+        songWin.on('close', (e) => {
+            e.preventDefault();
+            setImmediate(() => { if (songWin && !songWin.isDestroyed()) songWin.hide(); });
+        });
+        songWin.on('closed', () => { songWin = null; });
+    }
+
+    function broadcastSongCmd(data) {
+        const payload = `data: ${JSON.stringify(data)}\n\n`;
+        songClients.forEach(c => c.write(payload));
+    }
+
+    function extractYouTubeId(url) {
+        const patterns = [
+            /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]{11})/,
+            /^([A-Za-z0-9_-]{11})$/
+        ];
+        for (const p of patterns) {
+            const m = url.match(p);
+            if (m) return m[1];
+        }
+        return null;
+    }
+
+    async function fetchYouTubeTitle(videoId) {
+        try {
+            const resp = await axios.get(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`);
+            return resp.data.title || videoId;
+        } catch(e) { return videoId; }
+    }
+
+    function playNextSong() {
+        if (songCurrent) return;
+        if (!songQueue.length) return;
+        songCurrent = songQueue.shift();
+        broadcastSongCmd({ cmd: 'PLAY', ...songCurrent });
+        broadcastSongCmd({ cmd: 'QUEUE', queue: songQueue });
+    }
+
+    server.get('/api/songs/stream', (req, res) => {
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.flushHeaders();
+        songClients.push(res);
+        req.on('close', () => {
+            const i = songClients.indexOf(res);
+            if (i !== -1) songClients.splice(i, 1);
+        });
+    });
+
+    server.get('/api/songs/queue', (req, res) => {
+        res.json({ current: songCurrent, queue: songQueue });
+    });
+
+    server.post('/api/songs/queue', async (req, res) => {
+        try {
+            const { videoId, requester } = req.body;
+            if (!videoId) return res.json({ ok: false, error: 'No videoId' });
+            const title = await fetchYouTubeTitle(videoId);
+            const song = { videoId, title, requester, addedAt: Date.now() };
+            songQueue.push(song);
+            broadcastSongCmd({ cmd: 'QUEUE', queue: songQueue });
+            if (!songCurrent) playNextSong();
+            res.json({ ok: true, title, position: songCurrent ? songQueue.length : 0 });
+        } catch(e) { res.json({ ok: false, error: e.message }); }
+    });
+
+    server.post('/api/songs/skip', (req, res) => {
+        songCurrent = null;
+        broadcastSongCmd({ cmd: 'SKIP' });
+        setTimeout(playNextSong, 500);
+        res.json({ ok: true });
+    });
+
+    server.post('/api/songs/done', (req, res) => {
+        songCurrent = null;
+        setTimeout(playNextSong, 1000);
+        res.json({ ok: true });
+    });
+
+    server.delete('/api/songs/queue/:index', (req, res) => {
+        const idx = parseInt(req.params.index);
+        if (idx >= 0 && idx < songQueue.length) {
+            songQueue.splice(idx, 1);
+            broadcastSongCmd({ cmd: 'QUEUE', queue: songQueue });
+        }
+        res.json({ ok: true });
+    });
+
+    server.post('/api/songs/clear', (req, res) => {
+        songQueue = [];
+        songCurrent = null;
+        broadcastSongCmd({ cmd: 'CLEAR' });
+        res.json({ ok: true });
+    });
+
+    server.get('/api/songs/open', (req, res) => {
+        launchSongPlayer();
+        if (songWin && !songWin.isDestroyed()) { songWin.show(); songWin.focus(); }
+        res.json({ ok: true });
+    });
+
+    server.post('/api/songs/close', (req, res) => {
+        if (songWin && !songWin.isDestroyed()) songWin.hide();
+        res.json({ ok: true });
+    });
+
+    server.get('/song-player.html', (req, res) => {
+        res.sendFile(path.join(appDir, 'dashboard', 'song-player.html'));
+    });
+
     // Auto-launch overlays shortly after startup
     setTimeout(() => {
         if (!overlayProcess) launchOverlay('desktop');
         launchVideoOverlay('desktop');
         launchTextOverlay('desktop');
+        // launchSongPlayer(); // disabled until song-player.html is in dashboard/
     }, 3000);
 
     server.get('/api/overlay/status', (req, res) => { res.json({ running: !!overlayProcess, mode: overlayCurrentMode }); });
