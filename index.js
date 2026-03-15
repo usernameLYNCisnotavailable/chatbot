@@ -39,9 +39,9 @@ function sendToReactor(message) {
     socket.on('error', () => {});
 }
 
-function fireOverlayCommand(command) {
+function fireOverlayCommand(command, args) {
     const http = require('http');
-    const body = JSON.stringify({ command });
+    const body = JSON.stringify({ command, args: args || '' });
     const options = {
         hostname: '127.0.0.1', port: 3000,
         path: '/api/overlay/fire-command', method: 'POST',
@@ -288,7 +288,7 @@ client.on('message', (channel, tags, message, self) => {
             if (isOnCooldown(username, command, c.cooldown ?? 5)) return;
             setCooldown(username, command);
             client.say(channel, c.response);
-            fireOverlayCommand(command);
+            fireOverlayCommand(command, args);
             return;
         }
 
@@ -301,7 +301,7 @@ client.on('message', (channel, tags, message, self) => {
             setCooldown(username, command);
             lastCommandChannel = channel;
             sendToReactor(`COMMAND:${guestActionKey}:${username}:${message}:${args}:${channel.replace('#','')}`);
-            fireOverlayCommand(command);
+            fireOverlayCommand(command, args);
             return;
         }
 
@@ -314,7 +314,7 @@ client.on('message', (channel, tags, message, self) => {
             setCooldown(username, command + ':' + sub);
             lastCommandChannel = channel;
             sendToReactor(`COMMAND:${command.slice(1)}:${username}:${message}:${args}:${channel.replace('#','')}`);
-            fireOverlayCommand(command);
+            fireOverlayCommand(command, args);
             return;
         }
 
@@ -327,7 +327,7 @@ client.on('message', (channel, tags, message, self) => {
             setCooldown(username, '!car:' + sub);
             lastCommandChannel = channel;
             sendToReactor(`COMMAND:car:${username}:${message}:${args}:${channel.replace('#','')}`);
-            fireOverlayCommand(command);
+            fireOverlayCommand(command, args);
             return;
         }
 
@@ -370,7 +370,7 @@ client.on('message', (channel, tags, message, self) => {
         if (isOnCooldown(username, command, cd)) return;
         setCooldown(username, command);
         client.say(channel, c.response);
-        fireOverlayCommand(command);
+        fireOverlayCommand(command, args);
         return;
     }
 
@@ -384,7 +384,7 @@ client.on('message', (channel, tags, message, self) => {
         setCooldown(username, command);
         lastCommandChannel = channel;
         sendToReactor(`COMMAND:${actionKey}:${username}:${message}:${args}:${config.channel}`);
-        fireOverlayCommand(command);
+        fireOverlayCommand(command, args);
         return;
     }
 
@@ -398,7 +398,7 @@ client.on('message', (channel, tags, message, self) => {
         setCooldown(username, command + ':' + sub);
         lastCommandChannel = channel;
         sendToReactor(`COMMAND:${command.slice(1)}:${username}:${message}:${args}:${config.channel}`);
-        fireOverlayCommand(command);
+        fireOverlayCommand(command, args);
         return;
     }
 
@@ -412,7 +412,7 @@ client.on('message', (channel, tags, message, self) => {
         setCooldown(username, '!car:' + sub);
         lastCommandChannel = channel;
         sendToReactor(`COMMAND:car:${username}:${message}:${args}:${config.channel}`);
-        fireOverlayCommand(command);
+        fireOverlayCommand(command, args);
         return;
     }
 
@@ -443,76 +443,87 @@ client.on('message', (channel, tags, message, self) => {
         }
     }
 
-    // !so
-    if (msgLower.startsWith('!so ') || msgLower.startsWith('!shoutout ')) {
-        if (defaults['!so'] === false) return;
-        const cd = defaults['!so_cd'] ?? 5;
-        if (isOnCooldown(username, '!so', cd)) return;
-        setCooldown(username, '!so');
-        const target = msgLower.split(' ')[1];
-        client.say(channel, `🔥 Go check out ${target} over at twitch.tv/${target} !`);
-        return;
+    // ---- SONG REQUESTS ----
+    async function searchYouTube(query) {
+        return new Promise((resolve, reject) => {
+            const https = require('https');
+            const url = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(query) + '&sp=EgIQAQ%3D%3D';
+            const opts = {
+                hostname: 'www.youtube.com',
+                path: '/results?search_query=' + encodeURIComponent(query) + '&sp=EgIQAQ%3D%3D',
+                method: 'GET',
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+                },
+                timeout: 8000
+            };
+            const req = https.request(opts, (res) => {
+                let data = '';
+                res.on('data', d => data += d);
+                res.on('end', () => {
+                    const patterns = [
+                        /"videoId":"([A-Za-z0-9_-]{11})"/,
+                        /watch\?v=([A-Za-z0-9_-]{11})/
+                    ];
+                    for (const pat of patterns) {
+                        const m = data.match(pat);
+                        if (m) return resolve(m[1]);
+                    }
+                    reject(new Error('No results found'));
+                });
+            });
+            req.on('error', reject);
+            req.on('timeout', () => { req.destroy(); reject(new Error('Timeout')); });
+            req.end();
+        });
     }
 
-    // !sr — song request
+    // !sr — search by name or queue by URL
     if (command === '!sr') {
         if (defaults['!sr'] === false) return;
-        const url = args.trim();
-        if (!url) {
-            client.say(channel, `@${username} Usage: !sr <youtube url>`);
-            return;
-        }
-        const ytPattern = /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]{11})/;
-        const m = url.match(ytPattern);
-        if (!m) {
-            client.say(channel, `@${username} Please provide a valid YouTube URL.`);
-            return;
-        }
-        const videoId = m[1];
-        const http = require('http');
-        const body = JSON.stringify({ videoId, requester: username });
-        const req2 = http.request({
-            hostname: '127.0.0.1', port: 3000, path: '/api/songs/queue', method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
-        }, (resp) => {
-            let data = '';
-            resp.on('data', d => data += d);
-            resp.on('end', () => {
-                try {
-                    const result = JSON.parse(data);
-                    if (result.ok) {
-                        const pos = result.position;
-                        const title = result.title || videoId;
-                        if (pos === 0) {
-                            client.say(channel, `🎵 Now playing: ${title} (requested by @${username})`);
-                        } else {
-                            client.say(channel, `🎵 Added to queue at #${pos}: ${title} (requested by @${username})`);
-                        }
-                    } else {
-                        client.say(channel, `@${username} Couldn't add that song.`);
-                    }
-                } catch(e) {}
-            });
-        });
-        req2.on('error', () => {});
-        req2.write(body);
-        req2.end();
+        const query = args.trim();
+        if (!query) { client.say(channel, `@${username} Usage: !sr <song name or youtube url>`); return; }
+        const urlMatch = query.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]{11})/);
+        (async () => {
+            try {
+                const videoId = urlMatch ? urlMatch[1] : await searchYouTube(query);
+                const http = require('http');
+                const body = JSON.stringify({ videoId, requester: username });
+                const req2 = http.request({
+                    hostname: '127.0.0.1', port: 3000, path: '/api/songs/queue', method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+                }, (resp) => {
+                    let data = '';
+                    resp.on('data', d => data += d);
+                    resp.on('end', () => {
+                        try {
+                            const d = JSON.parse(data);
+                            if (d.ok) {
+                                if (d.position === 0) client.say(channel, `🎵 Now playing: ${d.title} (requested by @${username})`);
+                                else client.say(channel, `🎵 Added to queue at #${d.position}: ${d.title} (by @${username})`);
+                            } else { client.say(channel, `@${username} Couldn't add that song.`); }
+                        } catch(e) {}
+                    });
+                });
+                req2.on('error', () => client.say(channel, `@${username} Failed to add song.`));
+                req2.write(body); req2.end();
+            } catch(e) {
+                process.stdout.write('[sr error] ' + e.message + '\n');
+                client.say(channel, `@${username} Couldn't find "${query.slice(0, 40)}" — try a YouTube URL instead.`);
+            }
+        })();
         return;
     }
 
-    // !skip — mods/streamer/admins only
+    // !skip
     if (command === '!skip') {
-        const isMod = tags.mod || false;
-        const isBroadcaster = username === homeChannel;
-        if (!isMod && !isBroadcaster && !isAdmin(username)) return;
+        if (!tags.mod && username !== homeChannel && !isAdmin(username)) return;
         const http = require('http');
-        const req2 = http.request({
-            hostname: '127.0.0.1', port: 3000, path: '/api/songs/skip', method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Content-Length': 2 }
-        }, () => {});
-        req2.on('error', () => {});
-        req2.write('{}');
-        req2.end();
+        const req2 = http.request({ hostname: '127.0.0.1', port: 3000, path: '/api/songs/skip', method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Content-Length': 2 } }, () => {});
+        req2.on('error', () => {}); req2.write('{}'); req2.end();
         client.say(channel, '⏭ Skipped.');
         return;
     }
@@ -525,21 +536,17 @@ client.on('message', (channel, tags, message, self) => {
             resp.on('data', d => data += d);
             resp.on('end', () => {
                 try {
-                    const result = JSON.parse(data);
-                    if (result.current) {
-                        client.say(channel, `🎵 Now playing: ${result.current.title} (by @${result.current.requester})`);
-                    } else {
-                        client.say(channel, 'No song currently playing.');
-                    }
+                    const d = JSON.parse(data);
+                    if (d.current) client.say(channel, `🎵 Now playing: ${d.current.title} (by @${d.current.requester})`);
+                    else client.say(channel, 'No song currently playing.');
                 } catch(e) {}
             });
         });
-        req2.on('error', () => {});
-        req2.end();
+        req2.on('error', () => {}); req2.end();
         return;
     }
 
-    // !queue — show next 3
+    // !queue
     if (command === '!queue') {
         const http = require('http');
         const req2 = http.request({ hostname: '127.0.0.1', port: 3000, path: '/api/songs/queue', method: 'GET' }, (resp) => {
@@ -547,23 +554,20 @@ client.on('message', (channel, tags, message, self) => {
             resp.on('data', d => data += d);
             resp.on('end', () => {
                 try {
-                    const result = JSON.parse(data);
-                    const q = result.queue || [];
-                    if (!q.length) {
-                        client.say(channel, 'Queue is empty. Use !sr <youtube url> to add a song!');
-                    } else {
+                    const q = JSON.parse(data).queue || [];
+                    if (!q.length) client.say(channel, 'Queue is empty — use !sr <song name> to add!');
+                    else {
                         const preview = q.slice(0, 3).map((s, i) => `${i+1}. ${s.title}`).join(' | ');
                         client.say(channel, `🎵 Up next: ${preview}${q.length > 3 ? ` (+${q.length-3} more)` : ''}`);
                     }
                 } catch(e) {}
             });
         });
-        req2.on('error', () => {});
-        req2.end();
+        req2.on('error', () => {}); req2.end();
         return;
     }
 
-    // !removesong — remove your own last request; mods can pass a position number
+    // !removesong
     if (command === '!removesong') {
         const isMod = tags.mod || false;
         const isBroadcaster = username === homeChannel;
@@ -573,32 +577,33 @@ client.on('message', (channel, tags, message, self) => {
             resp.on('data', d => data += d);
             resp.on('end', () => {
                 try {
-                    const result = JSON.parse(data);
-                    const q = result.queue || [];
+                    const q = JSON.parse(data).queue || [];
                     let idx = -1;
                     if ((isMod || isBroadcaster || isAdmin(username)) && args.trim()) {
                         const pos = parseInt(args.trim()) - 1;
                         if (pos >= 0 && pos < q.length) idx = pos;
                     } else {
-                        for (let i = q.length - 1; i >= 0; i--) {
-                            if (q[i].requester === username) { idx = i; break; }
-                        }
+                        for (let i = q.length - 1; i >= 0; i--) { if (q[i].requester === username) { idx = i; break; } }
                     }
-                    if (idx === -1) {
-                        client.say(channel, `@${username} No song found to remove.`);
-                        return;
-                    }
-                    const delReq = http.request({
-                        hostname: '127.0.0.1', port: 3000, path: '/api/songs/queue/' + idx, method: 'DELETE'
-                    }, () => {});
-                    delReq.on('error', () => {});
-                    delReq.end();
+                    if (idx === -1) { client.say(channel, `@${username} No song found to remove.`); return; }
+                    const delReq = http.request({ hostname: '127.0.0.1', port: 3000, path: '/api/songs/queue/' + idx, method: 'DELETE' }, () => {});
+                    delReq.on('error', () => {}); delReq.end();
                     client.say(channel, `@${username} Removed from queue.`);
                 } catch(e) {}
             });
         });
-        req2.on('error', () => {});
-        req2.end();
+        req2.on('error', () => {}); req2.end();
+        return;
+    }
+
+    // !so
+    if (msgLower.startsWith('!so ') || msgLower.startsWith('!shoutout ')) {
+        if (defaults['!so'] === false) return;
+        const cd = defaults['!so_cd'] ?? 5;
+        if (isOnCooldown(username, '!so', cd)) return;
+        setCooldown(username, '!so');
+        const target = msgLower.split(' ')[1];
+        client.say(channel, `🔥 Go check out ${target} over at twitch.tv/${target} !`);
         return;
     }
 

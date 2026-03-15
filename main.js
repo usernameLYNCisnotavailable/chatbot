@@ -17,9 +17,10 @@ let textWin = null;
 let textWinMode = 'desktop';
 let textOverlayClients = []; // SSE clients
 let songWin = null;
-let songQueue = []; // { videoId, title, requester, addedAt }
-let songCurrent = null; // currently playing song
-let songClients = []; // SSE clients for song-player.html
+let songQueue = [];
+let songCurrent = null;
+
+app.commandLine.appendSwitch('max-connections-per-host', '20');
 
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -1212,6 +1213,19 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
         res.json({ ok: true });
     });
 
+    // ---- PRESETS ----
+    server.get('/api/presets', (req, res) => {
+        const p = getDataPath('presets.json');
+        try { res.json(JSON.parse(fs.readFileSync(p, 'utf8'))); }
+        catch(e) { res.json({}); }
+    });
+    server.post('/api/presets', (req, res) => {
+        try {
+            fs.writeFileSync(getDataPath('presets.json'), JSON.stringify(req.body, null, 2));
+            res.json({ ok: true });
+        } catch(e) { res.json({ ok: false, error: e.message }); }
+    });
+
     // ---- ROUTES_OVERLAY ----
     server.get('/api/overlay/sources', (req, res) => {
         try {
@@ -1247,20 +1261,13 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
         } catch(e) { console.error('[overlay] launch error:', e.message); }
     }
 
-    // ---- ROUTES_SONGS ----
+    // ---- SONG ROUTES ----
     function launchSongPlayer() {
         if (songWin && !songWin.isDestroyed()) return;
         songWin = new BrowserWindow({
-            width: 320,
-            height: 500,
-            minWidth: 260,
-            minHeight: 300,
-            frame: false,
-            transparent: false,
-            resizable: true,
-            skipTaskbar: false,
-            title: 'Song Requests',
-            backgroundColor: '#0e0e10',
+            width: 320, height: 500, minWidth: 260, minHeight: 300,
+            frame: false, transparent: false, resizable: true, skipTaskbar: false,
+            title: 'Song Requests', backgroundColor: '#0e0e10',
             webPreferences: { nodeIntegration: false, contextIsolation: true }
         });
         songWin.loadURL('http://localhost:3000/song-player.html');
@@ -1271,26 +1278,9 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
         songWin.on('closed', () => { songWin = null; });
     }
 
-    function broadcastSongCmd(data) {
-        const payload = `data: ${JSON.stringify(data)}\n\n`;
-        songClients.forEach(c => c.write(payload));
-    }
-
-    function extractYouTubeId(url) {
-        const patterns = [
-            /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]{11})/,
-            /^([A-Za-z0-9_-]{11})$/
-        ];
-        for (const p of patterns) {
-            const m = url.match(p);
-            if (m) return m[1];
-        }
-        return null;
-    }
-
     async function fetchYouTubeTitle(videoId) {
         try {
-            const resp = await axios.get(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`);
+            const resp = await axios.get(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`, { timeout: 4000 });
             return resp.data.title || videoId;
         } catch(e) { return videoId; }
     }
@@ -1299,21 +1289,7 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
         if (songCurrent) return;
         if (!songQueue.length) return;
         songCurrent = songQueue.shift();
-        broadcastSongCmd({ cmd: 'PLAY', ...songCurrent });
-        broadcastSongCmd({ cmd: 'QUEUE', queue: songQueue });
     }
-
-    server.get('/api/songs/stream', (req, res) => {
-        res.setHeader('Content-Type', 'text/event-stream');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.setHeader('Connection', 'keep-alive');
-        res.flushHeaders();
-        songClients.push(res);
-        req.on('close', () => {
-            const i = songClients.indexOf(res);
-            if (i !== -1) songClients.splice(i, 1);
-        });
-    });
 
     server.get('/api/songs/queue', (req, res) => {
         res.json({ current: songCurrent, queue: songQueue });
@@ -1326,7 +1302,6 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
             const title = await fetchYouTubeTitle(videoId);
             const song = { videoId, title, requester, addedAt: Date.now() };
             songQueue.push(song);
-            broadcastSongCmd({ cmd: 'QUEUE', queue: songQueue });
             if (!songCurrent) playNextSong();
             res.json({ ok: true, title, position: songCurrent ? songQueue.length : 0 });
         } catch(e) { res.json({ ok: false, error: e.message }); }
@@ -1334,7 +1309,6 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
 
     server.post('/api/songs/skip', (req, res) => {
         songCurrent = null;
-        broadcastSongCmd({ cmd: 'SKIP' });
         setTimeout(playNextSong, 500);
         res.json({ ok: true });
     });
@@ -1347,17 +1321,12 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
 
     server.delete('/api/songs/queue/:index', (req, res) => {
         const idx = parseInt(req.params.index);
-        if (idx >= 0 && idx < songQueue.length) {
-            songQueue.splice(idx, 1);
-            broadcastSongCmd({ cmd: 'QUEUE', queue: songQueue });
-        }
+        if (idx >= 0 && idx < songQueue.length) songQueue.splice(idx, 1);
         res.json({ ok: true });
     });
 
     server.post('/api/songs/clear', (req, res) => {
-        songQueue = [];
-        songCurrent = null;
-        broadcastSongCmd({ cmd: 'CLEAR' });
+        songQueue = []; songCurrent = null;
         res.json({ ok: true });
     });
 
@@ -1381,7 +1350,7 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
         if (!overlayProcess) launchOverlay('desktop');
         launchVideoOverlay('desktop');
         launchTextOverlay('desktop');
-        // launchSongPlayer(); // disabled until song-player.html is in dashboard/
+        launchSongPlayer();
     }, 3000);
 
     server.get('/api/overlay/status', (req, res) => { res.json({ running: !!overlayProcess, mode: overlayCurrentMode }); });
@@ -1428,13 +1397,19 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
     // Trigger overlay sources assigned to a chat command
     server.post('/api/overlay/fire-command', async (req, res) => {
         try {
-            const { command } = req.body;
+            const { command, args } = req.body;
             if (!command) return res.json({ ok: false });
             const p = getDataPath('overlay-sources.json');
             if (!fs.existsSync(p)) return res.json({ ok: true, triggered: 0 });
             const sources = JSON.parse(fs.readFileSync(p, 'utf8'));
             const matches = sources.filter(s => s.assignedCommand === command);
             if (!matches.length) return res.json({ ok: true, triggered: 0 });
+
+            // Resolve text — if src.text is '{message}', use user args instead
+            function resolveText(src) {
+                if (src.text === '{message}') return (args || '').trim() || src.text;
+                return src.text;
+            }
 
             const overlayCmdPath = getDataPath('overlay-cmd.txt');
             const overlayCmdTmp = getDataPath('overlay-cmd.tmp');
@@ -1447,25 +1422,43 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
                 const hasImage = src.type === 'image' || src.type === 'image+sound';
                 const hasSound = src.type === 'sound' || src.type === 'image+sound' || src.type === 'video+sound';
                 const hasVideo = src.type === 'video' || src.type === 'video+sound';
-                const hasText  = src.type === 'text';
+                const hasText  = src.type === 'text' || !!(src.speak && src.text);
                 const isGif = hasImage && src.path && src.path.toLowerCase().endsWith('.gif');
 
                 if (hasText && textWin && !textWin.isDestroyed()) {
-                    broadcastTextCmd({ cmd: 'ADDTEXT', id: src.id, text: src.text, x: src.x || 100, y: src.y || 100,
-                        font: src.font, size: src.fontSize, color: src.color, bold: src.bold, italic: src.italic,
-                        shadow: src.shadow, animation: src.animation, animDuration: src.animDuration, maxW: src.maxW });
+                    const clearMediaId = (src.clearWithTTS && (hasImage || hasVideo)) ? src.id : null;
+                    const clearMediaKind = clearMediaId ? (hasImage ? 'image' : 'video') : null;
+                    broadcastTextCmd({ cmd: 'ADDTEXT', id: src.id, text: resolveText(src),
+                        x: src.x || 100, y: src.y || 100,
+                        font: src.font, size: src.fontSize, color: src.color,
+                        bold: src.bold, italic: src.italic, shadow: src.shadow,
+                        animation: src.animation, animDuration: src.animDuration, maxW: src.maxW, maxH: src.maxH || 0,
+                        speak: src.speak || false, voice: src.voice || null,
+                        ttsRate: src.ttsRate || 1, ttsPitch: src.ttsPitch || 1, ttsVolume: src.ttsVolume ?? 1,
+                        clearMediaId, clearMediaKind });
                     const textSecs = src.displaySeconds || 0;
-                    if (textSecs > 0) {
+                    if (textSecs > 0 && !src.speak) {
                         setTimeout(() => broadcastTextCmd({ cmd: 'CLEARTEXT', id: src.id }), textSecs * 1000);
                     }
                 }
 
-                if (hasImage && overlayProcess) {
-                    const loops = isGif ? (hasSound ? 0 : (src.gifLoops || 1)) : 1;
-                    writeOverlayCmd('LOAD ' + src.id + ' ' + loops + ' ' + src.path + '\n');
-                    if (!hasSound && !isGif && src.displaySeconds > 0) {
-                        const ms = src.displaySeconds * 1000;
-                        setTimeout(() => writeOverlayCmd('CLEAR ' + src.id + '\n'), ms);
+                if (hasImage) {
+                    const hasPositionData = src.mediaX !== undefined || src.mediaY !== undefined;
+                    if (hasPositionData && videoWin && !videoWin.isDestroyed()) {
+                        // Use video overlay PLAYIMG — supports position, size, clearWithTTS
+                        const loops = src.clearWithTTS ? 0 : (isGif ? (src.gifLoops || 0) : 0);
+                        const displaySeconds = src.clearWithTTS ? 0 : (src.displaySeconds || 5);
+                        broadcastVideoCmd({ cmd: 'PLAYIMG', id: src.id, path: src.path, loops, displaySeconds,
+                            x: src.mediaX || 0, y: src.mediaY || 0, w: src.mediaW || 960, h: src.mediaH || 540,
+                            chromaKey: src.chromaKey || false, chromaColor: src.chromaColor || '#00ff00', chromaThreshold: src.chromaThreshold ?? 40 });
+                    } else if (overlayProcess) {
+                        // Legacy C++ overlay path
+                        const loops = isGif ? (hasSound ? 0 : (src.gifLoops || 1)) : 1;
+                        writeOverlayCmd('LOAD ' + src.id + ' ' + loops + ' ' + src.path + '\n');
+                        if (!hasSound && !isGif && src.displaySeconds > 0) {
+                            const ms = src.displaySeconds * 1000;
+                            setTimeout(() => writeOverlayCmd('CLEAR ' + src.id + '\n'), ms);
+                        }
                     }
                 }
 
@@ -1979,7 +1972,7 @@ Write-Output $sb.ToString().Trim()
                 broadcastTextCmd({ cmd: 'ADDTEXT', id: src.id, text: src.text,
                     x: src.x || 100, y: src.y || 100, font: src.font, size: src.fontSize, color: src.color,
                     bold: src.bold, italic: src.italic, shadow: src.shadow, animation: src.animation,
-                    animDuration: src.animDuration, maxW: src.maxW,
+                    animDuration: src.animDuration, maxW: src.maxW, maxH: src.maxH || 0,
                     speak: src.speak || false, voice: src.voice || null,
                     ttsRate: src.ttsRate || 1, ttsPitch: src.ttsPitch || 1, ttsVolume: src.ttsVolume ?? 1,
                     clearMediaId, clearMediaKind });
@@ -2025,6 +2018,7 @@ function createWindow() {
         if (chatWin && !chatWin.isDestroyed()) chatWin.destroy();
         if (modWin && !modWin.isDestroyed()) modWin.destroy();
         if (videoWin && !videoWin.isDestroyed()) videoWin.destroy();
+        if (songWin && !songWin.isDestroyed()) songWin.destroy();
         mainWindow = null;
     });
 }

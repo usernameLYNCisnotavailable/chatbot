@@ -439,6 +439,41 @@
   /* Misc overrides */
   input, select, textarea, button { font-family: 'Inter', sans-serif; }
   [style*="Syne"], .cmd-title { font-family: 'Inter', sans-serif !important; }
+  /* ---- Preset cards ---- */
+  .preset-card { position:relative;background:rgba(var(--card-color),0.06);border:1px solid rgba(var(--card-color),0.2);border-radius:16px;padding:18px 16px 14px;display:flex;flex-direction:column;gap:6px;transition:all 0.2s cubic-bezier(0.4,0,0.2,1);overflow:hidden; }
+  .preset-card::before { content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(var(--card-color),0.6),transparent); }
+  .preset-card:hover { background:rgba(var(--card-color),0.1);border-color:rgba(var(--card-color),0.4);transform:translateY(-3px);box-shadow:0 12px 40px var(--card-glow); }
+  .preset-icon { font-size:2rem;margin-bottom:4px; }
+  .preset-name { font-size:14px;font-weight:700;color:#fff;letter-spacing:-0.2px; }
+  .preset-desc { font-size:11px;color:rgba(255,255,255,0.38);line-height:1.5;flex:1; }
+  .preset-status { font-size:10px;font-weight:600;letter-spacing:0.5px;color:rgba(var(--card-color),0.5);margin-top:4px; }
+  .preset-status.configured { color:rgb(var(--card-color)); }
+  .preset-status.configured::before { content:'✓ '; }
+  .preset-btn { margin-top:10px;padding:8px 14px;background:rgba(var(--card-color),0.12);border:1px solid rgba(var(--card-color),0.28);border-radius:20px;color:rgb(var(--card-color));font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s;font-family:'Inter',sans-serif;width:100%; }
+  .preset-btn:hover { background:rgba(var(--card-color),0.25);border-color:rgba(var(--card-color),0.5); }
+  /* Wizard */
+  .wiz-step { min-width:100%;width:100%;padding:24px 24px 8px;display:flex;flex-direction:column;gap:16px;box-sizing:border-box;flex-shrink:0;overflow-y:auto;overflow-x:hidden;height:100%; }
+  .wiz-label { font-size:10px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:rgba(255,255,255,0.28);display:block;margin-bottom:7px; }
+  .wiz-input { width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:#fff;font-family:'Inter',sans-serif;font-size:15px;font-weight:500;padding:12px 16px;outline:none;transition:border-color 0.2s,background 0.2s; }
+  .wiz-input:focus { border-color:rgba(var(--wiz-color,147,71,255),0.6);background:rgba(255,255,255,0.08); }
+  .wiz-input::placeholder { color:rgba(255,255,255,0.18); }
+  .wiz-input option,.wiz-input optgroup { background:#1c1c1e;color:#fff; }
+  .wiz-file-row { display:flex;gap:10px; }
+  .wiz-browse { padding:12px 16px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:rgba(255,255,255,0.5);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:'Inter',sans-serif;transition:all 0.15s;flex-shrink:0; }
+  .wiz-browse:hover { background:rgba(255,255,255,0.1);color:#fff; }
+  .wiz-toggle-row { display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:14px 18px;cursor:pointer;transition:background 0.15s; }
+  .wiz-toggle-row:hover { background:rgba(255,255,255,0.07); }
+  .wiz-toggle-title { font-size:13px;font-weight:600;color:rgba(255,255,255,0.85); }
+  .wiz-toggle-sub { font-size:11px;color:rgba(255,255,255,0.3);margin-top:2px; }
+  .wiz-toggle { position:relative;width:44px;height:26px;flex-shrink:0; }
+  .wiz-toggle input { opacity:0;width:0;height:0; }
+  .wiz-toggle-slider { position:absolute;inset:0;background:rgba(255,255,255,0.1);border-radius:13px;cursor:pointer;transition:background 0.2s;border:1px solid rgba(255,255,255,0.1); }
+  .wiz-toggle-slider::before { content:'';position:absolute;width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,0.4);left:3px;top:3px;transition:transform 0.2s,background 0.2s; }
+  .wiz-toggle input:checked + .wiz-toggle-slider { background:rgb(var(--wiz-color,147,71,255));border-color:rgb(var(--wiz-color,147,71,255)); }
+  .wiz-toggle input:checked + .wiz-toggle-slider::before { transform:translateX(18px);background:#fff; }
+  @keyframes wiz-modal-in { from{opacity:0;transform:scale(0.96) translateY(10px)} to{opacity:1;transform:scale(1) translateY(0)} }
+  @keyframes modal-in { from{opacity:0;transform:scale(0.97) translateY(6px)} to{opacity:1;transform:scale(1) translateY(0)} }
+
   @keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
 </style>
 </head>
@@ -509,8 +544,8 @@
 
     <!-- LOYALTY -->
     <div class="nav-section">Loyalty</div>
-    <div class="nav-item" id="nav-economy" onclick="showPage('economy');loadEconomy();">
-      Economy
+    <div class="nav-item" id="nav-presets" onclick="showPage('presets')">
+      <span class="nav-icon">⚡</span> Presets
     </div>
 
     <!-- TOOLS -->
@@ -847,23 +882,92 @@
 
 
 <!-- ECONOMY PAGE -->
-<div class="page" id="page-economy">
+<div class="page" id="page-presets">
   <div class="cmd-page-wrap">
     <div class="cmd-topbar">
       <div class="cmd-title-block">
-        <div class="cmd-title">Economy</div>
-        <div class="cmd-sub">View and manage viewer balances</div>
+        <div class="cmd-title">Presets</div>
+        <div class="cmd-sub">Step-by-step setup wizards — no overlay knowledge needed</div>
       </div>
-      <button class="btn btn-green" style="padding:5px 14px;font-size:0.6rem;" onclick="loadEconomy()">↻ Refresh</button>
     </div>
-    <div style="padding:0 28px;display:flex;flex-direction:column;flex:1;overflow-y:auto;">
-      <!-- Search row -->
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);flex-shrink:0;">
-        <div style="font-size:0.6rem;color:var(--muted-2);letter-spacing:2px;text-transform:uppercase;">Viewer Balances</div>
-        <input class="form-input" type="text" id="economySearch" placeholder="Search username..." style="margin-bottom:0;width:220px;padding:6px 12px;font-size:0.65rem;" oninput="filterEconomy(this.value)" />
+    <div style="padding:20px 24px;flex:1;overflow-y:auto;">
+      <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.2);margin-bottom:14px;">Overlay Presets</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-bottom:26px;">
+        <div class="preset-card" id="preset-ttsgif" style="--card-color:99,102,241;--card-glow:rgba(99,102,241,0.25);"><div class="preset-icon">🎬</div><div class="preset-name">TTS + GIF</div><div class="preset-desc">Chat command plays a GIF while the bot speaks a message</div><div class="preset-status" id="preset-ttsgif-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('ttsgif')">Set Up</button></div>
+        <div class="preset-card" id="preset-tts" style="--card-color:147,71,255;--card-glow:rgba(147,71,255,0.25);"><div class="preset-icon">🔊</div><div class="preset-name">TTS Alert</div><div class="preset-desc">Chat command speaks a custom message aloud via overlay TTS</div><div class="preset-status" id="preset-tts-status">Not configured</div><button class="preset-btn" onclick="showToast('Coming soon')">Set Up</button></div>
+        <div class="preset-card" id="preset-greenscreen" style="--card-color:0,200,83;--card-glow:rgba(0,200,83,0.25);"><div class="preset-icon">💚</div><div class="preset-name">Green Screen</div><div class="preset-desc">Chroma key overlay — chat command triggers a green screen GIF or video</div><div class="preset-status" id="preset-greenscreen-status">Not configured</div><button class="preset-btn" onclick="showToast('Coming soon')">Set Up</button></div>
+        <div class="preset-card" id="preset-imagealert" style="--card-color:249,115,22;--card-glow:rgba(249,115,22,0.25);"><div class="preset-icon">🖼</div><div class="preset-name">Image Alert</div><div class="preset-desc">Chat command shows an image on stream for a set duration</div><div class="preset-status" id="preset-imagealert-status">Not configured</div><button class="preset-btn" onclick="showToast('Coming soon')">Set Up</button></div>
+        <div class="preset-card" id="preset-soundalert" style="--card-color:234,179,8;--card-glow:rgba(234,179,8,0.25);"><div class="preset-icon">🎵</div><div class="preset-name">Sound Alert</div><div class="preset-desc">Chat command plays a sound effect with no image needed</div><div class="preset-status" id="preset-soundalert-status">Not configured</div><button class="preset-btn" onclick="showToast('Coming soon')">Set Up</button></div>
+        <div class="preset-card" id="preset-videoalert" style="--card-color:236,72,153;--card-glow:rgba(236,72,153,0.25);"><div class="preset-icon">📹</div><div class="preset-name">Video Alert</div><div class="preset-desc">Chat command plays a video clip directly on your stream</div><div class="preset-status" id="preset-videoalert-status">Not configured</div><button class="preset-btn" onclick="showToast('Coming soon')">Set Up</button></div>
       </div>
-      <div id="economyList" style="display:flex;flex-direction:column;gap:0;">
-        <div class="empty" style="padding:20px 0;">Loading...</div>
+      <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.2);margin-bottom:14px;">Chat & Stream Tools</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;">
+        <div class="preset-card" id="preset-autoso" style="--card-color:244,63,94;--card-glow:rgba(244,63,94,0.25);"><div class="preset-icon">📣</div><div class="preset-name">Auto Shoutout</div><div class="preset-desc">Automatically shouts out raiders and returning streamers in chat</div><div class="preset-status" id="preset-autoso-status">Not configured</div><button class="preset-btn" onclick="showToast('Coming soon')">Set Up</button></div>
+        <div class="preset-card" id="preset-clip" style="--card-color:239,68,68;--card-glow:rgba(239,68,68,0.25);"><div class="preset-icon">✂️</div><div class="preset-name">Clip Command</div><div class="preset-desc">!clip creates a Twitch clip and posts the link in chat automatically</div><div class="preset-status" id="preset-clip-status">Not configured</div><button class="preset-btn" onclick="showToast('Coming soon')">Set Up</button></div>
+        <div class="preset-card" id="preset-hypetext" style="--card-color:20,184,166;--card-glow:rgba(20,184,166,0.25);"><div class="preset-icon">⚡</div><div class="preset-name">Hype Text</div><div class="preset-desc">Animated text overlay that pops up when chat uses a command</div><div class="preset-status" id="preset-hypetext-status">Not configured</div><button class="preset-btn" onclick="showToast('Coming soon')">Set Up</button></div>
+        <div class="preset-card" id="preset-hydrate" style="--card-color:56,189,248;--card-glow:rgba(56,189,248,0.25);"><div class="preset-icon">💧</div><div class="preset-name">Hydration Alert</div><div class="preset-desc">Drink water reminder — image + sound triggered by chat command</div><div class="preset-status" id="preset-hydrate-status">Not configured</div><button class="preset-btn" onclick="showToast('Coming soon')">Set Up</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- WIZARD MODAL -->
+<div id="wizardOverlay" style="display:none;position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,0.88);backdrop-filter:blur(16px);align-items:center;justify-content:center;">
+  <div id="wizardBox" style="width:100%;max-width:560px;height:90vh;background:#131316;border:1px solid rgba(255,255,255,0.1);border-radius:24px;box-shadow:0 40px 120px rgba(0,0,0,0.7);display:flex;flex-direction:column;animation:wiz-modal-in 0.25s cubic-bezier(0.4,0,0.2,1);">
+    <div style="padding:22px 24px 0;display:flex;align-items:center;gap:14px;flex-shrink:0;border-radius:24px 24px 0 0;background:#131316;">
+      <div id="wizHeaderIcon" style="font-size:1.8rem;width:48px;height:48px;display:flex;align-items:center;justify-content:center;border-radius:14px;flex-shrink:0;"></div>
+      <div style="flex:1;min-width:0;"><div id="wizHeaderTitle" style="font-size:17px;font-weight:700;color:#fff;"></div><div id="wizHeaderSub" style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:2px;"></div></div>
+      <button onclick="wizardClose()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:rgba(255,255,255,0.35);font-size:15px;width:30px;height:30px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;" onmouseover="this.style.background='rgba(235,4,0,0.15)';this.style.color='rgba(255,100,100,0.8)'" onmouseout="this.style.background='rgba(255,255,255,0.06)';this.style.color='rgba(255,255,255,0.35)'">✕</button>
+    </div>
+    <div id="wizDots" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:14px 24px 0;flex-shrink:0;"></div>
+    <div id="wizViewport" style="flex:1;overflow:hidden;min-height:0;position:relative;">
+      <div id="wizSlides" style="display:flex;transition:transform 0.4s cubic-bezier(0.4,0,0.2,1);align-items:flex-start;height:100%;"></div>
+    </div>
+    <div style="padding:16px 24px 22px;display:flex;align-items:center;gap:10px;flex-shrink:0;border-top:1px solid rgba(255,255,255,0.06);border-radius:0 0 24px 24px;background:#131316;">
+      <button id="wizBackBtn" onclick="wizPrev()" style="display:none;padding:10px 20px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:rgba(255,255,255,0.5);font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.09)';this.style.color='#fff'" onmouseout="this.style.background='rgba(255,255,255,0.05)';this.style.color='rgba(255,255,255,0.5)'">← Back</button>
+      <div style="flex:1;"></div>
+      <button id="wizNextBtn" onclick="wizNext()" style="padding:10px 28px;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;color:#fff;transition:all 0.2s;"></button>
+    </div>
+  </div>
+</div>
+<input type="hidden" id="wizMediaX" value="0"><input type="hidden" id="wizMediaY" value="0"><input type="hidden" id="wizMediaW" value="960"><input type="hidden" id="wizMediaH" value="540"><input type="hidden" id="wizTextX" value="100"><input type="hidden" id="wizTextY" value="400"><input type="hidden" id="wizTextMaxW" value="800"><input type="hidden" id="wizTextMaxH" value="200"><input type="hidden" id="wizTextSize" value="48">
+
+<!-- SONG REQUESTS PAGE -->
+<div class="page" id="page-songs">
+  <div class="cmd-page-wrap">
+    <div class="cmd-topbar">
+      <div class="cmd-title-block">
+        <div class="cmd-title">Song Requests</div>
+        <div class="cmd-sub">Let viewers queue YouTube tracks with !sr</div>
+      </div>
+    </div>
+    <div style="padding:28px;flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:20px;">
+      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:20px;backdrop-filter:blur(20px);">
+        <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:12px;">Now Playing</div>
+        <div id="dash-np-title" style="font-size:17px;font-weight:600;color:rgba(255,255,255,0.25);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px;">Nothing playing</div>
+        <div id="dash-np-requester" style="font-size:12px;color:rgba(255,255,255,0.35);margin-bottom:16px;"></div>
+        <div style="position:relative;height:2px;background:rgba(255,255,255,0.1);border-radius:1px;margin-bottom:18px;overflow:hidden;"><div id="dash-progress-bar" style="position:absolute;top:0;left:0;height:100%;width:0%;background:rgba(255,255,255,0.7);border-radius:1px;transition:width 1s linear;"></div></div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button onclick="fetch('/api/songs/skip',{method:'POST'}).then(()=>_pollSongs())" style="display:flex;align-items:center;gap:6px;padding:7px 16px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:20px;color:rgba(255,255,255,0.7);font-size:13px;font-weight:500;cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.07)'">⏭ Skip</button>
+          <button onclick="if(confirm('Clear the entire queue?'))fetch('/api/songs/clear',{method:'POST'}).then(()=>_pollSongs())" style="display:flex;align-items:center;gap:6px;padding:7px 16px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:20px;color:rgba(255,255,255,0.7);font-size:13px;font-weight:500;cursor:pointer;" onmouseover="this.style.background='rgba(235,4,0,0.15)';this.style.color='rgba(255,100,100,0.9)'" onmouseout="this.style.background='rgba(255,255,255,0.07)';this.style.color='rgba(255,255,255,0.7)'">🗑 Clear</button>
+          <div style="margin-left:auto;"><button onclick="fetch('/api/songs/open').catch(()=>{})" style="display:flex;align-items:center;gap:6px;padding:7px 18px;background:rgba(145,71,255,0.2);border:1px solid rgba(145,71,255,0.35);border-radius:20px;color:rgba(180,130,255,0.95);font-size:13px;font-weight:600;cursor:pointer;" onmouseover="this.style.background='rgba(145,71,255,0.3)'" onmouseout="this.style.background='rgba(145,71,255,0.2)'">🎵 Open Playlist</button></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+        <span style="font-size:11px;color:rgba(255,255,255,0.25);margin-right:2px;">Commands:</span>
+        <code style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);padding:2px 8px;border-radius:6px;font-size:11px;color:rgba(255,255,255,0.5);">!sr &lt;song or url&gt;</code>
+        <code style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);padding:2px 8px;border-radius:6px;font-size:11px;color:rgba(255,255,255,0.5);">!skip</code>
+        <code style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);padding:2px 8px;border-radius:6px;font-size:11px;color:rgba(255,255,255,0.5);">!queue</code>
+        <code style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);padding:2px 8px;border-radius:6px;font-size:11px;color:rgba(255,255,255,0.5);">!currentsong</code>
+        <code style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);padding:2px 8px;border-radius:6px;font-size:11px;color:rgba(255,255,255,0.5);">!removesong</code>
+      </div>
+      <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:16px;overflow:hidden;">
+        <div style="padding:12px 18px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.3);">Up Next</span>
+          <span id="dash-queue-count" style="font-size:11px;color:rgba(145,71,255,0.8);font-weight:600;"></span>
+        </div>
+        <div id="dash-queue-list"></div>
+        <div id="dash-queue-empty" style="padding:28px;text-align:center;font-size:12px;color:rgba(255,255,255,0.2);">Queue is empty — viewers can use <code style="background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;">!sr &lt;song name or youtube url&gt;</code></div>
       </div>
     </div>
   </div>
@@ -1444,7 +1548,16 @@
             </label>
             <button type="button" onclick="overlayExpandCanvas()" style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;padding:2px 6px;border-radius:4px;border:1px solid var(--border);" title="Open large preview">&#x26F6; Expand</button>
           </div>
-          <div id="overlaySharedCanvas" style="position:relative;width:100%;background:#111;border:1px solid var(--border);border-radius:6px;overflow:hidden;user-select:none;">
+          <!-- Canvas + font size slider -->
+          <div style="display:flex;align-items:stretch;gap:8px;">
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;flex-shrink:0;padding:2px 0;">
+              <span style="font-size:8px;color:var(--muted-2);letter-spacing:0.5px;">BIG</span>
+              <input type="range" id="overlayFontSlider" min="8" max="200" value="48" orient="vertical"
+                style="-webkit-appearance:slider-vertical;writing-mode:vertical-lr;direction:rtl;width:20px;height:120px;cursor:pointer;accent-color:var(--accent);"
+                oninput="overlayFontSliderChange(this.value)">
+              <span style="font-size:8px;color:var(--muted-2);letter-spacing:0.5px;">SML</span>
+            </div>
+          <div id="overlaySharedCanvas" style="position:relative;flex:1;background:#111;border:1px solid var(--border);border-radius:6px;overflow:hidden;user-select:none;">
             <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 10%,rgba(255,255,255,0.02) 10%,rgba(255,255,255,0.02) 10.5%),repeating-linear-gradient(90deg,transparent,transparent 17.7%,rgba(255,255,255,0.02) 17.7%,rgba(255,255,255,0.02) 18.2%);pointer-events:none;"></div>
             <!-- Media box (image / video) -->
             <div id="overlayMediaBox" style="display:none;position:absolute;left:10%;top:10%;width:40%;height:40%;cursor:grab;border:2px dashed rgba(145,71,255,0.7);border-radius:4px;background:rgba(145,71,255,0.08);align-items:center;justify-content:center;min-width:20px;min-height:12px;box-sizing:border-box;">
@@ -1452,11 +1565,13 @@
               <div id="overlayMediaResizeHandle" style="position:absolute;bottom:-5px;right:-5px;width:12px;height:12px;background:var(--accent);border-radius:3px;cursor:se-resize;z-index:2;"></div>
             </div>
             <!-- Text box -->
-            <div id="overlayTextBox" style="display:none;position:absolute;left:5.2%;top:37%;cursor:grab;min-width:32px;min-height:12px;">
-              <div id="overlayTextPreview" style="font-family:Arial;font-size:14px;color:#fff;font-weight:normal;font-style:normal;text-shadow:1px 1px 4px rgba(0,0,0,0.8);white-space:pre-wrap;word-break:break-word;line-height:1.25;border:1px dashed rgba(145,71,255,0.6);border-radius:3px;pointer-events:none;box-sizing:border-box;width:100%;">Text preview</div>
+            <div id="overlayTextBox" style="display:none;position:absolute;left:5.2%;top:37%;cursor:grab;min-width:32px;min-height:12px;overflow:hidden;border:1px dashed rgba(145,71,255,0.55);border-radius:3px;box-sizing:border-box;">
+              <div id="overlayTextPreview" style="font-family:Arial;font-size:14px;color:#fff;font-weight:normal;font-style:normal;text-shadow:1px 1px 4px rgba(0,0,0,0.8);white-space:pre-wrap;word-break:break-word;line-height:1.25;pointer-events:none;box-sizing:border-box;width:100%;overflow:hidden;padding:2px 4px;">Text preview</div>
               <div id="overlayTextResizeHandle" style="position:absolute;bottom:-5px;right:-5px;width:14px;height:14px;background:var(--accent);border-radius:3px;cursor:se-resize;z-index:2;"></div>
             </div>
           </div>
+          </div>
+          <input type="hidden" id="overlayTextMaxH" value="200">
           <!-- Shared numeric grid — content changes based on type -->
           <div id="overlayMediaCoordGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">
             <div><label style="font-size:10px;color:var(--muted-2);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px;">X</label><input type="number" id="overlayMediaX" class="input" value="0" min="0" step="1" style="width:100%;font-size:12px;padding:5px 8px;" oninput="overlayMediaCoordsChanged()"></div>
@@ -1561,8 +1676,11 @@ async function overlayLoadSources() {
 // Listen for video done events (video finished all loops)
 let videoOverlayReady = false;
 
+let _videoSSE = null;
 function overlayStartVideoSSE() {
+  if (_videoSSE) { _videoSSE.close(); _videoSSE = null; }
   const es = new EventSource('/api/video-overlay/events');
+  _videoSSE = es;
   es.onmessage = (e) => {
     try {
       const msg = JSON.parse(e.data);
@@ -2570,6 +2688,13 @@ function overlayTextSizeAltChanged() {
   overlayTextPreviewUpdate();
 }
 
+function overlayFontSliderChange(val) {
+  document.getElementById('overlayTextSize').value = val;
+  const altEl = document.getElementById('overlayTextSizeAlt');
+  if (altEl) altEl.value = val;
+  overlayTextPreviewUpdate();
+}
+
 // ---- Shared canvas constants ----
 const SCREEN_W = 1920, SCREEN_H = 1080;
 const MEDIA_SCREEN_W = 1920, MEDIA_SCREEN_H = 1080;
@@ -2852,67 +2977,84 @@ function overlayTextPreviewUpdate() {
 
   const cw = canvas.offsetWidth  || 1;
   const ch = canvas.offsetHeight || 1;
-  // Use canvas height as the reference — same axis the text coords use on screen
   const scaleX = cw / SCREEN_W;
   const scaleY = ch / SCREEN_H;
 
-  // Position — map screen coords to canvas coords
+  // Position
   const x = parseFloat(document.getElementById('overlayTextX').value) || 0;
   const y = parseFloat(document.getElementById('overlayTextY').value) || 0;
   box.style.left = (x * scaleX) + 'px';
   box.style.top  = (y * scaleY) + 'px';
 
-  // Width — max width scaled by X axis
+  // Width
   const maxW = parseFloat(document.getElementById('overlayTextMaxW').value) || 600;
   box.style.width = Math.max(20, maxW * scaleX) + 'px';
 
-  // Font size — scale proportionally to canvas height (same as real screen)
-  const fontSize   = parseFloat(document.getElementById('overlayTextSize').value) || 48;
-  const scaledFont = Math.max(4, fontSize * scaleY);
-  const font    = overlayTextGetFont();
-  const color   = document.getElementById('overlayTextColor').value;
-  const bold    = document.getElementById('overlayTextBold').checked;
-  const italic  = document.getElementById('overlayTextItalic').checked;
-  const shadow  = document.getElementById('overlayTextShadow').checked;
-  const text    = document.getElementById('overlayTextContent').value || 'Text preview';
+  // Height boundary
+  const maxH = parseFloat(document.getElementById('overlayTextMaxH').value) || 200;
+  const boxH = Math.max(12, maxH * scaleY);
+  box.style.height = boxH + 'px';
+
+  // Font + styles
+  const fontSize = parseFloat(document.getElementById('overlayTextSize').value) || 48;
+  const font   = overlayTextGetFont();
+  const color  = document.getElementById('overlayTextColor').value;
+  const bold   = document.getElementById('overlayTextBold').checked;
+  const italic = document.getElementById('overlayTextItalic').checked;
+  const shadow = document.getElementById('overlayTextShadow').checked;
+  const text   = document.getElementById('overlayTextContent').value || 'Text preview';
 
   preview.style.fontFamily  = font;
-  preview.style.fontSize    = scaledFont + 'px';
   preview.style.color       = color;
   preview.style.fontWeight  = bold   ? 'bold'   : 'normal';
   preview.style.fontStyle   = italic ? 'italic' : 'normal';
   preview.style.textShadow  = shadow ? '1px 1px 4px rgba(0,0,0,0.85)' : 'none';
   preview.textContent = text;
 
-  // Keep below-canvas Size alt in sync
+  // Apply font size then shrink to fit box height
+  let scaledFont = Math.max(4, fontSize * scaleY);
+  preview.style.fontSize = scaledFont + 'px';
+  while (preview.scrollHeight > boxH && scaledFont > 4) {
+    scaledFont -= 0.5;
+    preview.style.fontSize = scaledFont + 'px';
+  }
+
+  // Sync slider and alt input
+  const slider = document.getElementById('overlayFontSlider');
+  if (slider && slider !== document.activeElement) slider.value = fontSize;
   const sizeAlt = document.getElementById('overlayTextSizeAlt');
   if (sizeAlt && sizeAlt !== document.activeElement) sizeAlt.value = fontSize;
 }
 
-// Scroll over canvas to resize font size
+// Scroll over canvas to resize text box height
 (function() {
   document.addEventListener('wheel', (e) => {
     const canvas = document.getElementById('overlaySharedCanvas');
-    if (!canvas || !canvas.contains(e.target) && e.target !== canvas) return;
-    // Only resize font when text type is active
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) return;
     const textBox = document.getElementById('overlayTextBox');
     if (!textBox || textBox.style.display === 'none') return;
     e.preventDefault();
-    const sizeEl    = document.getElementById('overlayTextSize');
-    const sizeAltEl = document.getElementById('overlayTextSizeAlt');
-    if (!sizeEl) return;
-    let val = parseFloat(sizeEl.value) || 48;
-    val = Math.min(300, Math.max(8, val + (e.deltaY < 0 ? 2 : -2)));
-    sizeEl.value    = val;
-    if (sizeAltEl) sizeAltEl.value = val;
-    overlayTextPreviewUpdate();
+    const ch = canvas.offsetHeight || 1;
+    const curH = textBox.offsetHeight || 20;
+    const newH = Math.max(16, Math.min(ch, curH + (e.deltaY < 0 ? 4 : -4)));
+    textBox.style.height = newH + 'px';
+    document.getElementById('overlayTextMaxH').value = Math.round((newH / ch) * SCREEN_H);
+    const preview = document.getElementById('overlayTextPreview');
+    const fontSize = parseFloat(document.getElementById('overlayTextSize').value) || 48;
+    if (preview) {
+      let scaledFont = Math.max(4, fontSize * (ch / SCREEN_H));
+      preview.style.fontSize = scaledFont + 'px';
+      while (preview.scrollHeight > newH && scaledFont > 4) { scaledFont -= 0.5; preview.style.fontSize = scaledFont + 'px'; }
+    }
   }, { passive: false });
 })();
 
 // Move + resize drag logic (text box)
 (function() {
   let mode = null;
-  let startX, startY, startLeft, startTop, startW, startFontSize;
+  let startX, startY, startLeft, startTop, startW, startH, startFontSize;
 
   function getBox()    { return document.getElementById('overlayTextBox'); }
   function getCanvas() { return document.getElementById('overlaySharedCanvas'); }
@@ -2928,6 +3070,7 @@ function overlayTextPreviewUpdate() {
       mode = 'resize';
       startX = e.clientX; startY = e.clientY;
       startW = box.offsetWidth;
+      startH = box.offsetHeight;
       startFontSize = parseFloat(document.getElementById('overlayTextSize').value) || 48;
       e.preventDefault();
     } else if (e.target === box || (box.contains(e.target) && e.target !== resize)) {
@@ -2953,16 +3096,20 @@ function overlayTextPreviewUpdate() {
       document.getElementById('overlayTextX').value = Math.round((newLeft / cw) * SCREEN_W);
       document.getElementById('overlayTextY').value = Math.round((newTop  / ch) * SCREEN_H);
     } else if (mode === 'resize') {
-      // Left/right → max width
+      // Horizontal → max width
       const newW = Math.max(40, startW + e.clientX - startX);
       box.style.width = newW + 'px';
       document.getElementById('overlayTextMaxW').value = Math.round((newW / cw) * SCREEN_W);
-      // Up/down → font size (drag down = bigger)
-      const newSize = Math.min(300, Math.max(8, Math.round(startFontSize + (e.clientY - startY) * 0.4)));
-      document.getElementById('overlayTextSize').value = newSize;
-      const altEl = document.getElementById('overlayTextSizeAlt');
-      if (altEl) altEl.value = newSize;
-      overlayTextPreviewUpdate();
+      // Vertical → max height, font auto-fits
+      const newH = Math.max(16, startH + e.clientY - startY);
+      box.style.height = newH + 'px';
+      document.getElementById('overlayTextMaxH').value = Math.round((newH / ch) * SCREEN_H);
+      const preview = document.getElementById('overlayTextPreview');
+      if (preview) {
+        let scaledFont = Math.max(4, startFontSize * (ch / SCREEN_H));
+        preview.style.fontSize = scaledFont + 'px';
+        while (preview.scrollHeight > newH && scaledFont > 4) { scaledFont -= 0.5; preview.style.fontSize = scaledFont + 'px'; }
+      }
     }
   });
 
@@ -2990,6 +3137,9 @@ function overlayTextResetFields() {
   document.getElementById('overlayTextX').value = '100';
   document.getElementById('overlayTextY').value = '100';
   document.getElementById('overlayTextMaxW').value = '600';
+  document.getElementById('overlayTextMaxH').value = '200';
+  const slider = document.getElementById('overlayFontSlider');
+  if (slider) slider.value = 48;
   document.getElementById('overlayTextDisplaySeconds').value = '5';
   // Close font accordion
   document.getElementById('overlayTextFontPanel').style.display = 'none';
@@ -3024,6 +3174,9 @@ function overlayTextPopulateFields(src) {
   document.getElementById('overlayTextX').value = src.x || 100;
   document.getElementById('overlayTextY').value = src.y || 100;
   document.getElementById('overlayTextMaxW').value = src.maxW || 600;
+  document.getElementById('overlayTextMaxH').value = src.maxH || 200;
+  const slider = document.getElementById('overlayFontSlider');
+  if (slider) slider.value = src.fontSize || 48;
   document.getElementById('overlayTextDisplaySeconds').value = src.displaySeconds !== undefined ? src.displaySeconds : 5;
   document.getElementById('overlayTextLockDuration').checked = src.lockDuration || false;
   overlayTextPreviewUpdate();
@@ -3038,7 +3191,7 @@ async function overlayTextTrigger(src) {
       x: src.x || 100, y: src.y || 100,
       font: src.font, size: src.fontSize, color: src.color,
       bold: src.bold, italic: src.italic, shadow: src.shadow,
-      animation: src.animation, animDuration: src.animDuration, maxW: src.maxW,
+      animation: src.animation, animDuration: src.animDuration, maxW: src.maxW, maxH: src.maxH || 0,
       speak: src.speak || false, voice: src.voice || null,
       ttsRate: src.ttsRate || 1, ttsPitch: src.ttsPitch || 1, ttsVolume: src.ttsVolume ?? 1,
       clearMediaId: src._clearMediaId || null,
@@ -3121,6 +3274,7 @@ async function overlayConfirmAdd() {
     x:          hasText ? (parseInt(document.getElementById('overlayTextX').value) || 100) : null,
     y:          hasText ? (parseInt(document.getElementById('overlayTextY').value) || 100) : null,
     maxW:       hasText ? (parseInt(document.getElementById('overlayTextMaxW').value) || 600) : null,
+    maxH:       hasText ? (parseInt(document.getElementById('overlayTextMaxH').value) || 200) : null,
     displaySeconds: hasText ? (parseFloat(document.getElementById('overlayTextDisplaySeconds').value) || 0) : null,
     lockDuration: hasText ? document.getElementById('overlayTextLockDuration').checked : false,
     ...(hasText ? overlayTTSRead() : { speak: false, voice: null, ttsRate: 1, ttsPitch: 1 }),
@@ -3155,7 +3309,7 @@ async function overlayTriggerSource(src) {
                          : (src.displaySeconds || 0);
     await fetch('/api/video-overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ cmd: 'PLAYIMG', id: src.id, path: src.path, loops, displaySeconds,
-        x: src.mediaX || 0, y: src.mediaY || 0, w: src.mediaW || null, h: src.mediaH || null,
+        x: src.mediaX || 0, y: src.mediaY || 0, w: src.mediaW || 400, h: src.mediaH || 300,
         chromaKey: src.chromaKey || false, chromaColor: src.chromaColor || '#00ff00', chromaThreshold: src.chromaThreshold ?? 40 }) });
   }
 
@@ -3165,7 +3319,7 @@ async function overlayTriggerSource(src) {
       body: JSON.stringify({ cmd: 'PLAYVID', id: src.id, path: src.videoPath, loops,
         videoStart: src.videoStart || 0, videoEnd: src.videoEnd || 0,
         volume: src.videoVolume ?? 1,
-        x: src.mediaX || 0, y: src.mediaY || 0, w: src.mediaW || null, h: src.mediaH || null,
+        x: src.mediaX || 0, y: src.mediaY || 0, w: src.mediaW || 400, h: src.mediaH || 300,
         chromaKey: src.chromaKey || false, chromaColor: src.chromaColor || '#00ff00', chromaThreshold: src.chromaThreshold ?? 40 }) });
   }
 
@@ -3500,6 +3654,7 @@ async function overlayConfirmEdit(id) {
     src.x           = parseInt(document.getElementById('overlayTextX').value) || 100;
     src.y           = parseInt(document.getElementById('overlayTextY').value) || 100;
     src.maxW        = parseInt(document.getElementById('overlayTextMaxW').value) || 600;
+    src.maxH        = parseInt(document.getElementById('overlayTextMaxH').value) || 200;
     src.displaySeconds = parseFloat(document.getElementById('overlayTextDisplaySeconds').value) || 0;
     src.lockDuration = document.getElementById('overlayTextLockDuration').checked;
     Object.assign(src, overlayTTSRead());
@@ -3610,60 +3765,6 @@ async function overlayConfirmEdit(id) {
         <div style="font-size:2rem;margin-bottom:12px;">💬</div>
         <div style="font-size:0.75rem;color:var(--muted);">Quotes coming soon</div>
         <div style="font-size:0.65rem;color:var(--muted-2);margin-top:6px;">!addquote "text" · !quote returns a random one</div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- SONG REQUESTS PAGE -->
-<div class="page" id="page-songs">
-  <div class="cmd-page-wrap">
-    <div class="cmd-topbar">
-      <div class="cmd-title-block">
-        <div class="cmd-title">Song Requests</div>
-        <div class="cmd-sub">Let viewers queue YouTube tracks with !sr</div>
-      </div>
-    </div>
-    <div style="padding:20px 28px;flex:1;overflow-y:auto;">
-
-      <!-- Controls row -->
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
-        <button class="btn btn-primary" onclick="fetch('/api/songs/open').catch(()=>{})">
-          🎵 Open Player
-        </button>
-        <button class="btn" style="background:var(--surface-raised);border:1px solid var(--border);color:var(--muted);" onclick="if(confirm('Clear the entire queue?'))fetch('/api/songs/clear',{method:'POST'}).then(()=>loadSongsPage())">
-          🗑 Clear Queue
-        </button>
-        <div style="margin-left:auto;font-size:11px;color:var(--muted-2);">
-          <code style="background:var(--surface-raised);padding:2px 6px;border-radius:4px;font-size:10px;">!sr</code>
-          <code style="background:var(--surface-raised);padding:2px 6px;border-radius:4px;font-size:10px;">!skip</code>
-          <code style="background:var(--surface-raised);padding:2px 6px;border-radius:4px;font-size:10px;">!queue</code>
-          <code style="background:var(--surface-raised);padding:2px 6px;border-radius:4px;font-size:10px;">!currentsong</code>
-          <code style="background:var(--surface-raised);padding:2px 6px;border-radius:4px;font-size:10px;">!removesong</code>
-        </div>
-      </div>
-
-      <!-- Now Playing card -->
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px;">
-        <div style="font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted-2);margin-bottom:8px;">Now Playing</div>
-        <div id="dash-np-title" style="font-size:14px;font-weight:600;color:var(--muted-2);">Nothing playing</div>
-        <div id="dash-np-requester" style="font-size:11px;color:var(--muted);margin-top:3px;"></div>
-        <div style="margin-top:10px;">
-          <button class="btn" style="background:var(--surface-raised);border:1px solid var(--border);color:var(--muted);font-size:11px;padding:4px 12px;"
-            onclick="fetch('/api/songs/skip',{method:'POST'}).then(()=>loadSongsPage())">⏭ Skip</button>
-        </div>
-      </div>
-
-      <!-- Queue list -->
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
-        <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
-          <span style="font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted-2);">Up Next</span>
-          <span id="dash-queue-count" style="font-size:11px;color:var(--accent);font-weight:600;"></span>
-        </div>
-        <div id="dash-queue-list"></div>
-        <div id="dash-queue-empty" style="padding:24px;text-align:center;font-size:12px;color:var(--muted-2);">
-          Queue is empty — viewers can use <code style="background:var(--surface-raised);padding:2px 6px;border-radius:4px;">!sr &lt;youtube url&gt;</code>
-        </div>
       </div>
     </div>
   </div>
@@ -3915,58 +4016,10 @@ async function overlayConfirmEdit(id) {
     if (name === 'groups') refreshGroupSelects();
     if (name === 'mod-view') loadModChannels();
     if (name === 'overlay') { overlayLoadSources(); overlayStartVideoSSE(); loadHotkeys(); }
+    if (name === 'presets') loadPresetsPage();
     if (name === 'songs') loadSongsPage();
+    if (name !== 'songs' && _songsPollInterval) { clearInterval(_songsPollInterval); _songsPollInterval = null; }
     if (name === 'actions' && inlineEditor) setTimeout(() => inlineEditor.layout(), 50);
-  }
-
-  function loadSongsPage() {
-    fetch('/api/songs/queue').then(r => r.json()).then(data => {
-      const cur = data.current;
-      const queue = data.queue || [];
-      const npTitle = document.getElementById('dash-np-title');
-      const npReq = document.getElementById('dash-np-requester');
-      if (npTitle) {
-        if (cur) {
-          npTitle.textContent = cur.title || cur.videoId;
-          npTitle.style.color = '';
-          npReq.textContent = 'requested by @' + cur.requester;
-        } else {
-          npTitle.textContent = 'Nothing playing';
-          npTitle.style.color = 'var(--muted-2)';
-          npReq.textContent = '';
-        }
-      }
-      const countEl = document.getElementById('dash-queue-count');
-      if (countEl) countEl.textContent = queue.length ? queue.length + ' song' + (queue.length !== 1 ? 's' : '') : '';
-      const listEl = document.getElementById('dash-queue-list');
-      const emptyEl = document.getElementById('dash-queue-empty');
-      if (!listEl) return;
-      if (!queue.length) {
-        listEl.innerHTML = '';
-        if (emptyEl) emptyEl.style.display = 'block';
-        return;
-      }
-      if (emptyEl) emptyEl.style.display = 'none';
-      listEl.innerHTML = queue.map((s, i) => `
-        <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid rgba(42,42,53,0.5);">
-          <span style="font-size:11px;color:var(--muted-2);min-width:16px;text-align:center;">${i+1}</span>
-          <img src="https://img.youtube.com/vi/${s.videoId}/default.jpg" style="width:40px;height:28px;border-radius:3px;object-fit:cover;background:var(--surface-raised);" onerror="this.style.display='none'">
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtmlSongs(s.title || s.videoId)}</div>
-            <div style="font-size:10px;color:var(--muted-2);margin-top:1px;">@${escHtmlSongs(s.requester)}</div>
-          </div>
-          <button onclick="removeSongFromDash(${i})" style="background:none;border:none;color:var(--muted-2);cursor:pointer;font-size:13px;padding:2px 6px;border-radius:3px;" title="Remove">✕</button>
-        </div>
-      `).join('');
-    }).catch(() => {});
-  }
-
-  function removeSongFromDash(idx) {
-    fetch('/api/songs/queue/' + idx, { method: 'DELETE' }).then(() => loadSongsPage()).catch(() => {});
-  }
-
-  function escHtmlSongs(str) {
-    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
   function toggleNavGroup(id) {
@@ -5619,6 +5672,435 @@ checkBotStatus();
       showToast('Alert deleted');
       loadAlerts();
     });
+  }
+
+  // ============================================================
+  // SONGS PAGE
+  // ============================================================
+  let _songsPollInterval = null;
+
+  function loadSongsPage() {
+    if (_songsPollInterval) { clearInterval(_songsPollInterval); _songsPollInterval = null; }
+    _pollSongs();
+    _songsPollInterval = setInterval(_pollSongs, 2000);
+  }
+
+  function _pollSongs() {
+    fetch('/api/songs/queue', { signal: AbortSignal.timeout(3000) })
+      .then(r => r.json())
+      .then(data => {
+        const cur = data.current, queue = data.queue || [];
+        const npTitle = document.getElementById('dash-np-title');
+        const npReq = document.getElementById('dash-np-requester');
+        if (npTitle) {
+          if (cur) { npTitle.textContent = cur.title || cur.videoId; npTitle.style.color = 'rgba(255,255,255,0.85)'; if (npReq) npReq.textContent = 'requested by @' + cur.requester; }
+          else { npTitle.textContent = 'Nothing playing'; npTitle.style.color = 'rgba(255,255,255,0.25)'; if (npReq) npReq.textContent = ''; }
+        }
+        const countEl = document.getElementById('dash-queue-count');
+        if (countEl) countEl.textContent = queue.length ? queue.length + ' song' + (queue.length !== 1 ? 's' : '') : '';
+        const listEl = document.getElementById('dash-queue-list');
+        const emptyEl = document.getElementById('dash-queue-empty');
+        if (!listEl) return;
+        if (!queue.length) { listEl.innerHTML = ''; if (emptyEl) emptyEl.style.display = 'block'; return; }
+        if (emptyEl) emptyEl.style.display = 'none';
+        listEl.innerHTML = queue.map((s, i) => `
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid rgba(255,255,255,0.05);">
+            <span style="font-size:11px;color:rgba(255,255,255,0.2);min-width:16px;text-align:center;">${i+1}</span>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:12px;font-weight:500;color:rgba(255,255,255,0.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_songEsc(s.title||s.videoId)}</div>
+              <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:2px;">@${_songEsc(s.requester)}</div>
+            </div>
+            <button onclick="_songRemove(${i})" style="background:none;border:none;color:rgba(255,255,255,0.2);cursor:pointer;font-size:13px;padding:2px 6px;border-radius:4px;" onmouseover="this.style.color='rgba(235,100,100,0.8)'" onmouseout="this.style.color='rgba(255,255,255,0.2)'">✕</button>
+          </div>`).join('');
+      }).catch(() => {});
+  }
+
+  function _songRemove(idx) { fetch('/api/songs/queue/'+idx,{method:'DELETE'}).then(()=>_pollSongs()).catch(()=>{}); }
+  function _songEsc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // ============================================================
+  // PRESETS + WIZARD
+  // ============================================================
+  let presetsConfig = {};
+  let _wizKey = null, _wizStep = 0, _wizSteps = [], _wizData = {}, _wizColorStr = '147,71,255';
+
+  async function loadPresetsPage() {
+    try { const r = await fetch('/api/presets'); presetsConfig = await r.json(); } catch(e) { presetsConfig = {}; }
+    _wizRenderStatuses();
+  }
+
+  function _wizRenderStatuses() {
+    ['ttsgif','tts','greenscreen','imagealert','soundalert','videoalert','autoso','clip','hypetext','hydrate'].forEach(k => {
+      const el = document.getElementById('preset-' + k + '-status');
+      const btn = document.querySelector('#preset-' + k + ' .preset-btn');
+      if (!el) return;
+      if (presetsConfig[k]) { el.textContent = presetsConfig[k].cmd || 'Configured'; el.className = 'preset-status configured'; if (btn && k === 'ttsgif') btn.textContent = 'Edit'; }
+      else { el.textContent = 'Not configured'; el.className = 'preset-status'; if (btn && k === 'ttsgif') btn.textContent = 'Set Up'; }
+    });
+  }
+
+  const _WIZ_DEFS = {
+    ttsgif: {
+      name: 'TTS + GIF', icon: '🎬', color: '99,102,241',
+      steps: [
+        { id: 'cmd', question: 'What should the command be?', hint: 'Viewers type this in chat to trigger the alert.', fields: [{ id: 'w_cmd', type: 'text', label: 'Command name', placeholder: '!hype', default: '!hype' }] },
+        { id: 'gif', question: 'Pick your GIF or image.', hint: 'This plays on screen when the command is used.', fields: [{ id: 'w_gif', type: 'file', label: 'GIF / Image file', placeholder: 'C:\\path\\to\\file.gif', accept: 'image' }] },
+        { id: 'options', question: 'How should it behave?', hint: 'The GIF toggle and fades are already set to the recommended defaults.',
+          fields: [
+            { id: 'w_clearwithtts', type: 'toggle', label: 'GIF disappears when TTS finishes', sub: 'Recommended — keeps image visible while bot speaks', default: true },
+            { id: 'w_fadein',  type: 'toggle', label: 'Fade in',  sub: '1 second fade when the GIF appears', default: true },
+            { id: 'w_fadeout', type: 'toggle', label: 'Fade out', sub: '1 second fade when the GIF disappears', default: true },
+            { id: 'w_duration', type: 'number', label: 'Manual duration in seconds (only used if GIF toggle is off)', placeholder: '5', default: '5' }
+          ]
+        },
+        { id: 'text', question: 'What should the bot say?', hint: 'Choose whether the bot speaks a fixed message or reads whatever the viewer types after the command.',
+          fields: [
+            { id: 'w_textmode', type: 'radio', label: 'Text mode', options: [
+              { value: 'user', label: 'Whatever the user types', sub: '!hype great stream → bot says "great stream"' },
+              { value: 'fixed', label: 'Fixed message', sub: 'Bot always says the same thing' }
+            ], default: 'user' },
+            { id: 'w_text', type: 'fixedtext', label: 'Fixed message', placeholder: 'HYPE! {user} is bringing the energy!', default: 'HYPE!' },
+            { id: 'w_voice', type: 'voice', label: 'TTS Voice' },
+            { id: 'w_volume', type: 'volume', label: 'TTS Volume', default: 80 }
+          ],
+          canvas: true
+        }
+      ]
+    }
+  };
+
+  function wizardOpen(key) {
+    const def = _WIZ_DEFS[key];
+    if (!def) { showToast('Wizard coming soon'); return; }
+    _wizKey = key; _wizStep = 0; _wizData = {}; _wizColorStr = def.color;
+    _wizSteps = def.steps;
+    const saved = presetsConfig[key] || {};
+    document.getElementById('wizardBox').style.setProperty('--wiz-color', def.color);
+    document.getElementById('wizardBox').dataset['w_textmode'] = saved['w_textmode'] || 'user';
+    document.getElementById('wizHeaderIcon').textContent = def.icon;
+    document.getElementById('wizHeaderIcon').style.background = `rgba(${def.color},0.15)`;
+    document.getElementById('wizHeaderTitle').textContent = def.name;
+    document.getElementById('wizHeaderSub').textContent = `${def.steps.length} steps to set up`;
+    const slidesEl = document.getElementById('wizSlides');
+    slidesEl.innerHTML = '';
+    slidesEl.style.transition = 'none';
+    slidesEl.style.transform = 'translateX(0)';
+    _wizSteps.forEach((step, i) => {
+      const slide = document.createElement('div');
+      slide.className = 'wiz-step';
+      slide.innerHTML = _wizBuildSlide(step, saved);
+      slidesEl.appendChild(slide);
+    });
+    setTimeout(() => {
+      _wizUpdateDots(); _wizUpdateFooter();
+      ['wizMediaX','wizMediaY','wizMediaW','wizMediaH','wizTextX','wizTextY','wizTextMaxW','wizTextMaxH','wizTextSize'].forEach(id => {
+        const el = document.getElementById(id);
+        const key2 = id.replace('wiz','').replace('Media','media').replace('Text','text').charAt(0).toLowerCase() + id.replace('wiz','').replace('Media','media').replace('Text','text').slice(1);
+        if (el && saved[key2] !== undefined) el.value = saved[key2];
+      });
+    }, 20);
+    document.getElementById('wizardOverlay').style.display = 'flex';
+  }
+
+  function _wizBuildSlide(step, saved) {
+    let h = `<div style="font-size:21px;font-weight:700;color:#fff;line-height:1.3;letter-spacing:-0.3px;">${step.question}</div>`;
+    if (step.hint) h += `<div style="font-size:12px;color:rgba(255,255,255,0.3);margin-top:-8px;line-height:1.6;">${step.hint}</div>`;
+    step.fields.forEach(f => {
+      const val = saved[f.id] !== undefined ? saved[f.id] : (f.default !== undefined ? f.default : '');
+      if (f.type === 'toggle') {
+        const checked = saved[f.id] !== undefined ? saved[f.id] : f.default;
+        h += `<label class="wiz-toggle-row" style="cursor:pointer;"><div><div class="wiz-toggle-title">${f.label}</div>${f.sub?`<div class="wiz-toggle-sub">${f.sub}</div>`:''}</div><label class="wiz-toggle" onclick="event.stopPropagation()"><input type="checkbox" id="${f.id}" ${checked?'checked':''}><span class="wiz-toggle-slider"></span></label></label>`;
+      } else if (f.type === 'radio') {
+        const v = saved[f.id] !== undefined ? saved[f.id] : f.default;
+        h += `<div><span class="wiz-label">${f.label}</span><div style="display:flex;flex-direction:column;gap:8px;">${f.options.map(o=>`<div style="display:flex;align-items:center;gap:14px;padding:12px 16px;background:rgba(255,255,255,0.04);border:1px solid ${v===o.value?`rgba(${_wizColorStr},0.4)`:'rgba(255,255,255,0.08)'};border-radius:12px;cursor:pointer;transition:all 0.15s;" id="wiz-radio-label-${f.id}-${o.value}" onclick="_wizRadioSelect('${f.id}','${o.value}','${_wizColorStr}')"><div style="width:18px;height:18px;border-radius:50%;border:2px solid ${v===o.value?`rgb(${_wizColorStr})`:'rgba(255,255,255,0.2)'};background:${v===o.value?`rgb(${_wizColorStr})`:'transparent'};flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.15s;" id="wiz-radio-dot-${f.id}-${o.value}">${v===o.value?`<div style="width:7px;height:7px;border-radius:50%;background:#fff;"></div>`:''}</div><div><div style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.85);">${o.label}</div>${o.sub?`<div style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:2px;">${o.sub}</div>`:''}</div></div>`).join('')}</div></div>`;
+      } else if (f.type === 'file') {
+        h += `<div><span class="wiz-label">${f.label}</span><div class="wiz-file-row"><input type="text" id="${f.id}" class="wiz-input" placeholder="${f.placeholder}" value="${val}"><button class="wiz-browse" onclick="_wizBrowse('${f.id}','${f.accept||'image'}')">Browse</button></div></div>`;
+      } else if (f.type === 'number') {
+        h += `<div><span class="wiz-label">${f.label}</span><input type="number" id="${f.id}" class="wiz-input" placeholder="${f.placeholder}" value="${val}"></div>`;
+      } else if (f.type === 'voice') {
+        h += `<div style="position:relative;"><span class="wiz-label">${f.label}</span><div id="wiz-voice-box" class="wiz-input" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;font-size:13px;" onclick="_wizVoiceToggle()"><span id="wiz-voice-label">Loading voices...</span><span style="color:rgba(255,255,255,0.3);font-size:10px;">▾</span></div><div id="wiz-voice-dropdown" style="display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);background:#1c1c1e;border:1px solid rgba(255,255,255,0.12);border-radius:12px;z-index:9999;max-height:220px;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.5);"></div><input type="hidden" id="${f.id}" value="${saved[f.id]||''}"></div>`;
+      } else if (f.type === 'volume') {
+        const v2 = saved[f.id] !== undefined ? saved[f.id] : (f.default || 80);
+        h += `<div><span class="wiz-label">${f.label}</span><div style="display:flex;align-items:center;gap:12px;"><input type="range" id="${f.id}" min="0" max="100" value="${v2}" style="-webkit-appearance:none;flex:1;height:4px;background:rgba(255,255,255,0.12);border-radius:2px;outline:none;cursor:pointer;accent-color:rgb(${_wizColorStr});" oninput="document.getElementById('${f.id}-val').textContent=this.value+'%'"><span id="${f.id}-val" style="font-size:12px;color:rgba(255,255,255,0.4);min-width:36px;text-align:right;">${v2}%</span></div></div>`;
+      } else if (f.type === 'fixedtext') {
+        const modeVal = document.getElementById('wizardBox') ? (document.getElementById('wizardBox').dataset['w_textmode'] || 'user') : 'user';
+        h += `<div id="wiz-text-wrap" style="display:${modeVal==='fixed'?'block':'none'}"><span class="wiz-label">${f.label}</span><input type="text" id="${f.id}" class="wiz-input" placeholder="${f.placeholder||''}" value="${val}" oninput="_wizTextLiveUpdate()"></div>`;
+      } else {
+        h += `<div><span class="wiz-label">${f.label}</span><input type="text" id="${f.id}" class="wiz-input" placeholder="${f.placeholder||''}" value="${val}" oninput="_wizTextLiveUpdate()"></div>`;
+      }
+    });
+    if (step.canvas) {
+      h += `<div><span class="wiz-label">Preview — drag to reposition · corner handle to resize · slider to change text size</span>
+        <div style="display:flex;align-items:stretch;gap:10px;">
+          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;flex-shrink:0;">
+            <span style="font-size:9px;color:rgba(255,255,255,0.25);letter-spacing:1px;">BIG</span>
+            <input type="range" id="wizFontSlider" min="8" max="200" value="48" orient="vertical" style="-webkit-appearance:slider-vertical;writing-mode:vertical-lr;direction:rtl;width:24px;height:140px;cursor:pointer;accent-color:rgb(99,102,241);" oninput="_wizFontSliderChange(this.value)">
+            <span style="font-size:9px;color:rgba(255,255,255,0.25);letter-spacing:1px;">SML</span>
+          </div>
+          <div id="wizCanvas" style="position:relative;flex:1;background:#111;border:1px solid var(--border);border-radius:6px;overflow:hidden;user-select:none;">
+            <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 10%,rgba(255,255,255,0.018) 10%,rgba(255,255,255,0.018) 10.5%),repeating-linear-gradient(90deg,transparent,transparent 17.7%,rgba(255,255,255,0.018) 17.7%,rgba(255,255,255,0.018) 18.2%);pointer-events:none;"></div>
+            <div id="wizMediaBox" style="display:none;position:absolute;left:10%;top:10%;width:40%;height:40%;cursor:grab;border:2px dashed rgba(99,102,241,0.7);border-radius:4px;background:rgba(99,102,241,0.08);align-items:center;justify-content:center;min-width:20px;min-height:12px;box-sizing:border-box;">
+              <span style="font-size:10px;color:rgba(99,102,241,0.9);font-weight:600;letter-spacing:0.5px;pointer-events:none;">GIF</span>
+              <div id="wizMediaResize" style="position:absolute;bottom:-5px;right:-5px;width:12px;height:12px;background:rgb(99,102,241);border-radius:3px;cursor:se-resize;z-index:2;"></div>
+            </div>
+            <div id="wizTextBox" style="position:absolute;cursor:grab;min-width:32px;min-height:12px;overflow:hidden;border:1px dashed rgba(99,102,241,0.45);border-radius:3px;box-sizing:border-box;">
+              <div id="wizTextPreview" style="font-family:Arial;font-size:14px;color:rgba(255,255,255,0.4);font-style:italic;text-shadow:1px 1px 4px rgba(0,0,0,0.8);white-space:pre-wrap;word-break:break-word;line-height:1.25;pointer-events:none;box-sizing:border-box;width:100%;padding:2px 4px;overflow:hidden;">{message}</div>
+              <div id="wizTextResize" style="position:absolute;bottom:-5px;right:-5px;width:14px;height:14px;background:rgb(99,102,241);border-radius:3px;cursor:se-resize;z-index:2;"></div>
+            </div>
+          </div>
+        </div></div>`;
+    }
+    return h;
+  }
+
+  function _wizRadioSelect(fieldId, value, colorStr) {
+    document.getElementById('wizardBox').dataset[fieldId] = value;
+    ['user','fixed'].forEach(o => {
+      const lbl = document.getElementById(`wiz-radio-label-${fieldId}-${o}`);
+      const dot = document.getElementById(`wiz-radio-dot-${fieldId}-${o}`);
+      if (!lbl || !dot) return;
+      const active = o === value;
+      lbl.style.borderColor = active ? `rgba(${colorStr},0.4)` : 'rgba(255,255,255,0.08)';
+      dot.style.borderColor = active ? `rgb(${colorStr})` : 'rgba(255,255,255,0.2)';
+      dot.style.background  = active ? `rgb(${colorStr})` : 'transparent';
+      dot.innerHTML = active ? `<div style="width:7px;height:7px;border-radius:50%;background:#fff;"></div>` : '';
+    });
+    const wrap = document.getElementById('wiz-text-wrap');
+    if (wrap) wrap.style.display = value === 'fixed' ? '' : 'none';
+    const prev = document.getElementById('wizTextPreview');
+    if (prev) {
+      if (value === 'user') { prev.textContent = '{message}'; prev.style.color = 'rgba(255,255,255,0.4)'; prev.style.fontStyle = 'italic'; }
+      else { const inp = document.getElementById('w_text'); prev.textContent = inp ? (inp.value || 'HYPE!') : 'HYPE!'; prev.style.color = '#fff'; prev.style.fontStyle = 'normal'; }
+    }
+  }
+
+  async function _wizBrowse(fieldId, type) {
+    try {
+      const r = await fetch('/api/overlay/browse?type=' + type);
+      const d = await r.json();
+      if (!d.path) return;
+      document.getElementById(fieldId).value = d.path;
+      const mb = document.getElementById('wizMediaBox');
+      if (mb) mb.style.display = 'flex';
+      _wizUpdateCanvasBoxes();
+    } catch(e) {}
+  }
+
+  function _wizVoiceToggle() {
+    const dd = document.getElementById('wiz-voice-dropdown');
+    if (dd) dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+  }
+
+  function _wizVoiceSelect(value, label) {
+    const inp = document.getElementById('w_voice');
+    const lbl = document.getElementById('wiz-voice-label');
+    const dd = document.getElementById('wiz-voice-dropdown');
+    if (inp) inp.value = value;
+    if (lbl) { lbl.textContent = label; lbl.style.color = '#fff'; }
+    if (dd) dd.style.display = 'none';
+  }
+
+  document.addEventListener('click', (e) => {
+    const box = document.getElementById('wiz-voice-box');
+    const dd = document.getElementById('wiz-voice-dropdown');
+    if (dd && box && !box.contains(e.target) && !dd.contains(e.target)) dd.style.display = 'none';
+  });
+
+  async function _wizLoadVoices() {
+    const dd = document.getElementById('wiz-voice-dropdown');
+    if (!dd) return;
+    const savedVal = (presetsConfig[_wizKey] || {}).w_voice || _wizData.w_voice || '';
+    const itemStyle = 'padding:10px 14px;font-size:13px;color:rgba(255,255,255,0.8);cursor:pointer;transition:background 0.1s;';
+    const groupStyle = 'padding:6px 14px 4px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.25);border-top:1px solid rgba(255,255,255,0.06);margin-top:4px;';
+    async function build() {
+      let html = `<div style="${itemStyle}" onmouseover="this.style.background='rgba(255,255,255,0.07)'" onmouseout="this.style.background=''" onclick="_wizVoiceSelect('','Default voice (Windows)')">Default voice (Windows)</div>`;
+      let total = 0;
+      try { const r = await fetch('/api/text-overlay/voices'); const d = await r.json(); if ((d.voices||[]).length) { total += d.voices.length; html += `<div style="${groupStyle}">Windows Voices</div>`; d.voices.forEach(v => { const lbl = v.name+(v.lang?` (${v.lang})`:''); const val = 'win:'+v.name; html += `<div style="${itemStyle}" onmouseover="this.style.background='rgba(255,255,255,0.07)'" onmouseout="this.style.background=''" onclick="_wizVoiceSelect('${val.replace(/'/g,"\\'")}','${lbl.replace(/'/g,"\\'")}')"> ${lbl}</div>`; }); } } catch(e) {}
+      try { const r2 = await fetch('/api/tts/monster-voices'); const d2 = await r2.json(); const all=[...(d2.voices||[]),...(d2.customVoices||[])]; if (all.length) { total += all.length; html += `<div style="${groupStyle}">TTS Monster Voices</div>`; all.forEach(v => { const lbl = v.name+(v.metadata?' — '+v.metadata:''); const val = 'ttsm:'+v.voice_id; html += `<div style="${itemStyle}" onmouseover="this.style.background='rgba(255,255,255,0.07)'" onmouseout="this.style.background=''" onclick="_wizVoiceSelect('${val.replace(/'/g,"\\'")}','${lbl.replace(/'/g,"\\'")}')"> ${lbl}</div>`; }); } } catch(e) {}
+      return { html, total };
+    }
+    const { html, total } = await build();
+    const ddEl = document.getElementById('wiz-voice-dropdown');
+    const lblEl = document.getElementById('wiz-voice-label');
+    if (!ddEl) return;
+    ddEl.innerHTML = html;
+    if (lblEl && !savedVal) lblEl.textContent = 'Default voice (Windows)';
+    if (total === 0) setTimeout(async () => { const { html: h2 } = await build(); const d2 = document.getElementById('wiz-voice-dropdown'); if (d2) d2.innerHTML = h2; _wizRestoreVoice(savedVal); }, 1500);
+    else _wizRestoreVoice(savedVal);
+  }
+
+  function _wizRestoreVoice(savedVal) {
+    const lbl = document.getElementById('wiz-voice-label');
+    const inp = document.getElementById('w_voice');
+    if (!lbl || !savedVal) return;
+    const dd = document.getElementById('wiz-voice-dropdown');
+    if (dd) dd.querySelectorAll('div[onclick]').forEach(item => { if (item.getAttribute('onclick').includes(savedVal.replace(/'/g,"\\'"))) lbl.textContent = item.textContent.trim(); });
+    if (inp) inp.value = savedVal;
+  }
+
+  // Wizard canvas
+  const _WIZ_SW = 1920, _WIZ_SH = 1080;
+
+  function _wizInitCanvas() {
+    const c = document.getElementById('wizCanvas');
+    if (!c) return;
+    const w = c.offsetWidth;
+    if (w > 0) c.style.height = Math.round(w * 9 / 16) + 'px';
+    const gifVal = document.getElementById('w_gif');
+    const mb = document.getElementById('wizMediaBox');
+    if (mb && gifVal && gifVal.value) mb.style.display = 'flex';
+    const modeVal = document.getElementById('wizardBox').dataset['w_textmode'] || 'user';
+    const wrap = document.getElementById('wiz-text-wrap');
+    if (wrap) wrap.style.display = modeVal === 'user' ? 'none' : '';
+    const slider = document.getElementById('wizFontSlider');
+    if (slider) slider.value = document.getElementById('wizTextSize').value || 48;
+    _wizLoadVoices();
+    _wizUpdateCanvasBoxes();
+    _wizTextLiveUpdate();
+  }
+
+  function _wizUpdateCanvasBoxes() {
+    const c = document.getElementById('wizCanvas');
+    if (!c) return;
+    const cw = c.offsetWidth || 1, ch = c.offsetHeight || 1;
+    const mb = document.getElementById('wizMediaBox');
+    if (mb) { const mx=parseFloat(document.getElementById('wizMediaX').value)||0,my=parseFloat(document.getElementById('wizMediaY').value)||0,mw=parseFloat(document.getElementById('wizMediaW').value)||960,mh=parseFloat(document.getElementById('wizMediaH').value)||540; mb.style.left=(mx/_WIZ_SW*cw)+'px';mb.style.top=(my/_WIZ_SH*ch)+'px';mb.style.width=Math.max(12,mw/_WIZ_SW*cw)+'px';mb.style.height=Math.max(8,mh/_WIZ_SH*ch)+'px'; }
+    const tb=document.getElementById('wizTextBox'),tp=document.getElementById('wizTextPreview');
+    if (tb&&tp) { const tx=parseFloat(document.getElementById('wizTextX').value)||100,ty=parseFloat(document.getElementById('wizTextY').value)||400,tmw=parseFloat(document.getElementById('wizTextMaxW').value)||800,tmh=parseFloat(document.getElementById('wizTextMaxH').value)||200,tsz=parseFloat(document.getElementById('wizTextSize').value)||48; tb.style.left=(tx/_WIZ_SW*cw)+'px';tb.style.top=(ty/_WIZ_SH*ch)+'px';tb.style.width=Math.max(20,tmw/_WIZ_SW*cw)+'px';const boxH=Math.max(12,tmh/_WIZ_SH*ch);tb.style.height=boxH+'px';let sf=Math.max(4,tsz*(ch/_WIZ_SH));tp.style.fontSize=sf+'px';while(tp.scrollHeight>boxH&&sf>4){sf-=0.5;tp.style.fontSize=sf+'px';} }
+  }
+
+  function _wizFontSliderChange(val) {
+    document.getElementById('wizTextSize').value = val;
+    const c=document.getElementById('wizCanvas'),tb=document.getElementById('wizTextBox'),tp=document.getElementById('wizTextPreview');
+    if (!c||!tb||!tp) return;
+    const ch=c.offsetHeight||1,boxH=tb.offsetHeight||20;
+    let sf=Math.max(4,parseFloat(val)*(ch/_WIZ_SH));
+    tp.style.fontSize=sf+'px';
+    while(tp.scrollHeight>boxH&&sf>4){sf-=0.5;tp.style.fontSize=sf+'px';}
+  }
+
+  function _wizTextLiveUpdate() {
+    const modeVal = document.getElementById('wizardBox').dataset['w_textmode'] || 'user';
+    const inp = document.getElementById('w_text'), prev = document.getElementById('wizTextPreview');
+    if (prev) { if (modeVal==='user'){prev.textContent='{message}';prev.style.color='rgba(255,255,255,0.4)';prev.style.fontStyle='italic';} else{prev.textContent=inp?(inp.value||'HYPE!'):'HYPE!';prev.style.color='#fff';prev.style.fontStyle='normal';} }
+    _wizUpdateCanvasBoxes();
+  }
+
+  // Wizard canvas drag
+  let _wizDMode=null,_wizDTarget=null,_wizDSX,_wizDSY,_wizDSL,_wizDST,_wizDSW,_wizDSH,_wizDSFS;
+  document.addEventListener('mousedown',(e)=>{
+    const id=e.target.id;
+    if(id==='wizMediaResize'){_wizDMode='resize';_wizDTarget='media';}
+    else if(id==='wizMediaBox'||(document.getElementById('wizMediaBox')&&document.getElementById('wizMediaBox').contains(e.target)&&id!=='wizMediaResize')){_wizDMode='move';_wizDTarget='media';}
+    else if(id==='wizTextResize'){_wizDMode='resize';_wizDTarget='text';}
+    else if(id==='wizTextBox'||(document.getElementById('wizTextBox')&&document.getElementById('wizTextBox').contains(e.target)&&id!=='wizTextResize')){_wizDMode='move';_wizDTarget='text';}
+    else return;
+    e.preventDefault();
+    _wizDSX=e.clientX;_wizDSY=e.clientY;
+    const el=document.getElementById(_wizDTarget==='media'?'wizMediaBox':'wizTextBox');
+    if(el){_wizDSL=parseFloat(el.style.left)||0;_wizDST=parseFloat(el.style.top)||0;_wizDSW=el.offsetWidth;_wizDSH=el.offsetHeight;}
+    _wizDSFS=parseFloat(document.getElementById('wizTextSize').value)||48;
+  });
+  document.addEventListener('mousemove',(e)=>{
+    if(!_wizDMode)return;
+    const c=document.getElementById('wizCanvas');if(!c)return;
+    const cw=c.offsetWidth,ch=c.offsetHeight,dx=e.clientX-_wizDSX,dy=e.clientY-_wizDSY;
+    if(_wizDTarget==='media'){const mb=document.getElementById('wizMediaBox');if(!mb)return;if(_wizDMode==='move'){const nl=Math.max(0,Math.min(cw-mb.offsetWidth,_wizDSL+dx)),nt=Math.max(0,Math.min(ch-mb.offsetHeight,_wizDST+dy));mb.style.left=nl+'px';mb.style.top=nt+'px';mb.style.cursor='grabbing';document.getElementById('wizMediaX').value=Math.round(nl/cw*_WIZ_SW);document.getElementById('wizMediaY').value=Math.round(nt/ch*_WIZ_SH);}else{const nw=Math.max(12,_wizDSW+dx),nh=Math.max(8,_wizDSH+dy);mb.style.width=nw+'px';mb.style.height=nh+'px';document.getElementById('wizMediaW').value=Math.round(nw/cw*_WIZ_SW);document.getElementById('wizMediaH').value=Math.round(nh/ch*_WIZ_SH);}}
+    else if(_wizDTarget==='text'){const tb=document.getElementById('wizTextBox'),tp=document.getElementById('wizTextPreview');if(!tb)return;if(_wizDMode==='move'){const nl=Math.max(0,Math.min(cw-tb.offsetWidth,_wizDSL+dx)),nt=Math.max(0,Math.min(ch-10,_wizDST+dy));tb.style.left=nl+'px';tb.style.top=nt+'px';tb.style.cursor='grabbing';document.getElementById('wizTextX').value=Math.round(nl/cw*_WIZ_SW);document.getElementById('wizTextY').value=Math.round(nt/ch*_WIZ_SH);}else{const nw=Math.max(40,_wizDSW+dx),nh=Math.max(16,_wizDSH+dy);tb.style.width=nw+'px';tb.style.height=nh+'px';document.getElementById('wizTextMaxW').value=Math.round(nw/cw*_WIZ_SW);document.getElementById('wizTextMaxH').value=Math.round(nh/ch*_WIZ_SH);if(tp){let sf=Math.max(4,_wizDSFS*(ch/_WIZ_SH));tp.style.fontSize=sf+'px';while(tp.scrollHeight>nh&&sf>4){sf-=0.5;tp.style.fontSize=sf+'px';}}}}
+  });
+  document.addEventListener('mouseup',()=>{if(_wizDMode==='move'){const el=document.getElementById(_wizDTarget==='media'?'wizMediaBox':'wizTextBox');if(el)el.style.cursor='grab';}
+  _wizDMode=null;_wizDTarget=null;});
+
+  document.addEventListener('wheel',(e)=>{
+    const c=document.getElementById('wizCanvas');if(!c)return;
+    const rect=c.getBoundingClientRect();if(e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom)return;
+    e.preventDefault();
+    const tb=document.getElementById('wizTextBox'),tp=document.getElementById('wizTextPreview');if(!tb||!tp)return;
+    const ch=c.offsetHeight||1,curH=tb.offsetHeight||20,newH=Math.max(16,Math.min(ch,curH+(e.deltaY<0?4:-4)));
+    tb.style.height=newH+'px';document.getElementById('wizTextMaxH').value=Math.round(newH/ch*_WIZ_SH);
+    const baseSz=parseFloat(document.getElementById('wizTextSize').value)||48;let sf=Math.max(4,baseSz*(ch/_WIZ_SH));tp.style.fontSize=sf+'px';while(tp.scrollHeight>newH&&sf>4){sf-=0.5;tp.style.fontSize=sf+'px';}
+  },{passive:false});
+
+  // Wizard navigation
+  function _wizUpdateDots() {
+    document.getElementById('wizDots').innerHTML = _wizSteps.map((_,i)=>{const active=i===_wizStep,done=i<_wizStep;return `<div style="height:7px;border-radius:4px;transition:all 0.3s cubic-bezier(0.4,0,0.2,1);width:${active?24:7}px;background:${active?`rgb(${_wizColorStr})`:done?`rgba(${_wizColorStr},0.4)`:'rgba(255,255,255,0.1)'};"></div>`;}).join('');
+  }
+  function _wizUpdateFooter() {
+    const last=_wizStep===_wizSteps.length-1;
+    const back=document.getElementById('wizBackBtn'),next=document.getElementById('wizNextBtn');
+    back.style.display=_wizStep>0?'':'none';
+    next.textContent=last?'✓  Finish':'Next  →';
+    next.style.background=`rgb(${_wizColorStr})`;next.style.boxShadow=`0 4px 20px rgba(${_wizColorStr},0.35)`;
+  }
+  function _wizCollect() {
+    const step=_wizSteps[_wizStep];
+    step.fields.forEach(f=>{
+      if(f.type==='toggle'){const el=document.getElementById(f.id);if(el)_wizData[f.id]=el.checked;}
+      else if(f.type==='radio'){_wizData[f.id]=document.getElementById('wizardBox').dataset[f.id]||f.default;}
+      else{const el=document.getElementById(f.id);if(el)_wizData[f.id]=el.value;}
+    });
+  }
+  function _wizSlide() {
+    const vp=document.getElementById('wizViewport'),slides=document.getElementById('wizSlides');
+    slides.style.transition='transform 0.38s cubic-bezier(0.4,0,0.2,1)';
+    slides.style.transform=`translateX(-${_wizStep*100}%)`;
+    if(vp)vp.scrollTop=0;
+  }
+  function wizNext() {
+    _wizCollect();
+    if(_wizStep===_wizSteps.length-1){_wizFinish();return;}
+    _wizStep++;_wizSlide();_wizUpdateDots();_wizUpdateFooter();
+    if(_wizSteps[_wizStep].canvas)setTimeout(()=>{_wizInitCanvas();},420);
+  }
+  function wizPrev() { if(_wizStep===0)return;_wizStep--;_wizSlide();_wizUpdateDots();_wizUpdateFooter(); }
+  function wizardClose() { document.getElementById('wizardOverlay').style.display='none';_wizKey=null;_wizStep=0;_wizData={}; }
+
+  async function _wizFinish() {
+    if(!_wizKey)return;
+    _wizCollect();
+    _wizData.mediaX=parseInt(document.getElementById('wizMediaX').value)||0;
+    _wizData.mediaY=parseInt(document.getElementById('wizMediaY').value)||0;
+    _wizData.mediaW=parseInt(document.getElementById('wizMediaW').value)||960;
+    _wizData.mediaH=parseInt(document.getElementById('wizMediaH').value)||540;
+    _wizData.textX=parseInt(document.getElementById('wizTextX').value)||100;
+    _wizData.textY=parseInt(document.getElementById('wizTextY').value)||400;
+    _wizData.textMaxW=parseInt(document.getElementById('wizTextMaxW').value)||800;
+    _wizData.textMaxH=parseInt(document.getElementById('wizTextMaxH').value)||200;
+    _wizData.textSize=parseInt(document.getElementById('wizTextSize').value)||48;
+    _wizData.cmd=_wizData.w_cmd||'!hype';
+    presetsConfig[_wizKey]=_wizData;
+    try {
+      await fetch('/api/presets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(presetsConfig)});
+      if(_wizKey==='ttsgif')await _wizCreateTtsGif();
+      showToast('Preset created ✓');_wizRenderStatuses();wizardClose();
+    } catch(e){showToast('Failed to save');}
+  }
+
+  async function _wizCreateTtsGif() {
+    const sources=await fetch('/api/overlay/sources').then(r=>r.json()).catch(()=>[]);
+    const filtered=sources.filter(s=>s.assignedCommand!==(_wizData.w_cmd||'!hype'));
+    const maxId=sources.length?Math.max(...sources.map(s=>s.id)):0;
+    const d=_wizData;
+    const newSrc={
+      id:maxId+1,type:'image',path:d.w_gif||'',videoPath:null,soundPath:null,
+      soundStart:0,soundEnd:0,soundVolume:1,videoStart:0,videoEnd:0,videoVolume:1,
+      gifLoops:0,displaySeconds:parseFloat(d.w_duration)||5,videoLoops:1,
+      clearWithTTS:d.w_clearwithtts!==false,
+      fadeIn:d.w_fadein!==false?1:0,fadeOut:d.w_fadeout!==false?1:0,
+      chromaKey:false,chromaColor:'#00ff00',chromaThreshold:40,
+      assignedCommand:d.w_cmd||'!hype',
+      mediaX:d.mediaX||0,mediaY:d.mediaY||0,mediaW:d.mediaW||960,mediaH:d.mediaH||540,
+      text:d.w_textmode==='user'?'{message}':(d.w_text||'HYPE!'),
+      font:'Arial',fontSize:d.textSize||48,color:'#ffffff',bold:false,italic:false,shadow:true,
+      animation:'fade',animDuration:0.5,
+      x:d.textX||100,y:d.textY||400,maxW:d.textMaxW||800,maxH:d.textMaxH||200,
+      lockDuration:false,speak:true,voice:d.w_voice||null,
+      ttsRate:1,ttsPitch:1,ttsVolume:d.w_volume!==undefined?(parseInt(d.w_volume)/100):1,
+    };
+    await fetch('/api/overlay/sources',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify([...filtered,newSrc])});
+    await fetch('/api/commands',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({command:d.w_cmd||'!hype',response:'',cooldown:10,access:'everyone',enabled:true})});
+    // Reload overlayState so TEXTDONE can find the source even if user never visited Overlay page
+    await overlayLoadSources();
   }
 </script>
 

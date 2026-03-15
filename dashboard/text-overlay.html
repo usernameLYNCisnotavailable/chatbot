@@ -16,6 +16,7 @@
     pointer-events: none;
     white-space: pre-wrap;
     word-break: break-word;
+    overflow: hidden;
   }
   .txt-source.visible { display: block; }
 
@@ -94,6 +95,8 @@ function addText(id, cfg) {
   el.style.left        = (cfg.x || 100) + 'px';
   el.style.top         = (cfg.y || 100) + 'px';
   el.style.maxWidth    = (cfg.maxW || 600) + 'px';
+  el.style.maxHeight   = (cfg.maxH || 0) > 0 ? cfg.maxH + 'px' : '';
+  el.style.overflow    = (cfg.maxH || 0) > 0 ? 'hidden' : '';
   el.style.fontFamily  = cfg.font || 'Arial';
   el.style.fontSize    = (cfg.size || 32) + 'px';
   el.style.color       = cfg.color || '#ffffff';
@@ -105,6 +108,25 @@ function addText(id, cfg) {
 
   document.body.appendChild(el);
   sources[id] = { el, cfg };
+
+  // Auto-shrink font to fit within maxH boundary.
+  // Measure with visibility:hidden + display:block so scrollHeight is accurate,
+  // then restore before the animation block takes over.
+  if ((cfg.maxH || 0) > 0) {
+    el.style.visibility = 'hidden';
+    el.style.display = 'block';
+    el.style.maxHeight = '';
+    el.style.overflow = 'visible';
+    let fontSize = cfg.size || 32;
+    while (el.scrollHeight > cfg.maxH && fontSize > 6) {
+      fontSize -= 0.5;
+      el.style.fontSize = fontSize + 'px';
+    }
+    el.style.maxHeight = cfg.maxH + 'px';
+    el.style.overflow = 'hidden';
+    el.style.display = '';
+    el.style.visibility = '';
+  }
 
   // Animation
   const anim = cfg.animation || 'static';
@@ -145,7 +167,6 @@ function addText(id, cfg) {
     const isTTSMonster = (cfg.voice || '').startsWith('ttsm:');
 
     if (isTTSMonster) {
-      // TTS Monster — server generates WAV, media-overlay plays it and fires TEXTDONE
       fetch('http://localhost:3000/api/tts/speak', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -159,16 +180,13 @@ function addText(id, cfg) {
         })
       }).then(r => r.json()).then(data => {
         if (!data.ok) {
-          // API failed — clear text after 3s so it doesn't stick on screen
           setTimeout(() => { if (sources[id]) clearText(id); }, 3000);
         }
-        // On success: media-overlay owns playback + fires TEXTDONE when done
       }).catch(() => {
         setTimeout(() => { if (sources[id]) clearText(id); }, 3000);
       });
 
     } else {
-      // Windows speechSynthesis — voice stored as "win:<name>" or plain name (legacy)
       window.speechSynthesis.cancel();
       const voiceName = (cfg.voice || '').replace(/^win:/, '');
       const utt = new SpeechSynthesisUtterance(cfg.text);
@@ -192,7 +210,6 @@ function addText(id, cfg) {
       window.speechSynthesis.speak(utt);
       sources[id].utt = utt;
 
-      // Polling fallback — onend doesn't always fire on Windows
       const poll = setInterval(() => {
         if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
           clearInterval(poll);
@@ -210,7 +227,6 @@ function clearText(id) {
   if (!src) return;
   if (src.typeTimer) clearInterval(src.typeTimer);
   if (src.pollInterval) { clearInterval(src.pollInterval); src.pollInterval = null; }
-  // Cancel TTS if this source was speaking
   if (src.cfg.speak) window.speechSynthesis.cancel();
   src.el.classList.remove('visible');
   src.el.style.display = 'none';
