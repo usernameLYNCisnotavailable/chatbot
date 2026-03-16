@@ -169,7 +169,7 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
     // ---- AUTH ----
     // Streamer signs in with their main Twitch account
     server.get('/auth/streamer', (req, res) => {
-        const url = `https://id.twitch.tv/oauth2/authorize?client_id=${TWITCH_CLIENT_ID}&redirect_uri=${encodeURIComponent(TWITCH_REDIRECT_URI)}&response_type=code&scope=chat:read+chat:edit+user:read:email+moderation:read+user:read:moderated_channels&state=streamer&force_verify=true`;
+        const url = `https://id.twitch.tv/oauth2/authorize?client_id=${TWITCH_CLIENT_ID}&redirect_uri=${encodeURIComponent(TWITCH_REDIRECT_URI)}&response_type=code&scope=chat:read+chat:edit+user:read:email+moderation:read+user:read:moderated_channels+channel:read:subscriptions+bits:read+channel:read:redemptions+channel:read:hype_train+moderator:read:followers&state=streamer&force_verify=true`;
         shell.openExternal(url);
         res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{background:#0a0a0a;color:#f0f0f0;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column;gap:12px;}h2{margin:0;font-size:1.1rem;}p{margin:0;color:rgba(255,255,255,0.4);font-size:0.75rem;text-align:center;}</style></head><body><h2>🌐 Opening in your browser...</h2><p>Sign in with Twitch in the browser window that just opened.<br>This page will update automatically when done.</p><script>const check=setInterval(async()=>{const cfg=await fetch('/api/config').then(r=>r.json()).catch(()=>({}));if(cfg.streamerUsername){clearInterval(check);window.location.replace('/setup?streamer_authed=true');}},1500);</script></body></html>`);
     });
@@ -228,13 +228,6 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
                 config.streamerAvatar = avatar;
                 config.streamerToken = `oauth:${accessToken}`;
                 config.loggedIn = true;
-
-                // If no separate bot account yet, default bot to main account
-                if (!config.botUsername) {
-                    config.botUsername = username;
-                    config.token = `oauth:${accessToken}`;
-                    config.usingMainAccount = true;
-                }
 
                 fs.writeFileSync(getDataPath('config.json'), JSON.stringify(config, null, 4));
 
@@ -422,21 +415,28 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
 
     // Logout streamer
     server.post('/api/logout', (req, res) => {
-        const config = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
-        config.loggedIn = false;
-        config.streamerToken = '';
-        config.setupComplete = false;
-        fs.writeFileSync(getDataPath('config.json'), JSON.stringify(config, null, 4));
+        // Full wipe — clear all auth and restart setup flow
+        const fresh = {
+            loggedIn: false, setupComplete: false,
+            streamerUsername: '', streamerDisplayName: '', streamerAvatar: '',
+            streamerToken: '', botUsername: '', token: '',
+            usingMainAccount: false, channel: '', admins: []
+        };
+        fs.writeFileSync(getDataPath('config.json'), JSON.stringify(fresh, null, 4));
+        if (eventsubWs) { try { eventsubWs.close(); } catch(e) {} eventsubWs = null; }
+        eventsubConnected = false; eventsubSessionId = null;
+        try { if (global.stopBot) global.stopBot(); } catch(e) {}
         res.json({ success: true });
     });
 
-    // Disconnect bot account (revert to main account)
+    // Disconnect bot account only — streamer stays logged in
     server.post('/api/logout-bot', (req, res) => {
         const config = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
-        config.botUsername = config.streamerUsername;
-        config.token = config.streamerToken;
-        config.usingMainAccount = true;
+        config.botUsername = '';
+        config.token = '';
+        config.usingMainAccount = false;
         fs.writeFileSync(getDataPath('config.json'), JSON.stringify(config, null, 4));
+        try { if (global.stopBot) global.stopBot(); } catch(e) {}
         res.json({ success: true });
     });
 
@@ -1607,6 +1607,79 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
     });
 
     // Clear saved position for a source (overlay handles this on REMOVE)
+
+    // ── EventSub Alert Config ─────────────────────────────────────────────────
+    function getEventsubAlerts() {
+        const p = getDataPath('eventsub-alerts.json');
+        if (!fs.existsSync(p)) return {};
+        try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch(e) { return {}; }
+    }
+    function saveEventsubAlerts(data) {
+        fs.writeFileSync(getDataPath('eventsub-alerts.json'), JSON.stringify(data, null, 2));
+    }
+
+    server.get('/api/eventsub/alerts', (req, res) => {
+        res.json(getEventsubAlerts());
+    });
+
+    server.post('/api/eventsub/alert', (req, res) => {
+        try {
+            const { key, src } = req.body;
+            if (!key || !src) return res.json({ ok: false, error: 'key and src required' });
+            const alerts = getEventsubAlerts();
+            alerts[key] = src;
+            saveEventsubAlerts(alerts);
+            // Reload eventsub so new alert is picked up immediately
+            startEventSub();
+            res.json({ ok: true });
+        } catch(e) { res.json({ ok: false, error: e.message }); }
+    });
+
+    server.get('/api/eventsub/status', (req, res) => {
+        res.json({ connected: eventsubConnected, sessionId: eventsubSessionId || null });
+    });
+
+    // Internal route called by EventSub engine to fire an alert (keeps broadcast fns in scope)
+    server.post('/api/eventsub/fire', (req, res) => {
+        try {
+            const src = req.body.eventsubSrc;
+            if (!src) return res.json({ ok: false });
+            const srcId = 88000 + Math.floor(Math.random() * 999);
+            src.id = srcId;
+            const hasImage = src.type === 'image' || src.type === 'image+sound';
+            const hasVideo = src.type === 'video' || src.type === 'video+sound';
+            const hasText  = !!(src.speak && src.text);
+            const isGif = hasImage && src.path && src.path.toLowerCase().includes('.gif');
+            if (hasImage && videoWin && !videoWin.isDestroyed()) {
+                const loops = src.clearWithTTS ? 0 : (isGif ? 0 : 1);
+                const displaySeconds = src.clearWithTTS ? 0 : (src.displaySeconds || 5);
+                broadcastVideoCmd({ cmd: 'PLAYIMG', id: srcId, path: src.path, loops, displaySeconds,
+                    x: src.mediaX ?? 480, y: src.mediaY ?? 270, w: src.mediaW || 960, h: src.mediaH || 540,
+                    chromaKey: src.chromaKey || false, chromaColor: src.chromaColor || '#00ff00', chromaThreshold: src.chromaThreshold ?? 40 });
+            }
+            if (hasVideo && videoWin && !videoWin.isDestroyed()) {
+                const loops = src.clearWithTTS ? 0 : (src.videoLoops || 1);
+                broadcastVideoCmd({ cmd: 'PLAYVID', id: srcId, path: src.videoPath, loops,
+                    videoStart: src.videoStart || 0, videoEnd: src.videoEnd || 0, volume: src.videoVolume ?? 1,
+                    x: src.mediaX ?? 480, y: src.mediaY ?? 270, w: src.mediaW || 960, h: src.mediaH || 540,
+                    chromaKey: src.chromaKey || false, chromaColor: src.chromaColor || '#00ff00', chromaThreshold: src.chromaThreshold ?? 40 });
+            }
+            if (hasText && textWin && !textWin.isDestroyed()) {
+                const clearMediaId = src.clearWithTTS ? srcId : null;
+                const clearMediaKind = clearMediaId ? (hasImage ? 'image' : 'video') : null;
+                broadcastTextCmd({ cmd: 'ADDTEXT', id: srcId, text: src.text,
+                    x: src.x || 100, y: src.y || 400,
+                    font: src.font || 'Arial', size: src.fontSize || 48, color: src.color || '#ffffff',
+                    bold: src.bold || false, italic: src.italic || false, shadow: src.shadow !== false,
+                    animation: src.animation || 'fade', animDuration: src.animDuration || 1,
+                    maxW: src.maxW || 1720, maxH: src.maxH || 200,
+                    speak: true, voice: src.voice || null,
+                    ttsRate: src.ttsRate || 1, ttsPitch: src.ttsPitch || 1, ttsVolume: src.ttsVolume ?? 1,
+                    clearMediaId, clearMediaKind });
+            }
+            res.json({ ok: true });
+        } catch(e) { res.json({ ok: false, error: e.message }); }
+    });
     server.post('/api/overlay/clearpos', (req, res) => { res.json({ ok: true }); });
     // Get saved positions
     server.get('/api/overlay/positions', (req, res) => {
@@ -1821,12 +1894,17 @@ Write-Output $sb.ToString().Trim()
             broadcastVideoDashboard({ cmd: 'READY' });
         } else {
             broadcastVideoDashboard({ cmd: body.cmd || 'VIDDONE', id: body.id });
-            // If a GIF library overlay is active, clear it when TTS finishes
-            if ((body.cmd === 'TEXTDONE') && activeGifLibId !== null) {
-                if (videoWin && !videoWin.isDestroyed()) {
-                    broadcastVideoCmd({ cmd: 'CLEARIMG', id: activeGifLibId });
+            if (body.cmd === 'TEXTDONE') {
+                // Clear media from event alerts (clearMediaId sent by text-overlay)
+                if (body.clearMediaId && videoWin && !videoWin.isDestroyed()) {
+                    const clearCmd = body.clearMediaKind === 'video' ? 'CLEARVID' : 'CLEARIMG';
+                    broadcastVideoCmd({ cmd: clearCmd, id: body.clearMediaId });
                 }
-                activeGifLibId = null;
+                // Also clear GIF library overlay if active
+                if (activeGifLibId !== null) {
+                    if (videoWin && !videoWin.isDestroyed()) broadcastVideoCmd({ cmd: 'CLEARIMG', id: activeGifLibId });
+                    activeGifLibId = null;
+                }
             }
         }
         res.json({ ok: true });
@@ -2113,7 +2191,201 @@ Write-Output $sb.ToString().Trim()
         global.broadcastChat = server.broadcastChat;
         if (mainWindow) mainWindow.loadURL('http://localhost:3000');
         registerHotkeys();
+        // Start EventSub if streamer is already authed
+        setTimeout(() => {
+            try {
+                const cfg = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
+                if (cfg.streamerToken && cfg.setupComplete) startEventSub();
+            } catch(e) {}
+        }, 3000);
     });
+}
+
+// ── EventSub WebSocket Engine ─────────────────────────────────────────────────
+const axiosEventsub = require('axios');
+let eventsubWs = null;
+let eventsubConnected = false;
+let eventsubSessionId = null;
+let eventsubReconnectTimer = null;
+let eventsubKeepaliveTimer = null;
+let _eventsubClientId = null;
+let _eventsubToken = null;
+
+function getDataPathEventsub(file) {
+    const { app } = require('electron');
+    return require('path').join(app.getPath('userData'), file);
+}
+
+function startEventSub() {
+    try {
+        const cfg = JSON.parse(require('fs').readFileSync(getDataPathEventsub('config.json'), 'utf8'));
+        const token = (cfg.streamerToken || '').replace('oauth:', '');
+        if (!token) return;
+        _eventsubToken = token;
+        _eventsubClientId = process.env.TWITCH_CLIENT_ID || require('dotenv').config() && process.env.TWITCH_CLIENT_ID;
+        // Re-read from env
+        const envPath = require('path').join(process.resourcesPath || __dirname, '.env');
+        if (require('fs').existsSync(envPath)) require('dotenv').config({ path: envPath });
+        _eventsubClientId = process.env.TWITCH_CLIENT_ID;
+        if (eventsubWs) { try { eventsubWs.close(); } catch(e) {} }
+        if (eventsubReconnectTimer) { clearTimeout(eventsubReconnectTimer); eventsubReconnectTimer = null; }
+        _eventsubConnect();
+    } catch(e) { console.log('[eventsub] startEventSub error:', e.message); }
+}
+
+function _eventsubConnect() {
+    const WebSocket = require('ws') || (() => { try { return require('ws'); } catch(e) { return null; } })();
+    if (!WebSocket) { console.log('[eventsub] ws module not available'); return; }
+    console.log('[eventsub] connecting...');
+    eventsubWs = new WebSocket('wss://eventsub.wss.twitch.tv/ws');
+
+    eventsubWs.on('open', () => { console.log('[eventsub] connected'); });
+
+    eventsubWs.on('message', async (raw) => {
+        let msg;
+        try { msg = JSON.parse(raw); } catch(e) { return; }
+        const type = msg.metadata?.message_type;
+
+        if (type === 'session_welcome') {
+            eventsubConnected = true;
+            eventsubSessionId = msg.payload?.session?.id;
+            console.log('[eventsub] session:', eventsubSessionId);
+            await _eventsubSubscribeAll();
+            // Keepalive: Twitch sends session_keepalive every 10s — restart timer on any message
+            _eventsubResetKeepalive(msg.payload?.session?.keepalive_timeout_seconds || 10);
+        }
+        else if (type === 'session_keepalive') {
+            _eventsubResetKeepalive(10);
+        }
+        else if (type === 'session_reconnect') {
+            const url = msg.payload?.session?.reconnect_url;
+            if (url) { eventsubWs.close(); _eventsubConnectTo(url); }
+        }
+        else if (type === 'notification') {
+            _eventsubResetKeepalive(10);
+            _eventsubHandleEvent(msg.payload?.subscription?.type, msg.payload?.event);
+        }
+        else if (type === 'revocation') {
+            console.log('[eventsub] subscription revoked:', msg.payload?.subscription?.type);
+        }
+    });
+
+    eventsubWs.on('close', () => {
+        console.log('[eventsub] disconnected, reconnecting in 15s...');
+        eventsubConnected = false; eventsubSessionId = null;
+        if (eventsubKeepaliveTimer) { clearTimeout(eventsubKeepaliveTimer); eventsubKeepaliveTimer = null; }
+        eventsubReconnectTimer = setTimeout(_eventsubConnect, 15000);
+    });
+
+    eventsubWs.on('error', (e) => { console.log('[eventsub] error:', e.message); });
+}
+
+function _eventsubConnectTo(url) {
+    const WebSocket = require('ws');
+    eventsubWs = new WebSocket(url);
+    eventsubWs.on('open', () => {});
+    eventsubWs.on('message', async (raw) => {
+        let msg; try { msg = JSON.parse(raw); } catch(e) { return; }
+        if (msg.metadata?.message_type === 'session_welcome') {
+            eventsubConnected = true; eventsubSessionId = msg.payload?.session?.id;
+            await _eventsubSubscribeAll();
+        } else if (msg.metadata?.message_type === 'notification') {
+            _eventsubHandleEvent(msg.payload?.subscription?.type, msg.payload?.event);
+        }
+    });
+    eventsubWs.on('close', () => { eventsubConnected = false; eventsubReconnectTimer = setTimeout(_eventsubConnect, 15000); });
+    eventsubWs.on('error', (e) => { console.log('[eventsub] reconnect error:', e.message); });
+}
+
+function _eventsubResetKeepalive(secs) {
+    if (eventsubKeepaliveTimer) clearTimeout(eventsubKeepaliveTimer);
+    eventsubKeepaliveTimer = setTimeout(() => {
+        console.log('[eventsub] keepalive timeout, reconnecting...');
+        if (eventsubWs) try { eventsubWs.close(); } catch(e) {}
+    }, (secs + 5) * 1000);
+}
+
+async function _eventsubSubscribeAll() {
+    if (!eventsubSessionId || !_eventsubToken || !_eventsubClientId) return;
+    let broadcasterId;
+    try {
+        const r = await axiosEventsub.get('https://api.twitch.tv/helix/users', {
+            headers: { 'Authorization': `Bearer ${_eventsubToken}`, 'Client-Id': _eventsubClientId }
+        });
+        broadcasterId = r.data?.data?.[0]?.id;
+    } catch(e) { console.log('[eventsub] failed to get broadcaster id:', e.message); return; }
+    if (!broadcasterId) return;
+
+    const subs = [
+        { type: 'channel.follow',                                    version: '2', condition: { broadcaster_user_id: broadcasterId, moderator_user_id: broadcasterId } },
+        { type: 'channel.subscribe',                                  version: '1', condition: { broadcaster_user_id: broadcasterId } },
+        { type: 'channel.subscription.gift',                          version: '1', condition: { broadcaster_user_id: broadcasterId } },
+        { type: 'channel.cheer',                                      version: '1', condition: { broadcaster_user_id: broadcasterId } },
+        { type: 'channel.raid',                                       version: '1', condition: { to_broadcaster_user_id: broadcasterId } },
+        { type: 'channel.channel_points_custom_reward_redemption.add',version: '1', condition: { broadcaster_user_id: broadcasterId } },
+        { type: 'channel.hype_train.begin',                           version: '2', condition: { broadcaster_user_id: broadcasterId } },
+    ];
+
+    for (const sub of subs) {
+        try {
+            await axiosEventsub.post('https://api.twitch.tv/helix/eventsub/subscriptions', {
+                type: sub.type, version: sub.version, condition: sub.condition,
+                transport: { method: 'websocket', session_id: eventsubSessionId }
+            }, { headers: { 'Authorization': `Bearer ${_eventsubToken}`, 'Client-Id': _eventsubClientId, 'Content-Type': 'application/json' } });
+            console.log('[eventsub] subscribed:', sub.type);
+        } catch(e) {
+            const msg = e.response?.data?.message || e.message;
+            console.log('[eventsub] sub failed:', sub.type, msg);
+        }
+    }
+}
+
+function _eventsubHandleEvent(type, event) {
+    if (!event) return;
+    const alerts = (() => { try { return JSON.parse(fs.readFileSync(getDataPath('eventsub-alerts.json'), 'utf8')); } catch(e) { return {}; } })();
+
+    const keyMap = {
+        'channel.follow': 'follow',
+        'channel.subscribe': 'sub',
+        'channel.subscription.gift': 'giftsub',
+        'channel.cheer': 'cheer',
+        'channel.raid': 'raid',
+        'channel.channel_points_custom_reward_redemption.add': 'redeem',
+        'channel.hype_train.begin': 'hype',
+    };
+    const key = keyMap[type];
+    console.log('[eventsub] event received:', type, '->', key, '| alerts keys:', Object.keys(alerts));
+    if (!key || !alerts[key]) { console.log('[eventsub] no alert configured for:', key); return; }
+
+    const src = Object.assign({}, alerts[key]);
+
+    // Resolve dynamic text variables
+    if (src.text) {
+        const vars = {
+            '{username}': event.user_name || event.broadcaster_user_name || '',
+            '{gifter}': event.user_name || '',
+            '{count}': String(event.total || 1),
+            '{bits}': String(event.bits || 0),
+            '{raider}': event.from_broadcaster_user_name || '',
+            '{viewers}': String(event.viewers || 0),
+            '{reward}': event.reward?.title || '',
+            '{message}': event.message?.text || event.user_input || '',
+        };
+        let text = src.text;
+        Object.entries(vars).forEach(([k, v]) => { text = text.split(k).join(v); });
+        src.text = text;
+    }
+
+    console.log('[eventsub] firing alert for:', key, '—', src.text || '(no text)');
+
+    // Fire via the existing fire-source HTTP route so we stay in scope
+    const body = JSON.stringify({ eventsubSrc: src });
+    const http = require('http');
+    const opts = { hostname: '127.0.0.1', port: 3000, path: '/api/eventsub/fire', method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } };
+    const req = http.request(opts, () => {});
+    req.on('error', () => {});
+    req.write(body);
+    req.end();
 }
 
 function createWindow() {

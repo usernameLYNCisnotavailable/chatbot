@@ -1,6 +1,6 @@
 {
   "name": "chatcommander",
-  "version": "1.0.0",
+  "version": "1.1.2",
   "description": "A Twitch bot with C++ reactor",
   "main": "main.js",
   "scripts": {
@@ -53,7 +53,9 @@
     "dotenv": "^17.3.1",
     "electron-updater": "^6.8.3",
     "express": "^5.2.1",
-    "tmi.js": "^1.8.5"
+    "multer": "^2.1.1",
+    "tmi.js": "^1.8.5",
+    "ws": "^8.19.0"
   },
   "devDependencies": {
     "electron": "^40.7.0",

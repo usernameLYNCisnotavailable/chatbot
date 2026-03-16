@@ -760,7 +760,7 @@
         </div>
         <div style="display:flex;gap:8px;">
           <button class="btn btn-green btn-sm" onclick="window.location.href='/auth/bot'">Connect Different Account</button>
-          <button class="btn btn-sm" id="btnUseMainAccount" onclick="accountUseMain()">Use My Account</button>
+          <button class="btn btn-danger btn-sm" onclick="logoutBot()">Disconnect Bot</button>
         </div>
       </div>
 
@@ -895,14 +895,16 @@
       </div>
     </div>
     <div style="padding:20px 24px;flex:1;overflow-y:auto;">
-      <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.2);margin-bottom:14px;">Overlay Presets</div>
+      <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.2);margin-bottom:14px;">Twitch Event Alerts</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-bottom:26px;">
+        <div class="preset-card" id="preset-follow" style="--card-color:99,102,241;--card-glow:rgba(99,102,241,0.25);"><div class="preset-icon">🎉</div><div class="preset-name">New Follower</div><div class="preset-desc">Fires when someone follows your channel</div><div class="preset-status" id="preset-follow-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('follow')">Set Up</button></div>
+        <div class="preset-card" id="preset-sub" style="--card-color:147,71,255;--card-glow:rgba(147,71,255,0.25);"><div class="preset-icon">🌟</div><div class="preset-name">New Sub</div><div class="preset-desc">Fires when someone subscribes to your channel</div><div class="preset-status" id="preset-sub-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('sub')">Set Up</button></div>
+        <div class="preset-card" id="preset-giftsub" style="--card-color:236,72,153;--card-glow:rgba(236,72,153,0.25);"><div class="preset-icon">🎁</div><div class="preset-name">Gift Subs</div><div class="preset-desc">Fires when someone gifts subs to your community</div><div class="preset-status" id="preset-giftsub-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('giftsub')">Set Up</button></div>
+        <div class="preset-card" id="preset-cheer" style="--card-color:234,179,8;--card-glow:rgba(234,179,8,0.25);"><div class="preset-icon">💎</div><div class="preset-name">Bits / Cheer</div><div class="preset-desc">Fires when someone cheers bits in your chat</div><div class="preset-status" id="preset-cheer-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('cheer')">Set Up</button></div>
+        <div class="preset-card" id="preset-raid" style="--card-color:249,115,22;--card-glow:rgba(249,115,22,0.25);"><div class="preset-icon">⚔️</div><div class="preset-name">Raid</div><div class="preset-desc">Fires when another streamer raids your channel</div><div class="preset-status" id="preset-raid-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('raid')">Set Up</button></div>
+        <div class="preset-card" id="preset-redeem" style="--card-color:0,200,83;--card-glow:rgba(0,200,83,0.25);"><div class="preset-icon">🏆</div><div class="preset-name">Channel Points</div><div class="preset-desc">Fires when a viewer redeems a channel point reward</div><div class="preset-status" id="preset-redeem-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('redeem')">Set Up</button></div>
+        <div class="preset-card" id="preset-hype" style="--card-color:239,68,68;--card-glow:rgba(239,68,68,0.25);"><div class="preset-icon">🔥</div><div class="preset-name">Hype Train</div><div class="preset-desc">Fires when a hype train starts in your channel</div><div class="preset-status" id="preset-hype-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('hype')">Set Up</button></div>
         <div class="preset-card" id="preset-ttsgif" style="--card-color:99,102,241;--card-glow:rgba(99,102,241,0.25);"><div class="preset-icon">🎬</div><div class="preset-name">TTS + GIF</div><div class="preset-desc">Chat command plays a GIF while the bot speaks a message</div><div class="preset-status" id="preset-ttsgif-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('ttsgif')">Set Up</button></div>
-        <div class="preset-card" id="preset-tts" style="--card-color:147,71,255;--card-glow:rgba(147,71,255,0.25);"><div class="preset-icon">🔊</div><div class="preset-name">TTS Alert</div><div class="preset-desc">Chat command speaks a custom message aloud via overlay TTS</div><div class="preset-status" id="preset-tts-status">Not configured</div><button class="preset-btn" onclick="showToast('Coming soon')">Set Up</button></div>
-        <div class="preset-card" id="preset-greenscreen" style="--card-color:0,200,83;--card-glow:rgba(0,200,83,0.25);"><div class="preset-icon">💚</div><div class="preset-name">Green Screen</div><div class="preset-desc">Chroma key overlay — chat command triggers a green screen GIF or video</div><div class="preset-status" id="preset-greenscreen-status">Not configured</div><button class="preset-btn" onclick="showToast('Coming soon')">Set Up</button></div>
-        <div class="preset-card" id="preset-imagealert" style="--card-color:249,115,22;--card-glow:rgba(249,115,22,0.25);"><div class="preset-icon">🖼</div><div class="preset-name">Image Alert</div><div class="preset-desc">Chat command shows an image on stream for a set duration</div><div class="preset-status" id="preset-imagealert-status">Not configured</div><button class="preset-btn" onclick="showToast('Coming soon')">Set Up</button></div>
-        <div class="preset-card" id="preset-soundalert" style="--card-color:234,179,8;--card-glow:rgba(234,179,8,0.25);"><div class="preset-icon">🎵</div><div class="preset-name">Sound Alert</div><div class="preset-desc">Chat command plays a sound effect with no image needed</div><div class="preset-status" id="preset-soundalert-status">Not configured</div><button class="preset-btn" onclick="showToast('Coming soon')">Set Up</button></div>
-        <div class="preset-card" id="preset-videoalert" style="--card-color:236,72,153;--card-glow:rgba(236,72,153,0.25);"><div class="preset-icon">📹</div><div class="preset-name">Video Alert</div><div class="preset-desc">Chat command plays a video clip directly on your stream</div><div class="preset-status" id="preset-videoalert-status">Not configured</div><button class="preset-btn" onclick="showToast('Coming soon')">Set Up</button></div>
       </div>
       <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.2);margin-bottom:14px;">Chat & Stream Tools</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;">
@@ -5485,8 +5487,8 @@ async function overlayConfirmEdit(id) {
     dot.style.background = 'var(--green)';
     dot.style.boxShadow = '0 0 6px var(--green)';
     document.getElementById('botAccountName').textContent = session.botUsername || '—';
-    document.getElementById('botAccountType').textContent = session.usingMainAccount ? 'Same as your account' : 'Separate bot account';
-    if (session.usingMainAccount) document.getElementById('btnUseMainAccount').style.display = 'none';
+    document.getElementById('botAccountType').textContent = session.botUsername ? 'Bot account' : 'Not connected';
+    document.getElementById('botAccountName').textContent = session.botUsername || '—';
     if (session.channel) document.getElementById('accountChannelInput').value = session.channel;
     applyRole(session.role || 'streamer', session.activeUsername);
   }
@@ -5537,12 +5539,10 @@ async function overlayConfirmEdit(id) {
     window.location.href = '/setup';
   }
 
-  async function accountUseMain() {
-    await fetch('/api/setup-bot-main', { method: 'POST' });
-    showToast('Bot set to your main account');
-    loadSession();
-  loadGuestChannels();
-  setInterval(loadGuestChannels, 10000);
+  async function logoutBot() {
+    await fetch('/api/logout-bot', { method: 'POST' });
+    showToast('Bot account disconnected');
+    setTimeout(() => { window.location.href = '/auth/bot'; }, 800);
   }
 
   async function accountSaveChannel() {
@@ -5806,31 +5806,37 @@ checkBotStatus();
   // PRESETS + WIZARD
   // ============================================================
   let presetsConfig = {};
+  let eventsubConfig = {};
   let _wizKey = null, _wizStep = 0, _wizSteps = [], _wizData = {}, _wizColorStr = '147,71,255';
 
   async function loadPresetsPage() {
     try { const r = await fetch('/api/presets'); presetsConfig = await r.json(); } catch(e) { presetsConfig = {}; }
+    try { const r = await fetch('/api/eventsub/alerts'); eventsubConfig = await r.json(); } catch(e) { eventsubConfig = {}; }
     _wizRenderStatuses();
   }
 
   function _wizRenderStatuses() {
-    ['ttsgif','tts','greenscreen','imagealert','soundalert','videoalert','autoso','clip','hypetext','hydrate'].forEach(k => {
+    ['ttsgif','follow','sub','giftsub','cheer','raid','redeem','hype','autoso','clip','hypetext','hydrate'].forEach(k => {
       const el = document.getElementById('preset-' + k + '-status');
       const btn = document.querySelector('#preset-' + k + ' .preset-btn');
       if (!el) return;
-      if (presetsConfig[k]) { el.textContent = presetsConfig[k].cmd || 'Configured'; el.className = 'preset-status configured'; if (btn) btn.textContent = 'Edit'; }
+      const isEvent = ['follow','sub','giftsub','cheer','raid','redeem','hype'].includes(k);
+      const configured = isEvent ? !!(eventsubConfig[k]) : !!(presetsConfig[k]);
+      if (configured) { el.textContent = 'Configured'; el.className = 'preset-status configured'; if (btn) btn.textContent = 'Edit'; }
       else { el.textContent = 'Not configured'; el.className = 'preset-status'; if (btn) btn.textContent = 'Set Up'; }
     });
   }
 
   // ---- Wizard type meta ----
   const _WIZ_META = {
-    ttsgif:      { name: 'TTS + GIF',    icon: '🎬', color: '99,102,241',  desc: 'GIF or image plays while the bot speaks' },
-    tts:         { name: 'TTS Alert',    icon: '🔊', color: '147,71,255',  desc: 'Bot speaks a message, no image needed' },
-    imagealert:  { name: 'Image Alert',  icon: '🖼',  color: '249,115,22',  desc: 'Image pops up on stream for a set duration' },
-    soundalert:  { name: 'Sound Alert',  icon: '🎵', color: '234,179,8',   desc: 'Sound plays with no visual' },
-    videoalert:  { name: 'Video Alert',  icon: '📹', color: '236,72,153',  desc: 'Video clip plays on stream' },
-    greenscreen: { name: 'Green Screen', icon: '💚', color: '0,200,83',    desc: 'Chroma key video triggered by chat' },
+    ttsgif:   { name: 'TTS + GIF',       icon: '🎬', color: '99,102,241',  desc: 'GIF or image plays while the bot speaks' },
+    follow:   { name: 'New Follower',     icon: '🎉', color: '99,102,241',  desc: 'Fires when someone follows your channel' },
+    sub:      { name: 'New Sub',          icon: '🌟', color: '147,71,255',  desc: 'Fires when someone subscribes' },
+    giftsub:  { name: 'Gift Subs',        icon: '🎁', color: '236,72,153',  desc: 'Fires when someone gifts subs' },
+    cheer:    { name: 'Bits / Cheer',     icon: '💎', color: '234,179,8',   desc: 'Fires when someone cheers bits' },
+    raid:     { name: 'Raid',             icon: '⚔️', color: '249,115,22',  desc: 'Fires when someone raids your channel' },
+    redeem:   { name: 'Channel Points',   icon: '🏆', color: '0,200,83',    desc: 'Fires when a viewer redeems a reward' },
+    hype:     { name: 'Hype Train',       icon: '🔥', color: '239,68,68',   desc: 'Fires when a hype train starts' },
   };
 
   function _wizBuildSteps(key, data) {
@@ -5865,6 +5871,31 @@ checkBotStatus();
     const TTS_WANT_STEP = { id:'wanttts', question:'Add TTS to this alert?', hint:'The bot can speak a message when this triggers.', fields:[
       { id:'w_wanttts', type:'radio', label:'TTS', options:[{ value:'yes', label:'Yes — bot speaks when triggered', sub:'Choose voice and message on the next step' },{ value:'no', label:'No — just the media', sub:'Silent alert' }], default:'no' }
     ]};
+    // EventSub event types
+    const EVENT_KEYS = ['follow','sub','giftsub','cheer','raid','redeem','hype'];
+    if (EVENT_KEYS.includes(key)) {
+      const mediaType = data.w_mediatype || 'image';
+      const eventVars = { follow:'{username} just followed!', sub:'{username} just subscribed!', giftsub:'{gifter} gifted {count} subs!', cheer:'{username} cheered {bits} bits!', raid:'{raider} is raiding with {viewers} viewers!', redeem:'{username} redeemed {reward}!', hype:'Hype Train is live!' };
+      const defaultMsg = eventVars[key] || '{username}';
+      const EVENT_TTS_FIELDS = [
+        { id:'w_text', type:'text', label:'Message (variables shown above)', placeholder: defaultMsg, default: defaultMsg },
+        { id:'w_voice', type:'voice', label:'TTS Voice' },
+        { id:'w_volume', type:'volume', label:'TTS Volume', default:80 }
+      ];
+      if (mediaType === 'none') {
+        return [{ id:'text', question:'What should the bot say?', hint:'Variables: ' + defaultMsg, fields: EVENT_TTS_FIELDS }];
+      }
+      const isVideo = mediaType === 'video';
+      const steps = [];
+      steps.push({ id:'media', question: isVideo ? 'Pick your video file.' : 'Pick your GIF or image.', hint:'This plays automatically when the event fires.',
+        fields:[{ id:'w_gif', type: isVideo ? 'videofile' : 'file', label: isVideo ? 'Video file' : 'GIF / Image file', placeholder: isVideo ? 'C:\\\\path\\\\to\\\\file.mp4' : 'C:\\\\path\\\\to\\\\file.gif', accept: isVideo ? 'video' : 'image' }]
+      });
+      if (isVideo) steps.push({ id:'chroma', question:'Is it a green screen video?', hint:'Enable chroma key to remove the background colour.', fields: CHROMA_FIELDS });
+      steps.push(OPTIONS_STEP);
+      steps.push({ id:'text', question:'What should the bot say?', hint:'Variables: ' + defaultMsg, fields: EVENT_TTS_FIELDS, canvas:true });
+      return steps;
+    }
+
     if (key === 'ttsgif') {
       const mediaType = data.w_mediatype || 'image';
       if (mediaType === 'none') return [CMD, Object.assign({}, {id:'text',question:'What should the bot say?',hint:'TTS only — no media will show on screen.',fields:TTS_FIELDS}), ACCS];
@@ -5889,8 +5920,11 @@ checkBotStatus();
   function wizardOpen(key) {
     _wizKey = null; _wizStep = 0; _wizData = {}; _wizSteps = [];
     document.getElementById('wizardOverlay').style.display = 'flex';
-    if (key === 'ttsgif') { _wizShowMediaTypePicker(); }
-    else if (_WIZ_META[key]) { _wizStartFlow(key); }
+    const EVENT_KEYS = ['follow','sub','giftsub','cheer','raid','redeem','hype'];
+    if (key === 'ttsgif' || EVENT_KEYS.includes(key)) {
+      _wizKey = key;
+      _wizShowMediaTypePicker();
+    } else if (_WIZ_META[key]) { _wizStartFlow(key); }
     else { _wizShowPicker(); }
   }
 
@@ -5911,14 +5945,14 @@ checkBotStatus();
   }
 
   function _wizShowMediaTypePicker() {
-    _wizKey = 'ttsgif';
-    _wizSetHeader('🎬', '99,102,241', 'TTS + GIF', 'Pick your media type');
+    const m = _WIZ_META[_wizKey] || { icon:'⚡', color:'99,102,241', name:'Alert' };
+    _wizSetHeader(m.icon, m.color, m.name, 'Pick your media type');
     document.getElementById('wizDots').innerHTML = '';
     document.getElementById('wizBackBtn').style.display = 'none';
     document.getElementById('wizNextBtn').style.display = 'none';
     const vp = document.getElementById('wizViewport');
     vp.innerHTML = '<div style="padding:24px;display:flex;flex-direction:column;gap:12px;">' +
-      '<div style="font-size:13px;color:rgba(255,255,255,0.4);margin-bottom:4px;">What kind of media do you want to display while the bot speaks?</div>' +
+      '<div style="font-size:13px;color:rgba(255,255,255,0.4);margin-bottom:4px;">What kind of media do you want to display when this fires?</div>' +
       '<div onclick="_wizPickMediaType(\'image\')" style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.background=\'rgba(255,255,255,0.08)\'" onmouseout="this.style.background=\'rgba(255,255,255,0.04)\'">' +
       '<div style="font-size:1.8rem;">🖼</div><div><div style="font-size:14px;font-weight:600;color:#fff;">GIF or Image</div><div style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:2px;">PNG, JPG, GIF — great for animated reactions</div></div><div style="margin-left:auto;color:rgba(255,255,255,0.2);font-size:16px;">›</div></div>' +
       '<div onclick="_wizPickMediaType(\'video\')" style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.background=\'rgba(255,255,255,0.08)\'" onmouseout="this.style.background=\'rgba(255,255,255,0.04)\'">' +
@@ -5931,7 +5965,7 @@ checkBotStatus();
   function _wizPickMediaType(type) {
     _wizStopVideoPreview();
     _wizData.w_mediatype = type;
-    _wizStartFlow('ttsgif');
+    _wizStartFlow(_wizKey || 'ttsgif');
   }
 
   function _wizStartFlow(key) {
@@ -6406,16 +6440,21 @@ checkBotStatus();
       _wizData.mediaX=parseInt(_g('wizMediaX'))||0; _wizData.mediaY=parseInt(_g('wizMediaY'))||0; _wizData.mediaW=parseInt(_g('wizMediaW'))||960; _wizData.mediaH=parseInt(_g('wizMediaH'))||540;
       _wizData.textX=parseInt(_g('wizTextX'))||100; _wizData.textY=parseInt(_g('wizTextY'))||400; _wizData.textMaxW=parseInt(_g('wizTextMaxW'))||800; _wizData.textMaxH=parseInt(_g('wizTextMaxH'))||200; _wizData.textSize=parseInt(_g('wizTextSize'))||48;
     }
-    _wizData.cmd = _wizData.w_cmd || '!alert';
-    presetsConfig[_wizKey] = _wizData;
+    const EVENT_KEYS_FINISH = ['follow','sub','giftsub','cheer','raid','redeem','hype'];
+    if (!EVENT_KEYS_FINISH.includes(_wizKey)) {
+      presetsConfig[_wizKey] = _wizData;
+    }
     try {
-      await fetch('/api/presets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(presetsConfig)});
+      if (!EVENT_KEYS_FINISH.includes(_wizKey)) {
+        await fetch('/api/presets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(presetsConfig)});
+      }
       if (_wizKey==='ttsgif')           await _wizCreateTtsGif();
       else if (_wizKey==='tts')         await _wizCreateTts();
       else if (_wizKey==='imagealert')  await _wizCreateImageAlert();
       else if (_wizKey==='soundalert')  await _wizCreateSoundAlert();
       else if (_wizKey==='videoalert')  await _wizCreateVideoAlert();
       else if (_wizKey==='greenscreen') await _wizCreateGreenScreen();
+      else if (['follow','sub','giftsub','cheer','raid','redeem','hype'].includes(_wizKey)) await _wizCreateEventAlert(_wizKey);
       showToast('Preset saved ✓'); _wizRenderStatuses(); wizardClose();
     } catch(e) { showToast('Failed to save'); }
   }
@@ -6445,6 +6484,37 @@ checkBotStatus();
     const isVideo = mediaType === 'video';
     const newSrc = { id:maxId+1, type:isVideo?'video':'image', path:isVideo?null:(d.w_gif||''), videoPath:isVideo?(d.w_gif||''):null, soundPath:null, soundStart:0, soundEnd:0, soundVolume:1, videoStart:isVideo?(parseFloat(d.w_videoStart)||0):0, videoEnd:isVideo?(parseFloat(d.w_videoEnd)||0):0, videoVolume:1, gifLoops:0, displaySeconds:(d.w_clearwithtts!==false)?0:(parseFloat(d.w_duration)||5), videoLoops:1, clearWithTTS:d.w_clearwithtts!==false, fadeIn, fadeOut, chromaKey:isVideo?(d.w_chromakey||false):false, chromaColor:d.w_chromacolor||'#00ff00', chromaThreshold:parseInt(d.w_chromathreshold)||40, assignedCommand:cmd, mediaX:d.mediaX||480, mediaY:d.mediaY||270, mediaW:d.mediaW||960, mediaH:d.mediaH||540, text:d.w_textmode==='user'?'{message}':(d.w_text||'HYPE!'), font:'Arial', fontSize:d.textSize||48, color:'#ffffff', bold:false, italic:false, shadow:true, animation:'fade', animDuration:fadeIn, x:d.textX||100, y:d.textY||400, maxW:d.textMaxW||800, maxH:d.textMaxH||200, lockDuration:false, speak:true, voice:d.w_voice||null, ttsRate:1, ttsPitch:1, ttsVolume:d.w_volume!==undefined?(parseInt(d.w_volume)/100):1 };
     await _wizSaveSource(filtered, newSrc); await _wizSaveCommand(cmd, 'everyone'); await overlayLoadSources();
+  }
+
+  async function _wizCreateEventAlert(key) {
+    const d = _wizData;
+    const fadeIn = parseFloat(d.w_fadein_dur)||1, fadeOut = parseFloat(d.w_fadeout_dur)||1;
+    const mediaType = d.w_mediatype || 'image';
+    const isVideo = mediaType === 'video';
+    const src = {
+      type: mediaType === 'none' ? 'text' : (isVideo ? 'video' : 'image'),
+      path: (!isVideo && mediaType !== 'none') ? (d.w_gif||'') : null,
+      videoPath: isVideo ? (d.w_gif||'') : null,
+      soundPath: null, soundStart:0, soundEnd:0, soundVolume:1,
+      videoStart: isVideo ? (parseFloat(d.w_videoStart)||0) : 0,
+      videoEnd: isVideo ? (parseFloat(d.w_videoEnd)||0) : 0,
+      videoVolume:1, gifLoops:0,
+      displaySeconds: (d.w_clearwithtts!==false) ? 0 : (parseFloat(d.w_duration)||5),
+      videoLoops:1, clearWithTTS: d.w_clearwithtts!==false,
+      fadeIn, fadeOut,
+      chromaKey: isVideo ? (d.w_chromakey||false) : false,
+      chromaColor: d.w_chromacolor||'#00ff00', chromaThreshold: parseInt(d.w_chromathreshold)||40,
+      mediaX: d.mediaX||480, mediaY: d.mediaY||270, mediaW: d.mediaW||960, mediaH: d.mediaH||540,
+      text: d.w_text || '',
+      font:'Arial', fontSize: d.textSize||48, color:'#ffffff', bold:false, italic:false, shadow:true,
+      animation:'fade', animDuration: fadeIn,
+      x: d.textX||100, y: d.textY||400, maxW: d.textMaxW||800, maxH: d.textMaxH||200,
+      lockDuration:false, speak:true, voice: d.w_voice||null,
+      ttsRate:1, ttsPitch:1, ttsVolume: d.w_volume!==undefined ? (parseInt(d.w_volume)/100) : 1
+    };
+    const r = await fetch('/api/eventsub/alert', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ key, src }) });
+    const res = await r.json();
+    if (!res.ok) throw new Error(res.error || 'Failed to save event alert');
   }
 
   async function _wizCreateTts() {

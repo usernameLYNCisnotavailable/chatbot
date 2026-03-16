@@ -202,7 +202,7 @@ function addText(id, cfg) {
         fetch('http://localhost:3000/api/video-overlay/done', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ cmd: 'TEXTDONE', id: cfg.id })
+          body: JSON.stringify({ cmd: 'TEXTDONE', id: cfg.id, clearMediaId: cfg.clearMediaId || null, clearMediaKind: cfg.clearMediaKind || null })
         }).catch(() => {});
       };
 
