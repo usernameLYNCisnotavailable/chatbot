@@ -1449,7 +1449,7 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
                         const loops = src.clearWithTTS ? 0 : (isGif ? (src.gifLoops || 0) : 0);
                         const displaySeconds = src.clearWithTTS ? 0 : (src.displaySeconds || 5);
                         broadcastVideoCmd({ cmd: 'PLAYIMG', id: src.id, path: src.path, loops, displaySeconds,
-                            x: src.mediaX || 0, y: src.mediaY || 0, w: src.mediaW || 960, h: src.mediaH || 540,
+                            x: src.mediaX ?? 480, y: src.mediaY ?? 270, w: src.mediaW || 960, h: src.mediaH || 540,
                             chromaKey: src.chromaKey || false, chromaColor: src.chromaColor || '#00ff00', chromaThreshold: src.chromaThreshold ?? 40 });
                     } else if (overlayProcess) {
                         // Legacy C++ overlay path
@@ -1463,13 +1463,12 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
                 }
 
                 if (hasVideo && videoWin && !videoWin.isDestroyed()) {
-                    const loops = hasSound ? 0 : (src.videoLoops || 1);
-                    let px, py, pw, ph;
-                    if (videoPositions[src.id]) {
-                        px = videoPositions[src.id].x; py = videoPositions[src.id].y;
-                        pw = videoPositions[src.id].w; ph = videoPositions[src.id].h;
-                    }
-                    broadcastVideoCmd({ cmd: 'PLAYVID', id: src.id, path: src.videoPath, loops, videoStart: src.videoStart || 0, videoEnd: src.videoEnd || 0, x: px, y: py, w: pw, h: ph });
+                    const loops = src.clearWithTTS ? 0 : (hasSound ? 0 : (src.videoLoops || 1));
+                    const px = src.mediaX ?? (videoPositions[src.id]?.x);
+                    const py = src.mediaY ?? (videoPositions[src.id]?.y);
+                    const pw = src.mediaW || videoPositions[src.id]?.w || 960;
+                    const ph = src.mediaH || videoPositions[src.id]?.h || 540;
+                    broadcastVideoCmd({ cmd: 'PLAYVID', id: src.id, path: src.videoPath, loops, videoStart: src.videoStart || 0, videoEnd: src.videoEnd || 0, volume: src.videoVolume ?? 1, x: px, y: py, w: pw, h: ph, chromaKey: src.chromaKey || false, chromaColor: src.chromaColor || '#00ff00', chromaThreshold: src.chromaThreshold ?? 40 });
                 }
 
                 if (hasSound && overlayProcess) {

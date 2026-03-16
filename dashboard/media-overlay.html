@@ -102,14 +102,15 @@ function connectSSE() {
 function handleCmd(msg) {
   const id = String(msg.id);
   const { cmd, x, y, w, h } = msg;
+  console.log('[media-overlay] cmd:', cmd, 'id:', id, 'loops:', msg.loops, 'x:', x, 'y:', y, 'w:', w, 'h:', h, 'videoEnd:', msg.videoEnd);
   const chroma = { chromaKey: msg.chromaKey || false, chromaColor: msg.chromaColor || '#00ff00', chromaThreshold: msg.chromaThreshold ?? 40 };
 
-  if      (cmd === 'PLAYVID')   playVid(id, msg.path, msg.loops||1, x, y, w, h, msg.videoStart||0, msg.videoEnd||0, msg.volume ?? 1, chroma);
+  if      (cmd === 'PLAYVID')   playVid(id, msg.path, msg.loops != null ? msg.loops : 1, x, y, w, h, msg.videoStart||0, msg.videoEnd||0, msg.volume ?? 1, chroma);
   else if (cmd === 'CLEARVID')  clearSource(id);
   else if (cmd === 'REMOVEVID') removeSource(id);
   else if (cmd === 'MOVEVID')   moveSource(id, x, y);
   else if (cmd === 'SIZEVID')   sizeSource(id, w, h);
-  else if (cmd === 'PLAYIMG')   playImg(id, msg.path, msg.loops||1, x, y, w, h, msg.displaySeconds||0, chroma);
+  else if (cmd === 'PLAYIMG')   playImg(id, msg.path, msg.loops != null ? msg.loops : 1, x, y, w, h, msg.displaySeconds||0, chroma);
   else if (cmd === 'CLEARIMG')  clearSource(id);
   else if (cmd === 'REMOVEIMG') removeSource(id);
   else if (cmd === 'MOVEIMG')   moveSource(id, x, y);
@@ -229,6 +230,7 @@ function applyChroma(src, chroma) {
 
 // ---- Video playback ----
 function playVid(id, filePath, loops, x, y, w, h, videoStart, videoEnd, volume, chroma) {
+  console.log('[playVid] id:', id, 'loops:', loops, 'videoStart:', videoStart, 'videoEnd:', videoEnd, 'x:', x, 'y:', y);
   let src = sources[id];
   if (src && src.kind !== 'video') { removeSource(id); src = null; }
 
