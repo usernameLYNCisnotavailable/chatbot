@@ -561,6 +561,10 @@
     <div class="nav-item" id="nav-overlay" onclick="showPage('overlay')">
       <span class="nav-icon">🎬</span> Overlay
     </div>
+    <div class="nav-item" id="nav-giflibrary" onclick="showPage('giflibrary')">
+      <span class="nav-icon">🎭</span> GIF Library
+      <span id="gifPendingDot" style="display:none;width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent);margin-left:auto;flex-shrink:0;"></span>
+    </div>
 
     <!-- SETTINGS -->
     <div class="nav-section">Settings</div>
@@ -894,11 +898,11 @@
       <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.2);margin-bottom:14px;">Overlay Presets</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-bottom:26px;">
         <div class="preset-card" id="preset-ttsgif" style="--card-color:99,102,241;--card-glow:rgba(99,102,241,0.25);"><div class="preset-icon">🎬</div><div class="preset-name">TTS + GIF</div><div class="preset-desc">Chat command plays a GIF while the bot speaks a message</div><div class="preset-status" id="preset-ttsgif-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('ttsgif')">Set Up</button></div>
-        <div class="preset-card" id="preset-tts" style="--card-color:147,71,255;--card-glow:rgba(147,71,255,0.25);"><div class="preset-icon">🔊</div><div class="preset-name">TTS Alert</div><div class="preset-desc">Chat command speaks a custom message aloud via overlay TTS</div><div class="preset-status" id="preset-tts-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('tts')">Set Up</button></div>
-        <div class="preset-card" id="preset-greenscreen" style="--card-color:0,200,83;--card-glow:rgba(0,200,83,0.25);"><div class="preset-icon">💚</div><div class="preset-name">Green Screen</div><div class="preset-desc">Chroma key overlay — chat command triggers a green screen GIF or video</div><div class="preset-status" id="preset-greenscreen-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('greenscreen')">Set Up</button></div>
-        <div class="preset-card" id="preset-imagealert" style="--card-color:249,115,22;--card-glow:rgba(249,115,22,0.25);"><div class="preset-icon">🖼</div><div class="preset-name">Image Alert</div><div class="preset-desc">Chat command shows an image on stream for a set duration</div><div class="preset-status" id="preset-imagealert-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('imagealert')">Set Up</button></div>
-        <div class="preset-card" id="preset-soundalert" style="--card-color:234,179,8;--card-glow:rgba(234,179,8,0.25);"><div class="preset-icon">🎵</div><div class="preset-name">Sound Alert</div><div class="preset-desc">Chat command plays a sound effect with no image needed</div><div class="preset-status" id="preset-soundalert-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('soundalert')">Set Up</button></div>
-        <div class="preset-card" id="preset-videoalert" style="--card-color:236,72,153;--card-glow:rgba(236,72,153,0.25);"><div class="preset-icon">📹</div><div class="preset-name">Video Alert</div><div class="preset-desc">Chat command plays a video clip directly on your stream</div><div class="preset-status" id="preset-videoalert-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('videoalert')">Set Up</button></div>
+        <div class="preset-card" id="preset-tts" style="--card-color:147,71,255;--card-glow:rgba(147,71,255,0.25);"><div class="preset-icon">🔊</div><div class="preset-name">TTS Alert</div><div class="preset-desc">Chat command speaks a custom message aloud via overlay TTS</div><div class="preset-status" id="preset-tts-status">Not configured</div><button class="preset-btn" onclick="showToast('Coming soon')">Set Up</button></div>
+        <div class="preset-card" id="preset-greenscreen" style="--card-color:0,200,83;--card-glow:rgba(0,200,83,0.25);"><div class="preset-icon">💚</div><div class="preset-name">Green Screen</div><div class="preset-desc">Chroma key overlay — chat command triggers a green screen GIF or video</div><div class="preset-status" id="preset-greenscreen-status">Not configured</div><button class="preset-btn" onclick="showToast('Coming soon')">Set Up</button></div>
+        <div class="preset-card" id="preset-imagealert" style="--card-color:249,115,22;--card-glow:rgba(249,115,22,0.25);"><div class="preset-icon">🖼</div><div class="preset-name">Image Alert</div><div class="preset-desc">Chat command shows an image on stream for a set duration</div><div class="preset-status" id="preset-imagealert-status">Not configured</div><button class="preset-btn" onclick="showToast('Coming soon')">Set Up</button></div>
+        <div class="preset-card" id="preset-soundalert" style="--card-color:234,179,8;--card-glow:rgba(234,179,8,0.25);"><div class="preset-icon">🎵</div><div class="preset-name">Sound Alert</div><div class="preset-desc">Chat command plays a sound effect with no image needed</div><div class="preset-status" id="preset-soundalert-status">Not configured</div><button class="preset-btn" onclick="showToast('Coming soon')">Set Up</button></div>
+        <div class="preset-card" id="preset-videoalert" style="--card-color:236,72,153;--card-glow:rgba(236,72,153,0.25);"><div class="preset-icon">📹</div><div class="preset-name">Video Alert</div><div class="preset-desc">Chat command plays a video clip directly on your stream</div><div class="preset-status" id="preset-videoalert-status">Not configured</div><button class="preset-btn" onclick="showToast('Coming soon')">Set Up</button></div>
       </div>
       <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.2);margin-bottom:14px;">Chat & Stream Tools</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;">
@@ -1661,14 +1665,12 @@ async function overlayLoadSources() {
       try { const pr = await fetch('/api/overlay/positions'); positions = await pr.json(); } catch(e) {}
       overlayState.sources = data.map(s => {
         const pos = positions.find(p => p.id === s.id);
-        // Only restore C++ overlay drag position if it was actually dragged (non-zero)
-        // Don't overwrite wizard-set positions with stale zeros from overlay-positions.json
-        if (pos && (pos.x !== 0 || pos.y !== 0)) {
+        // Restore C++ overlay pixel position into mediaX/Y/W/H, NOT x/y (those are text coords)
+        if (pos) {
           return { ...s, mediaX: pos.x, mediaY: pos.y, mediaW: pos.w, mediaH: pos.h };
         }
         return s;
       });
-      console.log('[overlayLoadSources] sources:', JSON.stringify(overlayState.sources.map(s => ({id:s.id,type:s.type,mediaX:s.mediaX,mediaY:s.mediaY,clearWithTTS:s.clearWithTTS,text:s.text?.slice(0,20),assignedCommand:s.assignedCommand}))));
       overlayNextId = Math.max(...data.map(s => s.id), 0) + 1;
       overlayRenderSources();
     }
@@ -3311,18 +3313,17 @@ async function overlayTriggerSource(src) {
                          : (src.displaySeconds || 0);
     await fetch('/api/video-overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ cmd: 'PLAYIMG', id: src.id, path: src.path, loops, displaySeconds,
-        x: src.mediaX ?? 480, y: src.mediaY ?? 270, w: src.mediaW || 960, h: src.mediaH || 540,
+        x: src.mediaX || 0, y: src.mediaY || 0, w: src.mediaW || 400, h: src.mediaH || 300,
         chromaKey: src.chromaKey || false, chromaColor: src.chromaColor || '#00ff00', chromaThreshold: src.chromaThreshold ?? 40 }) });
   }
 
   if (hasVideo) {
     const loops = src.clearWithTTS ? 0 : (hasSound ? 0 : (src.videoLoops || 1));
-    console.log('[PLAYVID] id:', src.id, 'clearWithTTS:', src.clearWithTTS, 'loops:', loops, 'x:', src.mediaX, 'y:', src.mediaY, 'w:', src.mediaW, 'h:', src.mediaH, 'hasText:', hasText, 'text:', src.text);
     await fetch('/api/video-overlay/command', { method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ cmd: 'PLAYVID', id: src.id, path: src.videoPath, loops,
         videoStart: src.videoStart || 0, videoEnd: src.videoEnd || 0,
         volume: src.videoVolume ?? 1,
-        x: src.mediaX ?? 480, y: src.mediaY ?? 270, w: src.mediaW || 960, h: src.mediaH || 540,
+        x: src.mediaX || 0, y: src.mediaY || 0, w: src.mediaW || 400, h: src.mediaH || 300,
         chromaKey: src.chromaKey || false, chromaColor: src.chromaColor || '#00ff00', chromaThreshold: src.chromaThreshold ?? 40 }) });
   }
 
@@ -3699,6 +3700,85 @@ async function overlayConfirmEdit(id) {
       </div>
 </div>
 
+<!-- GIF LIBRARY PAGE -->
+<div class="page" id="page-giflibrary">
+  <div class="cmd-page-wrap">
+    <div class="cmd-topbar">
+      <div class="cmd-title-block">
+        <div class="cmd-title">GIF Library</div>
+        <div class="cmd-sub">Manage named GIFs viewers can call with :gifname: in TTS commands</div>
+      </div>
+      <button class="cmd-add-btn" onclick="gifLibOpenAdd()">+ Add GIF</button>
+    </div>
+
+    <div class="cmd-tabs-bar">
+      <div class="cmd-tab active" id="giftab-approved" onclick="gifLibSwitchTab('approved')">Library</div>
+      <div class="cmd-tab" id="giftab-pending" onclick="gifLibSwitchTab('pending')">
+        Pending
+        <span id="gifPendingCount" style="display:none;margin-left:5px;font-size:10px;background:var(--accent-soft);color:var(--accent);border-radius:8px;padding:1px 6px;"></span>
+      </div>
+      <div class="cmd-tab" id="giftab-position" onclick="gifLibSwitchTab('position')">Position</div>
+    </div>
+
+    <!-- Library tab -->
+    <div id="gifpanel-approved" style="flex:1;overflow-y:auto;padding:0 20px 20px;">
+      <div style="padding:10px 0 14px;font-size:12px;color:var(--muted);">
+        Viewers call GIFs with <code style="background:var(--surface-raised);padding:2px 6px;border-radius:4px;color:var(--accent);">:gifname:</code> inside any TTS command. Example: <code style="background:var(--surface-raised);padding:2px 6px;border-radius:4px;color:var(--muted);">!say great stream :hype:</code>
+      </div>
+      <div id="gifApprovedList"><div class="empty">No GIFs yet — click + Add GIF or approve a request</div></div>
+    </div>
+
+    <!-- Pending tab -->
+    <div id="gifpanel-pending" style="display:none;flex:1;overflow-y:auto;padding:0 20px 20px;">
+      <div style="padding:10px 0 14px;font-size:12px;color:var(--muted);">Viewer requests waiting for approval. You can rename before approving.</div>
+      <div id="gifPendingList"><div class="empty">No pending requests</div></div>
+    </div>
+
+    <!-- Position tab -->
+    <div id="gifpanel-position" style="display:none;flex:1;overflow-y:auto;padding:20px;">
+      <div style="max-width:560px;display:flex;flex-direction:column;gap:16px;">
+        <div style="font-size:13px;color:var(--muted);line-height:1.6;">Set where GIF Library overlays appear on screen. Drag the box to reposition, drag the corner to resize.</div>
+        <div style="display:flex;gap:12px;align-items:flex-end;">
+          <div style="flex:1;"><label class="form-label">Duration (seconds)</label><input type="number" id="gifPosDuration" class="form-input" value="5" min="1" max="60" style="width:100px;"></div>
+          <button class="btn btn-primary" style="padding:8px 20px;font-size:13px;" onclick="gifLibSavePosition()">Save Position</button>
+        </div>
+        <div style="position:relative;width:100%;aspect-ratio:16/9;background:#111;border:1px solid var(--border);border-radius:8px;overflow:hidden;user-select:none;" id="gifPosCanvas">
+          <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 10%,rgba(255,255,255,0.015) 10%,rgba(255,255,255,0.015) 10.5%),repeating-linear-gradient(90deg,transparent,transparent 17.7%,rgba(255,255,255,0.015) 17.7%,rgba(255,255,255,0.015) 18.2%);pointer-events:none;"></div>
+          <div id="gifPosBox" style="position:absolute;cursor:grab;border:2px dashed rgba(145,71,255,0.7);border-radius:4px;background:rgba(145,71,255,0.08);display:flex;align-items:center;justify-content:center;box-sizing:border-box;">
+            <span style="font-size:11px;color:rgba(145,71,255,0.8);font-weight:600;pointer-events:none;">GIF</span>
+            <div id="gifPosResize" style="position:absolute;bottom:-5px;right:-5px;width:12px;height:12px;background:var(--accent);border-radius:3px;cursor:se-resize;z-index:2;"></div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+          <div><label class="form-label" style="font-size:10px;">X</label><input type="number" id="gifPosX" class="form-input" style="padding:6px 8px;font-size:12px;" oninput="gifLibUpdatePosBox()"></div>
+          <div><label class="form-label" style="font-size:10px;">Y</label><input type="number" id="gifPosY" class="form-input" style="padding:6px 8px;font-size:12px;" oninput="gifLibUpdatePosBox()"></div>
+          <div><label class="form-label" style="font-size:10px;">W</label><input type="number" id="gifPosW" class="form-input" style="padding:6px 8px;font-size:12px;" oninput="gifLibUpdatePosBox()"></div>
+          <div><label class="form-label" style="font-size:10px;">H</label><input type="number" id="gifPosH" class="form-input" style="padding:6px 8px;font-size:12px;" oninput="gifLibUpdatePosBox()"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD GIF MODAL -->
+<div id="gifAddModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div class="card" style="max-width:420px;width:90%;padding:28px;">
+    <div style="font-size:16px;font-weight:600;margin-bottom:18px;color:var(--text);">Add GIF to Library</div>
+    <div class="form-group" style="margin-bottom:14px;">
+      <label class="form-label">Name <span style="color:var(--muted-2);font-size:11px;">(letters, numbers, _ and - only)</span></label>
+      <input class="form-input" type="text" id="gifAddName" placeholder="hype" />
+    </div>
+    <div class="form-group" style="margin-bottom:18px;">
+      <label class="form-label">GIF URL</label>
+      <input class="form-input" type="text" id="gifAddUrl" placeholder="https://media.giphy.com/..." />
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn" style="flex:1;" onclick="document.getElementById('gifAddModal').style.display='none'">Cancel</button>
+      <button class="btn btn-primary" style="flex:2;" onclick="gifLibAdd()">Add GIF</button>
+    </div>
+  </div>
+</div>
+
 <!-- MOD VIEW PAGE -->
 <div class="page" id="page-mod-view">
   <div class="cmd-page-wrap">
@@ -4021,6 +4101,7 @@ async function overlayConfirmEdit(id) {
     if (name === 'overlay') { overlayLoadSources(); overlayStartVideoSSE(); loadHotkeys(); }
     if (name === 'presets') loadPresetsPage();
     if (name === 'songs') loadSongsPage();
+    if (name === 'giflibrary') loadGifLibrary();
     if (name !== 'songs' && _songsPollInterval) { clearInterval(_songsPollInterval); _songsPollInterval = null; }
     if (name === 'actions' && inlineEditor) setTimeout(() => inlineEditor.layout(), 50);
   }
@@ -5755,19 +5836,17 @@ checkBotStatus();
   function _wizBuildSteps(key, data) {
     const CMD  = { id:'cmd', question:'What should the command be?', hint:'Viewers type this in chat to trigger the alert.', fields:[{ id:'w_cmd', type:'text', label:'Command name', placeholder:'!hype', default:'!hype' }] };
     const ACCS = { id:'access', question:'Who can trigger this?', hint:'Pick the minimum viewer role needed.', fields:[{ id:'w_access', type:'radio', label:'Access level', options:[{ value:'everyone', label:'Everyone', sub:'Any viewer' },{ value:'subscriber', label:'Subscribers only', sub:'Must be subbed' },{ value:'moderator', label:'Moderators', sub:'Mods and above' }], default:'everyone' }] };
-    const TTS_STEP = { id:'text', question:'What should the bot say?', hint:'Configure the TTS voice and message.', fields:[
+    const TTS_FIELDS = [
       { id:'w_textmode', type:'radio', label:'Text mode', options:[{ value:'user', label:'Whatever the user types', sub:'!hype great stream → bot says "great stream"' },{ value:'fixed', label:'Fixed message', sub:'Bot always says the same thing' }], default:'user' },
       { id:'w_text', type:'fixedtext', label:'Fixed message', placeholder:'HYPE! {user} is bringing the energy!', default:'HYPE!' },
       { id:'w_voice', type:'voice', label:'TTS Voice' },
       { id:'w_volume', type:'volume', label:'TTS Volume', default:80 }
-    ]};
-    const TTS_STEP_CANVAS = Object.assign({}, TTS_STEP, { canvas:true });
+    ];
     const CHROMA_FIELDS = [
       { id:'w_chromakey', type:'toggle', label:'Enable chroma key (green screen)', sub:'Removes the background colour', default:false },
       { id:'w_chromacolor', type:'color', label:'Background colour to remove', default:'#00ff00' },
       { id:'w_chromathreshold', type:'slider', label:'Threshold', min:0, max:100, default:40 }
     ];
-    // Options step — fades + duration collapsed into a "Customize" expander
     const OPTIONS_STEP = { id:'options', question:'How should it behave?', hint:'Sensible defaults are already set. Tap Customize to change timings.', fields:[
       { id:'w_clearwithtts', type:'toggle', label:'Media disappears when TTS finishes', sub:'Keeps media visible while bot speaks, clears when done', default:true },
       { id:'w_customize', type:'customize', label:'Customize timings', fields:[
@@ -5776,7 +5855,6 @@ checkBotStatus();
         { id:'w_duration',    type:'number', label:'Manual duration (seconds, used if TTS toggle is off)', placeholder:'5', default:'5' }
       ]}
     ]};
-    // Options step without TTS clear toggle (for non-TTS presets)
     const OPTIONS_STEP_NOTTS = { id:'options', question:'How should it behave?', hint:'Sensible defaults are already set. Tap Customize to change timings.', fields:[
       { id:'w_customize', type:'customize', label:'Customize timings', fields:[
         { id:'w_fadein_dur',  type:'number', label:'Fade in duration (seconds)', placeholder:'1', default:'1' },
@@ -5787,10 +5865,9 @@ checkBotStatus();
     const TTS_WANT_STEP = { id:'wanttts', question:'Add TTS to this alert?', hint:'The bot can speak a message when this triggers.', fields:[
       { id:'w_wanttts', type:'radio', label:'TTS', options:[{ value:'yes', label:'Yes — bot speaks when triggered', sub:'Choose voice and message on the next step' },{ value:'no', label:'No — just the media', sub:'Silent alert' }], default:'no' }
     ]};
-
     if (key === 'ttsgif') {
       const mediaType = data.w_mediatype || 'image';
-      if (mediaType === 'none') return [CMD, Object.assign({}, TTS_STEP, { question:'What should the bot say?', hint:'TTS only — no media will show on screen.' }), ACCS];
+      if (mediaType === 'none') return [CMD, Object.assign({}, {id:'text',question:'What should the bot say?',hint:'TTS only — no media will show on screen.',fields:TTS_FIELDS}), ACCS];
       const isVideo = mediaType === 'video';
       const steps = [CMD];
       steps.push({ id:'media', question: isVideo ? 'Pick your video file.' : 'Pick your GIF or image.', hint:'This plays on screen when the command is used.',
@@ -5798,35 +5875,17 @@ checkBotStatus();
       });
       if (isVideo) steps.push({ id:'chroma', question:'Is it a green screen video?', hint:'Enable chroma key to remove the background colour.', fields: CHROMA_FIELDS });
       steps.push(OPTIONS_STEP);
-      steps.push(Object.assign({}, TTS_STEP_CANVAS, { question:'What should the bot say?', hint:'Configure the TTS voice and message.' }));
+      steps.push({ id:'text', question:'What should the bot say?', hint:'Configure the TTS voice and message.', fields: TTS_FIELDS, canvas:true });
       return steps;
     }
-    if (key === 'tts') return [CMD, TTS_STEP, ACCS];
-    if (key === 'imagealert') return [CMD,
-      { id:'media', question:'Pick your image.', hint:'This shows on stream when the command is used.', fields:[{ id:'w_gif', type:'file', label:'Image file', placeholder:'C:\\path\\to\\file.png', accept:'image' }] },
-      TTS_WANT_STEP,
-      OPTIONS_STEP_NOTTS,
-      ACCS
-    ];
-    if (key === 'soundalert') return [CMD,
-      { id:'media', question:'Pick your sound file.', hint:'This plays when the command is used.', fields:[{ id:'w_sound', type:'file', label:'Sound file', placeholder:'C:\\path\\to\\file.mp3', accept:'sound' },{ id:'w_volume', type:'volume', label:'Volume', default:80 }] },
-      ACCS
-    ];
-    if (key === 'videoalert') return [CMD,
-      { id:'media', question:'Pick your video file.', hint:'This plays on stream when the command is used.', fields:[{ id:'w_gif', type:'videofile', label:'Video file', placeholder:'C:\\path\\to\\file.mp4', accept:'video' }] },
-      { id:'chroma', question:'Is it a green screen video?', hint:'Enable chroma key to remove the background colour.', fields: CHROMA_FIELDS },
-      TTS_WANT_STEP,
-      OPTIONS_STEP_NOTTS,
-      ACCS
-    ];
-    if (key === 'greenscreen') return [CMD,
-      { id:'media', question:'Pick your green screen video.', hint:'The background will be removed automatically.', fields:[{ id:'w_gif', type:'videofile', label:'Video file', placeholder:'C:\\path\\to\\file.mp4', accept:'video' }] },
-      { id:'chroma', question:'Chroma key settings.', hint:'Dial in the colour removal so the background disappears cleanly.', fields:[{ id:'w_chromacolor', type:'color', label:'Background colour to remove', default:'#00ff00' },{ id:'w_chromathreshold', type:'slider', label:'Threshold — higher = removes more', min:0, max:100, default:40 }] },
-      OPTIONS_STEP_NOTTS,
-      ACCS
-    ];
+    if (key === 'tts') return [CMD, { id:'text', question:'What should the bot say?', hint:'Configure the TTS voice and message.', fields: TTS_FIELDS }, ACCS];
+    if (key === 'imagealert') return [CMD, { id:'media', question:'Pick your image.', hint:'This shows on stream when the command is used.', fields:[{ id:'w_gif', type:'file', label:'Image file', placeholder:'C:\\path\\to\\file.png', accept:'image' }] }, TTS_WANT_STEP, OPTIONS_STEP_NOTTS, ACCS];
+    if (key === 'soundalert') return [CMD, { id:'media', question:'Pick your sound file.', hint:'This plays when the command is used.', fields:[{ id:'w_sound', type:'file', label:'Sound file', placeholder:'C:\\path\\to\\file.mp3', accept:'sound' },{ id:'w_volume', type:'volume', label:'Volume', default:80 }] }, ACCS];
+    if (key === 'videoalert') return [CMD, { id:'media', question:'Pick your video file.', hint:'This plays on stream when the command is used.', fields:[{ id:'w_gif', type:'videofile', label:'Video file', placeholder:'C:\\path\\to\\file.mp4', accept:'video' }] }, { id:'chroma', question:'Is it a green screen video?', hint:'Enable chroma key to remove the background colour.', fields: CHROMA_FIELDS }, TTS_WANT_STEP, OPTIONS_STEP_NOTTS, ACCS];
+    if (key === 'greenscreen') return [CMD, { id:'media', question:'Pick your green screen video.', hint:'The background will be removed automatically.', fields:[{ id:'w_gif', type:'videofile', label:'Video file', placeholder:'C:\\path\\to\\file.mp4', accept:'video' }] }, { id:'chroma', question:'Chroma key settings.', hint:'Dial in the colour removal so the background disappears cleanly.', fields:[{ id:'w_chromacolor', type:'color', label:'Background colour to remove', default:'#00ff00' },{ id:'w_chromathreshold', type:'slider', label:'Threshold — higher = removes more', min:0, max:100, default:40 }] }, OPTIONS_STEP_NOTTS, ACCS];
     return [CMD];
   }
+
   function wizardOpen(key) {
     _wizKey = null; _wizStep = 0; _wizData = {}; _wizSteps = [];
     document.getElementById('wizardOverlay').style.display = 'flex';
@@ -5869,12 +5928,16 @@ checkBotStatus();
       '</div>';
   }
 
-  function _wizPickMediaType(type) { _wizData.w_mediatype = type; _wizStartFlow('ttsgif'); }
+  function _wizPickMediaType(type) {
+    _wizStopVideoPreview();
+    _wizData.w_mediatype = type;
+    _wizStartFlow('ttsgif');
+  }
 
   function _wizStartFlow(key) {
     _wizKey = key; _wizStep = 0;
     _wizTrimDragSetup = false;
-    _wizData = Object.assign({ w_mediatype: _wizData.w_mediatype }, presetsConfig[key] || {});
+    _wizData = Object.assign({}, presetsConfig[key] || {}, { w_mediatype: _wizData.w_mediatype });
     _wizColorStr = _WIZ_META[key].color;
     _wizSteps = _wizBuildSteps(key, _wizData);
     const m = _WIZ_META[key]; const saved = presetsConfig[key] || {};
@@ -5891,6 +5954,7 @@ checkBotStatus();
         const k2 = id.replace('wiz','').replace('Media','media').replace('Text','text'); const k3 = k2.charAt(0).toLowerCase()+k2.slice(1);
         if (el && saved[k3] !== undefined) el.value = saved[k3];
       });
+      _wizMaybeStartVideoPreview();
     }, 20);
   }
 
@@ -5903,6 +5967,7 @@ checkBotStatus();
     document.getElementById('wizHeaderSub').textContent = sub;
     _wizColorStr = color;
   }
+
   function _wizBuildSlide(step, saved) {
     let h = `<div style="font-size:21px;font-weight:700;color:#fff;line-height:1.3;letter-spacing:-0.3px;">${step.question}</div>`;
     if (step.hint) h += `<div style="font-size:12px;color:rgba(255,255,255,0.3);margin-top:-8px;line-height:1.6;">${step.hint}</div>`;
@@ -5919,10 +5984,7 @@ checkBotStatus();
           <div id="wiz-video-preview-wrap" style="display:${val?'block':'none'};margin-top:10px;background:#000;border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);">
             <video id="wiz-video-preview" src="${val?'http://localhost:3000/api/localfile?path='+encodeURIComponent(val):''}" preload="auto" style="width:100%;max-height:160px;display:block;" playsinline></video>
             <div style="padding:10px 12px;">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-                <span style="font-size:11px;color:rgba(255,255,255,0.4);">Trim</span>
-                <span id="wiz-video-dur-label" style="font-size:11px;color:rgba(99,102,241,0.8);">Duration: --</span>
-              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><span style="font-size:11px;color:rgba(255,255,255,0.4);">Trim</span><span id="wiz-video-dur-label" style="font-size:11px;color:rgba(99,102,241,0.8);">Duration: --</span></div>
               <div id="wiz-video-slider-wrap" style="position:relative;height:20px;margin-bottom:8px;">
                 <div style="position:absolute;top:50%;left:0;right:0;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;transform:translateY(-50%);"></div>
                 <div id="wiz-video-range-bar" style="position:absolute;top:50%;height:4px;background:rgb(99,102,241);border-radius:2px;transform:translateY(-50%);left:0%;width:100%;"></div>
@@ -5997,7 +6059,7 @@ checkBotStatus();
 
   function _wizRadioSelect(fieldId, value, colorStr) {
     document.getElementById('wizardBox').dataset[fieldId] = value;
-    ['user','fixed'].forEach(o => {
+    ['user','fixed','yes','no','everyone','subscriber','moderator'].forEach(o => {
       const lbl = document.getElementById(`wiz-radio-label-${fieldId}-${o}`);
       const dot = document.getElementById(`wiz-radio-dot-${fieldId}-${o}`);
       if (!lbl || !dot) return;
@@ -6008,9 +6070,9 @@ checkBotStatus();
       dot.innerHTML = active ? `<div style="width:7px;height:7px;border-radius:50%;background:#fff;"></div>` : '';
     });
     const wrap = document.getElementById('wiz-text-wrap');
-    if (wrap) wrap.style.display = value === 'fixed' ? '' : 'none';
+    if (wrap && fieldId === 'w_textmode') wrap.style.display = value === 'fixed' ? '' : 'none';
     const prev = document.getElementById('wizTextPreview');
-    if (prev) {
+    if (prev && fieldId === 'w_textmode') {
       if (value === 'user') { prev.textContent = '{message}'; prev.style.color = 'rgba(255,255,255,0.4)'; prev.style.fontStyle = 'italic'; }
       else { const inp = document.getElementById('w_text'); prev.textContent = inp ? (inp.value || 'HYPE!') : 'HYPE!'; prev.style.color = '#fff'; prev.style.fontStyle = 'normal'; }
     }
@@ -6022,13 +6084,8 @@ checkBotStatus();
       const d = await r.json();
       if (!d.path) return;
       document.getElementById(fieldId).value = d.path;
-      if (type === 'video') {
-        _wizInitVideoPreview(d.path);
-      } else {
-        const mb = document.getElementById('wizMediaBox');
-        if (mb) mb.style.display = 'flex';
-        _wizUpdateCanvasBoxes();
-      }
+      if (type === 'video') { _wizInitVideoPreview(d.path); }
+      else { const mb = document.getElementById('wizMediaBox'); if (mb) mb.style.display = 'flex'; _wizUpdateCanvasBoxes(); }
     } catch(e) {}
   }
 
@@ -6038,26 +6095,29 @@ checkBotStatus();
     if (['mp4','webm','mov','avi','mkv'].includes(ext)) _wizInitVideoPreview(path);
   }
 
-  let _wizVideoDur = 0;
-  let _wizVideoLoopTimer = null;
-  let _wizTrimDragSetup = false;
+  let _wizVideoDur = 0, _wizVideoLoopTimer = null, _wizTrimDragSetup = false;
+
+  function _wizStopVideoPreview() {
+    if (_wizVideoLoopTimer) { clearInterval(_wizVideoLoopTimer); _wizVideoLoopTimer = null; }
+    const vid = document.getElementById('wiz-video-preview');
+    if (vid) { vid.pause(); }
+  }
 
   function _wizMaybeStartVideoPreview() {
     if (!_wizSteps.length) return;
     const step = _wizSteps[_wizStep];
     if (!step || !step.fields) return;
-    const hasVideo = step.fields.some(f => f.type === 'videofile');
-    if (!hasVideo) return;
-    const pathEl = document.getElementById('w_gif');
-    if (pathEl && pathEl.value) {
-      setTimeout(() => _wizInitVideoPreview(pathEl.value), 50);
+    // Stop video if not on a video step
+    if (!step.fields.some(f => f.type === 'videofile')) {
+      _wizStopVideoPreview();
+    } else {
+      const pathEl = document.getElementById('w_gif');
+      if (pathEl && pathEl.value) setTimeout(() => _wizInitVideoPreview(pathEl.value), 50);
     }
-  }
-
-  function _wizStopVideoPreview() {
-    if (_wizVideoLoopTimer) { clearInterval(_wizVideoLoopTimer); _wizVideoLoopTimer = null; }
-    const vid = document.getElementById('wiz-video-preview');
-    if (vid) { vid.pause(); vid._loopTimer = null; }
+    // Load voices if this step has a voice field
+    if (step.fields.some(f => f.type === 'voice')) {
+      setTimeout(_wizLoadVoices, 100);
+    }
   }
 
   function _wizInitVideoPreview(path) {
@@ -6069,22 +6129,17 @@ checkBotStatus();
     vid.src = 'http://localhost:3000/api/localfile?path=' + encodeURIComponent(path);
     vid.onloadedmetadata = () => {
       _wizVideoDur = vid.duration;
-      const dur = _wizVideoDur;
-      document.getElementById('wiz-video-dur-label').textContent = 'Duration: ' + dur.toFixed(1) + 's';
+      document.getElementById('wiz-video-dur-label').textContent = 'Duration: ' + vid.duration.toFixed(1) + 's';
       document.getElementById('wiz-video-start').value = '0';
-      document.getElementById('wiz-video-end').value = dur.toFixed(1);
+      document.getElementById('wiz-video-end').value = vid.duration.toFixed(1);
       _wizVideoUpdateSlider();
-      vid.currentTime = 0;
-      vid.play().catch(() => {});
-      // Loop within trim + move playhead
+      vid.currentTime = 0; vid.play().catch(() => {});
       if (_wizVideoLoopTimer) clearInterval(_wizVideoLoopTimer);
       _wizVideoLoopTimer = setInterval(() => {
         const s = parseFloat(document.getElementById('wiz-video-start')?.value) || 0;
-        const e = parseFloat(document.getElementById('wiz-video-end')?.value) || dur;
-        // Move playhead
+        const e = parseFloat(document.getElementById('wiz-video-end')?.value) || _wizVideoDur;
         const ph = document.getElementById('wiz-video-playhead');
-        if (ph && dur > 0) ph.style.left = (vid.currentTime / dur * 100) + '%';
-        // Loop
+        if (ph && _wizVideoDur > 0) ph.style.left = (vid.currentTime / _wizVideoDur * 100) + '%';
         if (!vid.paused && vid.currentTime >= e - 0.05) { vid.currentTime = s; vid.play().catch(() => {}); }
       }, 50);
     };
@@ -6105,34 +6160,29 @@ checkBotStatus();
 
   function _wizSetupVideoTrimDrag() {
     let drag = null;
-    const onDown = (e) => {
-      if (e.target.id === 'wiz-video-handle-start') drag = 'start';
-      else if (e.target.id === 'wiz-video-handle-end') drag = 'end';
-      else return;
-      e.preventDefault();
-    };
-    const onMove = (e) => {
+    document.addEventListener('mousedown', (e) => {
+      if (e.target.id === 'wiz-video-handle-start') { drag = 'start'; e.preventDefault(); }
+      else if (e.target.id === 'wiz-video-handle-end') { drag = 'end'; e.preventDefault(); }
+    });
+    document.addEventListener('mousemove', (e) => {
       if (!drag || !_wizVideoDur) return;
       const wrap = document.getElementById('wiz-video-slider-wrap'); if (!wrap) return;
       const rect = wrap.getBoundingClientRect();
-      const pct  = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-      const t    = pct * _wizVideoDur;
-      const vid  = document.getElementById('wiz-video-preview');
+      const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      const t = pct * _wizVideoDur;
+      const vid = document.getElementById('wiz-video-preview');
       if (drag === 'start') {
         const end = parseFloat(document.getElementById('wiz-video-end')?.value) || _wizVideoDur;
         document.getElementById('wiz-video-start').value = Math.min(t, end - 0.1).toFixed(1);
-        if (vid) { vid.currentTime = t; }
+        if (vid) vid.currentTime = t;
       } else {
         const start = parseFloat(document.getElementById('wiz-video-start')?.value) || 0;
         document.getElementById('wiz-video-end').value = Math.max(Math.min(t, _wizVideoDur), start + 0.1).toFixed(1);
-        if (vid) { vid.currentTime = t; }
+        if (vid) vid.currentTime = t;
       }
       _wizVideoUpdateSlider();
-    };
-    const onUp = () => { drag = null; };
-    document.addEventListener('mousedown', onDown);
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
+    });
+    document.addEventListener('mouseup', () => { drag = null; });
   }
 
   function _wizToggleCustomize() {
@@ -6279,18 +6329,19 @@ checkBotStatus();
     const baseSz=parseFloat(document.getElementById('wizTextSize').value)||48;let sf=Math.max(4,baseSz*(ch/_WIZ_SH));tp.style.fontSize=sf+'px';while(tp.scrollHeight>newH&&sf>4){sf-=0.5;tp.style.fontSize=sf+'px';}
   },{passive:false});
 
-  // Wizard navigation
   function _wizUpdateDots() {
     if(!_wizSteps.length){document.getElementById('wizDots').innerHTML='';return;}
     document.getElementById('wizDots').innerHTML = _wizSteps.map((_,i)=>{const active=i===_wizStep,done=i<_wizStep;return `<div style="height:7px;border-radius:4px;transition:all 0.3s cubic-bezier(0.4,0,0.2,1);width:${active?24:7}px;background:${active?`rgb(${_wizColorStr})`:done?`rgba(${_wizColorStr},0.4)`:'rgba(255,255,255,0.1)'};"></div>`;}).join('');
   }
+
   function _wizUpdateFooter() {
     const last=_wizStep===_wizSteps.length-1;
     const back=document.getElementById('wizBackBtn'),next=document.getElementById('wizNextBtn');
-    back.style.display=''; // always show back once in a flow
+    back.style.display='';
     next.textContent=last?'✓  Finish':'Next  →';
     next.style.background=`rgb(${_wizColorStr})`;next.style.boxShadow=`0 4px 20px rgba(${_wizColorStr},0.35)`;
   }
+
   function _wizCollect() {
     if (!_wizSteps.length) return;
     const step = _wizSteps[_wizStep];
@@ -6303,18 +6354,19 @@ checkBotStatus();
         if(vs) _wizData.w_videoStart=parseFloat(vs.value)||0;
         if(ve) _wizData.w_videoEnd=parseFloat(ve.value)||0;
       }
-      else if (f.type === 'customize') {
-        f.fields.forEach(cf => { const el=document.getElementById(cf.id); if(el) _wizData[cf.id]=el.value; });
-      }
+      else if (f.type === 'customize') { f.fields.forEach(cf => { const el=document.getElementById(cf.id); if(el) _wizData[cf.id]=el.value; }); }
       else { const el=document.getElementById(f.id); if(el) _wizData[f.id]=el.value; }
     });
   }
+
   function _wizSlide() {
     const vp=document.getElementById('wizViewport'),slides=document.getElementById('wizSlides');
+    if (!slides) return;
     slides.style.transition='transform 0.38s cubic-bezier(0.4,0,0.2,1)';
     slides.style.transform=`translateX(-${_wizStep*100}%)`;
     if(vp)vp.scrollTop=0;
   }
+
   function wizNext() {
     _wizCollect();
     _wizStopVideoPreview();
@@ -6323,6 +6375,7 @@ checkBotStatus();
     if(_wizSteps[_wizStep].canvas)setTimeout(()=>{_wizInitCanvas();},420);
     setTimeout(_wizMaybeStartVideoPreview, 450);
   }
+
   function wizPrev() {
     if(_wizStep===0) {
       _wizStopVideoPreview();
@@ -6332,11 +6385,11 @@ checkBotStatus();
     _wizStep--;_wizSlide();_wizUpdateDots();_wizUpdateFooter();
     setTimeout(_wizMaybeStartVideoPreview, 450);
   }
+
   function wizardClose() {
     _wizStopVideoPreview();
     document.getElementById('wizardOverlay').style.display='none';
     _wizKey=null;_wizStep=0;_wizData={};_wizSteps=[];
-    // Reset viewport in case it was replaced by picker HTML
     const vp=document.getElementById('wizViewport');
     if(vp) vp.innerHTML='<div id="wizSlides" style="display:flex;transition:transform 0.38s cubic-bezier(0.4,0,0.2,1);align-items:flex-start;height:100%;"></div>';
     document.getElementById('wizNextBtn').style.display='';
@@ -6347,7 +6400,6 @@ checkBotStatus();
   async function _wizFinish() {
     if(!_wizKey)return;
     _wizCollect();
-    // Collect canvas hidden inputs — only if this flow actually has a canvas step
     const _g = id => { const el=document.getElementById(id); return el?el.value:null; };
     const hasCanvasStep = _wizSteps.some(s => s.canvas);
     if (hasCanvasStep) {
@@ -6358,8 +6410,8 @@ checkBotStatus();
     presetsConfig[_wizKey] = _wizData;
     try {
       await fetch('/api/presets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(presetsConfig)});
-      if (_wizKey==='ttsgif')       await _wizCreateTtsGif();
-      else if (_wizKey==='tts')     await _wizCreateTts();
+      if (_wizKey==='ttsgif')           await _wizCreateTtsGif();
+      else if (_wizKey==='tts')         await _wizCreateTts();
       else if (_wizKey==='imagealert')  await _wizCreateImageAlert();
       else if (_wizKey==='soundalert')  await _wizCreateSoundAlert();
       else if (_wizKey==='videoalert')  await _wizCreateVideoAlert();
@@ -6368,7 +6420,6 @@ checkBotStatus();
     } catch(e) { showToast('Failed to save'); }
   }
 
-  // ---- Shared helpers ----
   async function _wizGetSourcesFiltered(cmd) {
     const sources = await fetch('/api/overlay/sources').then(r=>r.json()).catch(()=>[]);
     const filtered = sources.filter(s => s.assignedCommand !== cmd);
@@ -6383,151 +6434,57 @@ checkBotStatus();
   }
 
   async function _wizCreateTtsGif() {
-    const d = _wizData;
-    const cmd = d.w_cmd || '!hype';
+    const d = _wizData, cmd = d.w_cmd || '!hype';
     const { filtered, maxId } = await _wizGetSourcesFiltered(cmd);
     const mediaType = d.w_mediatype || 'image';
-    const fadeIn  = parseFloat(d.w_fadein_dur)  || 1;
-    const fadeOut = parseFloat(d.w_fadeout_dur) || 1;
+    const fadeIn = parseFloat(d.w_fadein_dur)||1, fadeOut = parseFloat(d.w_fadeout_dur)||1;
     if (mediaType === 'none') {
-      const newSrc = { id:maxId+1, type:'text', path:null, videoPath:null, soundPath:null,
-        soundStart:0, soundEnd:0, soundVolume:1, videoStart:0, videoEnd:0, videoVolume:1,
-        gifLoops:0, displaySeconds:0, videoLoops:1, clearWithTTS:false, fadeIn:0, fadeOut:0,
-        chromaKey:false, chromaColor:'#00ff00', chromaThreshold:40, assignedCommand:cmd,
-        mediaX:null, mediaY:null, mediaW:null, mediaH:null,
-        text: d.w_textmode==='user' ? '{message}' : (d.w_text||''),
-        font:'Arial', fontSize:48, color:'#ffffff', bold:false, italic:false, shadow:true,
-        animation:'fade', animDuration:fadeIn,
-        x:100, y:400, maxW:1720, maxH:200,
-        lockDuration:false, speak:true, voice:d.w_voice||null,
-        ttsRate:1, ttsPitch:1, ttsVolume:d.w_volume!==undefined?(parseInt(d.w_volume)/100):1 };
-      await _wizSaveSource(filtered, newSrc);
-      await _wizSaveCommand(cmd, d.w_access||'everyone');
-      await overlayLoadSources(); return;
+      const newSrc = { id:maxId+1, type:'text', path:null, videoPath:null, soundPath:null, soundStart:0, soundEnd:0, soundVolume:1, videoStart:0, videoEnd:0, videoVolume:1, gifLoops:0, displaySeconds:0, videoLoops:1, clearWithTTS:false, fadeIn:0, fadeOut:0, chromaKey:false, chromaColor:'#00ff00', chromaThreshold:40, assignedCommand:cmd, mediaX:null, mediaY:null, mediaW:null, mediaH:null, text:d.w_textmode==='user'?'{message}':(d.w_text||''), font:'Arial', fontSize:48, color:'#ffffff', bold:false, italic:false, shadow:true, animation:'fade', animDuration:fadeIn, x:100, y:400, maxW:1720, maxH:200, lockDuration:false, speak:true, voice:d.w_voice||null, ttsRate:1, ttsPitch:1, ttsVolume:d.w_volume!==undefined?(parseInt(d.w_volume)/100):1 };
+      await _wizSaveSource(filtered, newSrc); await _wizSaveCommand(cmd, 'everyone'); await overlayLoadSources(); return;
     }
     const isVideo = mediaType === 'video';
-    const newSrc = {
-      id:maxId+1, type:isVideo?'video':'image',
-      path:isVideo?null:(d.w_gif||''), videoPath:isVideo?(d.w_gif||''):null,
-      soundPath:null, soundStart:0, soundEnd:0, soundVolume:1,
-      videoStart:isVideo?(parseFloat(d.w_videoStart)||0):0, videoEnd:isVideo?(parseFloat(d.w_videoEnd)||0):0, videoVolume:1,
-      gifLoops:0, displaySeconds:(d.w_clearwithtts!==false)?0:(parseFloat(d.w_duration)||5), videoLoops:1,
-      clearWithTTS:d.w_clearwithtts!==false, fadeIn, fadeOut,
-      chromaKey:isVideo?(d.w_chromakey||false):false,
-      chromaColor:d.w_chromacolor||'#00ff00', chromaThreshold:parseInt(d.w_chromathreshold)||40,
-      assignedCommand:cmd,
-      mediaX:d.mediaX||480, mediaY:d.mediaY||270, mediaW:d.mediaW||960, mediaH:d.mediaH||540,
-      text:d.w_textmode==='user'?'{message}':(d.w_text||'HYPE!'),
-      font:'Arial', fontSize:d.textSize||48, color:'#ffffff', bold:false, italic:false, shadow:true,
-      animation:'fade', animDuration:fadeIn,
-      x:d.textX||100, y:d.textY||400, maxW:d.textMaxW||800, maxH:d.textMaxH||200,
-      lockDuration:false, speak:true, voice:d.w_voice||null,
-      ttsRate:1, ttsPitch:1, ttsVolume:d.w_volume!==undefined?(parseInt(d.w_volume)/100):1 };
-    await _wizSaveSource(filtered, newSrc);
-    await _wizSaveCommand(cmd, 'everyone');
-    await overlayLoadSources();
+    const newSrc = { id:maxId+1, type:isVideo?'video':'image', path:isVideo?null:(d.w_gif||''), videoPath:isVideo?(d.w_gif||''):null, soundPath:null, soundStart:0, soundEnd:0, soundVolume:1, videoStart:isVideo?(parseFloat(d.w_videoStart)||0):0, videoEnd:isVideo?(parseFloat(d.w_videoEnd)||0):0, videoVolume:1, gifLoops:0, displaySeconds:(d.w_clearwithtts!==false)?0:(parseFloat(d.w_duration)||5), videoLoops:1, clearWithTTS:d.w_clearwithtts!==false, fadeIn, fadeOut, chromaKey:isVideo?(d.w_chromakey||false):false, chromaColor:d.w_chromacolor||'#00ff00', chromaThreshold:parseInt(d.w_chromathreshold)||40, assignedCommand:cmd, mediaX:d.mediaX||480, mediaY:d.mediaY||270, mediaW:d.mediaW||960, mediaH:d.mediaH||540, text:d.w_textmode==='user'?'{message}':(d.w_text||'HYPE!'), font:'Arial', fontSize:d.textSize||48, color:'#ffffff', bold:false, italic:false, shadow:true, animation:'fade', animDuration:fadeIn, x:d.textX||100, y:d.textY||400, maxW:d.textMaxW||800, maxH:d.textMaxH||200, lockDuration:false, speak:true, voice:d.w_voice||null, ttsRate:1, ttsPitch:1, ttsVolume:d.w_volume!==undefined?(parseInt(d.w_volume)/100):1 };
+    await _wizSaveSource(filtered, newSrc); await _wizSaveCommand(cmd, 'everyone'); await overlayLoadSources();
   }
 
   async function _wizCreateTts() {
-    const d = _wizData; const cmd = d.w_cmd || '!tts';
+    const d = _wizData, cmd = d.w_cmd || '!tts';
     const { filtered, maxId } = await _wizGetSourcesFiltered(cmd);
-    const newSrc = { id:maxId+1, type:'text', path:null, videoPath:null, soundPath:null,
-      soundStart:0, soundEnd:0, soundVolume:1, videoStart:0, videoEnd:0, videoVolume:1,
-      gifLoops:0, displaySeconds:0, videoLoops:1, clearWithTTS:false, fadeIn:0, fadeOut:0,
-      chromaKey:false, chromaColor:'#00ff00', chromaThreshold:40, assignedCommand:cmd,
-      mediaX:null, mediaY:null, mediaW:null, mediaH:null,
-      text:d.w_textmode==='user'?'{message}':(d.w_text||''),
-      font:'Arial', fontSize:48, color:'#ffffff', bold:false, italic:false, shadow:true,
-      animation:'fade', animDuration:1, x:100, y:400, maxW:1720, maxH:200,
-      lockDuration:false, speak:true, voice:d.w_voice||null,
-      ttsRate:1, ttsPitch:1, ttsVolume:d.w_volume!==undefined?(parseInt(d.w_volume)/100):1 };
-    await _wizSaveSource(filtered, newSrc);
-    await _wizSaveCommand(cmd, d.w_access||'everyone');
-    await overlayLoadSources();
+    const newSrc = { id:maxId+1, type:'text', path:null, videoPath:null, soundPath:null, soundStart:0, soundEnd:0, soundVolume:1, videoStart:0, videoEnd:0, videoVolume:1, gifLoops:0, displaySeconds:0, videoLoops:1, clearWithTTS:false, fadeIn:0, fadeOut:0, chromaKey:false, chromaColor:'#00ff00', chromaThreshold:40, assignedCommand:cmd, mediaX:null, mediaY:null, mediaW:null, mediaH:null, text:d.w_textmode==='user'?'{message}':(d.w_text||''), font:'Arial', fontSize:48, color:'#ffffff', bold:false, italic:false, shadow:true, animation:'fade', animDuration:1, x:100, y:400, maxW:1720, maxH:200, lockDuration:false, speak:true, voice:d.w_voice||null, ttsRate:1, ttsPitch:1, ttsVolume:d.w_volume!==undefined?(parseInt(d.w_volume)/100):1 };
+    await _wizSaveSource(filtered, newSrc); await _wizSaveCommand(cmd, d.w_access||'everyone'); await overlayLoadSources();
   }
 
   async function _wizCreateImageAlert() {
-    const d = _wizData; const cmd = d.w_cmd || '!image';
+    const d = _wizData, cmd = d.w_cmd || '!image';
     const { filtered, maxId } = await _wizGetSourcesFiltered(cmd);
-    const fadeIn=parseFloat(d.w_fadein_dur)||1, fadeOut=parseFloat(d.w_fadeout_dur)||1;
-    const wantTTS = d.w_wanttts === 'yes';
-    const newSrc = { id:maxId+1, type:'image', path:d.w_gif||'', videoPath:null, soundPath:null,
-      soundStart:0, soundEnd:0, soundVolume:1, videoStart:0, videoEnd:0, videoVolume:1,
-      gifLoops:0, displaySeconds:parseFloat(d.w_duration)||5, videoLoops:1,
-      clearWithTTS:wantTTS, fadeIn, fadeOut,
-      chromaKey:false, chromaColor:'#00ff00', chromaThreshold:40, assignedCommand:cmd,
-      mediaX:480, mediaY:270, mediaW:960, mediaH:540,
-      text:wantTTS?(d.w_textmode==='user'?'{message}':(d.w_text||'')):null,
-      font:wantTTS?'Arial':null, fontSize:wantTTS?48:null, color:wantTTS?'#ffffff':null,
-      bold:false, italic:false, shadow:wantTTS,
-      animation:wantTTS?'fade':null, animDuration:wantTTS?fadeIn:null,
-      x:wantTTS?100:null, y:wantTTS?400:null, maxW:wantTTS?1720:null, maxH:wantTTS?200:null,
-      lockDuration:false, speak:wantTTS, voice:wantTTS?(d.w_voice||null):null,
-      ttsRate:1, ttsPitch:1, ttsVolume:wantTTS&&d.w_volume!==undefined?(parseInt(d.w_volume)/100):1 };
-    await _wizSaveSource(filtered, newSrc);
-    await _wizSaveCommand(cmd, d.w_access||'everyone');
-    await overlayLoadSources();
+    const fadeIn=parseFloat(d.w_fadein_dur)||1, fadeOut=parseFloat(d.w_fadeout_dur)||1, wantTTS=d.w_wanttts==='yes';
+    const newSrc = { id:maxId+1, type:'image', path:d.w_gif||'', videoPath:null, soundPath:null, soundStart:0, soundEnd:0, soundVolume:1, videoStart:0, videoEnd:0, videoVolume:1, gifLoops:0, displaySeconds:parseFloat(d.w_duration)||5, videoLoops:1, clearWithTTS:wantTTS, fadeIn, fadeOut, chromaKey:false, chromaColor:'#00ff00', chromaThreshold:40, assignedCommand:cmd, mediaX:480, mediaY:270, mediaW:960, mediaH:540, text:wantTTS?(d.w_textmode==='user'?'{message}':(d.w_text||'')):null, font:wantTTS?'Arial':null, fontSize:wantTTS?48:null, color:wantTTS?'#ffffff':null, bold:false, italic:false, shadow:wantTTS, animation:wantTTS?'fade':null, animDuration:wantTTS?fadeIn:null, x:wantTTS?100:null, y:wantTTS?400:null, maxW:wantTTS?1720:null, maxH:wantTTS?200:null, lockDuration:false, speak:wantTTS, voice:wantTTS?(d.w_voice||null):null, ttsRate:1, ttsPitch:1, ttsVolume:wantTTS&&d.w_volume!==undefined?(parseInt(d.w_volume)/100):1 };
+    await _wizSaveSource(filtered, newSrc); await _wizSaveCommand(cmd, d.w_access||'everyone'); await overlayLoadSources();
   }
 
   async function _wizCreateSoundAlert() {
-    const d = _wizData; const cmd = d.w_cmd || '!sound';
+    const d = _wizData, cmd = d.w_cmd || '!sound';
     const { filtered, maxId } = await _wizGetSourcesFiltered(cmd);
-    const newSrc = { id:maxId+1, type:'sound', path:null, videoPath:null, soundPath:d.w_sound||'',
-      soundStart:0, soundEnd:0, soundVolume:d.w_volume!==undefined?(parseInt(d.w_volume)/100):1,
-      videoStart:0, videoEnd:0, videoVolume:1,
-      gifLoops:0, displaySeconds:0, videoLoops:1, clearWithTTS:false, fadeIn:0, fadeOut:0,
-      chromaKey:false, chromaColor:'#00ff00', chromaThreshold:40, assignedCommand:cmd,
-      mediaX:null, mediaY:null, mediaW:null, mediaH:null,
-      text:null, font:null, fontSize:null, color:null, bold:false, italic:false, shadow:false,
-      animation:null, animDuration:null, x:null, y:null, maxW:null, maxH:null,
-      lockDuration:false, speak:false, voice:null, ttsRate:1, ttsPitch:1, ttsVolume:1 };
-    await _wizSaveSource(filtered, newSrc);
-    await _wizSaveCommand(cmd, d.w_access||'everyone');
-    await overlayLoadSources();
+    const newSrc = { id:maxId+1, type:'sound', path:null, videoPath:null, soundPath:d.w_sound||'', soundStart:0, soundEnd:0, soundVolume:d.w_volume!==undefined?(parseInt(d.w_volume)/100):1, videoStart:0, videoEnd:0, videoVolume:1, gifLoops:0, displaySeconds:0, videoLoops:1, clearWithTTS:false, fadeIn:0, fadeOut:0, chromaKey:false, chromaColor:'#00ff00', chromaThreshold:40, assignedCommand:cmd, mediaX:null, mediaY:null, mediaW:null, mediaH:null, text:null, font:null, fontSize:null, color:null, bold:false, italic:false, shadow:false, animation:null, animDuration:null, x:null, y:null, maxW:null, maxH:null, lockDuration:false, speak:false, voice:null, ttsRate:1, ttsPitch:1, ttsVolume:1 };
+    await _wizSaveSource(filtered, newSrc); await _wizSaveCommand(cmd, d.w_access||'everyone'); await overlayLoadSources();
   }
 
   async function _wizCreateVideoAlert() {
-    const d = _wizData; const cmd = d.w_cmd || '!video';
+    const d = _wizData, cmd = d.w_cmd || '!video';
     const { filtered, maxId } = await _wizGetSourcesFiltered(cmd);
-    const fadeIn=parseFloat(d.w_fadein_dur)||1, fadeOut=parseFloat(d.w_fadeout_dur)||1;
-    const wantTTS = d.w_wanttts === 'yes';
-    const newSrc = { id:maxId+1, type:'video', path:null, videoPath:d.w_gif||'', soundPath:null,
-      soundStart:0, soundEnd:0, soundVolume:1,
-      videoStart:parseFloat(d.w_videoStart)||0, videoEnd:parseFloat(d.w_videoEnd)||0, videoVolume:1,
-      gifLoops:0, displaySeconds:0, videoLoops:parseInt(d.w_loops)||1,
-      clearWithTTS:wantTTS, fadeIn, fadeOut,
-      chromaKey:d.w_chromakey||false, chromaColor:d.w_chromacolor||'#00ff00', chromaThreshold:parseInt(d.w_chromathreshold)||40,
-      assignedCommand:cmd, mediaX:480, mediaY:270, mediaW:960, mediaH:540,
-      text:wantTTS?(d.w_textmode==='user'?'{message}':(d.w_text||'')):null,
-      font:wantTTS?'Arial':null, fontSize:wantTTS?48:null, color:wantTTS?'#ffffff':null,
-      bold:false, italic:false, shadow:wantTTS,
-      animation:wantTTS?'fade':null, animDuration:wantTTS?fadeIn:null,
-      x:wantTTS?100:null, y:wantTTS?400:null, maxW:wantTTS?1720:null, maxH:wantTTS?200:null,
-      lockDuration:false, speak:wantTTS, voice:wantTTS?(d.w_voice||null):null,
-      ttsRate:1, ttsPitch:1, ttsVolume:wantTTS&&d.w_volume!==undefined?(parseInt(d.w_volume)/100):1 };
-    await _wizSaveSource(filtered, newSrc);
-    await _wizSaveCommand(cmd, d.w_access||'everyone');
-    await overlayLoadSources();
+    const fadeIn=parseFloat(d.w_fadein_dur)||1, fadeOut=parseFloat(d.w_fadeout_dur)||1, wantTTS=d.w_wanttts==='yes';
+    const newSrc = { id:maxId+1, type:'video', path:null, videoPath:d.w_gif||'', soundPath:null, soundStart:0, soundEnd:0, soundVolume:1, videoStart:parseFloat(d.w_videoStart)||0, videoEnd:parseFloat(d.w_videoEnd)||0, videoVolume:1, gifLoops:0, displaySeconds:0, videoLoops:parseInt(d.w_loops)||1, clearWithTTS:wantTTS, fadeIn, fadeOut, chromaKey:d.w_chromakey||false, chromaColor:d.w_chromacolor||'#00ff00', chromaThreshold:parseInt(d.w_chromathreshold)||40, assignedCommand:cmd, mediaX:480, mediaY:270, mediaW:960, mediaH:540, text:wantTTS?(d.w_textmode==='user'?'{message}':(d.w_text||'')):null, font:wantTTS?'Arial':null, fontSize:wantTTS?48:null, color:wantTTS?'#ffffff':null, bold:false, italic:false, shadow:wantTTS, animation:wantTTS?'fade':null, animDuration:wantTTS?fadeIn:null, x:wantTTS?100:null, y:wantTTS?400:null, maxW:wantTTS?1720:null, maxH:wantTTS?200:null, lockDuration:false, speak:wantTTS, voice:wantTTS?(d.w_voice||null):null, ttsRate:1, ttsPitch:1, ttsVolume:wantTTS&&d.w_volume!==undefined?(parseInt(d.w_volume)/100):1 };
+    await _wizSaveSource(filtered, newSrc); await _wizSaveCommand(cmd, d.w_access||'everyone'); await overlayLoadSources();
   }
 
   async function _wizCreateGreenScreen() {
-    const d = _wizData; const cmd = d.w_cmd || '!gs';
+    const d = _wizData, cmd = d.w_cmd || '!gs';
     const { filtered, maxId } = await _wizGetSourcesFiltered(cmd);
     const fadeIn=parseFloat(d.w_fadein_dur)||1, fadeOut=parseFloat(d.w_fadeout_dur)||1;
-    const newSrc = { id:maxId+1, type:'video', path:null, videoPath:d.w_gif||'', soundPath:null,
-      soundStart:0, soundEnd:0, soundVolume:1,
-      videoStart:parseFloat(d.w_videoStart)||0, videoEnd:parseFloat(d.w_videoEnd)||0, videoVolume:1,
-      gifLoops:0, displaySeconds:0, videoLoops:parseInt(d.w_loops)||1,
-      clearWithTTS:false, fadeIn, fadeOut,
-      chromaKey:true, chromaColor:d.w_chromacolor||'#00ff00', chromaThreshold:parseInt(d.w_chromathreshold)||40,
-      assignedCommand:cmd, mediaX:0, mediaY:0, mediaW:1920, mediaH:1080,
-      text:null, font:null, fontSize:null, color:null, bold:false, italic:false, shadow:false,
-      animation:null, animDuration:null, x:null, y:null, maxW:null, maxH:null,
-      lockDuration:false, speak:false, voice:null, ttsRate:1, ttsPitch:1, ttsVolume:1 };
-    await _wizSaveSource(filtered, newSrc);
-    await _wizSaveCommand(cmd, d.w_access||'everyone');
-    await overlayLoadSources();
+    const newSrc = { id:maxId+1, type:'video', path:null, videoPath:d.w_gif||'', soundPath:null, soundStart:0, soundEnd:0, soundVolume:1, videoStart:parseFloat(d.w_videoStart)||0, videoEnd:parseFloat(d.w_videoEnd)||0, videoVolume:1, gifLoops:0, displaySeconds:0, videoLoops:parseInt(d.w_loops)||1, clearWithTTS:false, fadeIn, fadeOut, chromaKey:true, chromaColor:d.w_chromacolor||'#00ff00', chromaThreshold:parseInt(d.w_chromathreshold)||40, assignedCommand:cmd, mediaX:0, mediaY:0, mediaW:1920, mediaH:1080, text:null, font:null, fontSize:null, color:null, bold:false, italic:false, shadow:false, animation:null, animDuration:null, x:null, y:null, maxW:null, maxH:null, lockDuration:false, speak:false, voice:null, ttsRate:1, ttsPitch:1, ttsVolume:1 };
+    await _wizSaveSource(filtered, newSrc); await _wizSaveCommand(cmd, d.w_access||'everyone'); await overlayLoadSources();
   }
+
 </script>
 
 <!-- ============================================================ -->
@@ -6811,10 +6768,210 @@ checkBotStatus();
     isResizing = false;
   });
 
+  // ============================================================
+  // GIF LIBRARY
+  // ============================================================
+  let _gifLib = { approved: [], pending: [] };
+  let _gifLibTab = 'approved';
+  const GIF_SW = 1920, GIF_SH = 1080;
+
+  async function loadGifLibrary() {
+    try {
+      const r = await fetch('/api/gif-library');
+      _gifLib = await r.json();
+    } catch(e) { _gifLib = { approved: [], pending: [] }; }
+    _gifRenderPendingDot();
+    _gifRenderApproved();
+    _gifRenderPending();
+    gifLibLoadPosition();
+  }
+
+  function _gifRenderPendingDot() {
+    const count = (_gifLib.pending || []).length;
+    const dot = document.getElementById('gifPendingDot');
+    const tabBadge = document.getElementById('gifPendingCount');
+    if (dot) dot.style.display = count > 0 ? 'inline-block' : 'none';
+    if (tabBadge) { tabBadge.textContent = count; tabBadge.style.display = count > 0 ? 'inline-block' : 'none'; }
+  }
+
+  function gifLibSwitchTab(tab) {
+    _gifLibTab = tab;
+    ['approved','pending','position'].forEach(t => {
+      document.getElementById('giftab-' + t).classList.toggle('active', t === tab);
+      document.getElementById('gifpanel-' + t).style.display = t === tab ? '' : 'none';
+    });
+    if (tab === 'position') gifLibInitPosCanvas();
+  }
+
+  function _gifRenderTab() {
+    if (_gifLibTab === 'approved') _gifRenderApproved();
+    else if (_gifLibTab === 'pending') _gifRenderPending();
+  }
+
+  function _gifRenderApproved() {
+    const list = document.getElementById('gifApprovedList');
+    if (!list) return;
+    const gifs = _gifLib.approved || [];
+    if (!gifs.length) { list.innerHTML = '<div class="empty">No GIFs yet — click + Add GIF or approve a request</div>'; return; }
+    list.innerHTML = gifs.map(g => `
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">
+        <img src="${g.url}" style="width:56px;height:40px;object-fit:cover;border-radius:4px;background:var(--surface-raised);flex-shrink:0;" onerror="this.style.opacity=0.3" />
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:600;color:var(--text);">:${g.name}:</div>
+          <div style="font-size:11px;color:var(--muted-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${g.url}</div>
+          <div style="font-size:10px;color:var(--muted-2);margin-top:1px;">added by ${g.addedBy}</div>
+        </div>
+        <button class="btn btn-sm" style="color:rgba(255,255,255,0.5);padding:5px 10px;" onclick="gifLibTest('${g.name}')">▶ Test</button>
+        <button class="cmd-delete-btn" onclick="gifLibRemove('${g.name}')">✕</button>
+      </div>`).join('');
+  }
+
+  function _gifRenderPending() {
+    const list = document.getElementById('gifPendingList');
+    if (!list) return;
+    const pending = _gifLib.pending || [];
+    if (!pending.length) { list.innerHTML = '<div class="empty">No pending requests</div>'; return; }
+    list.innerHTML = pending.map(g => `
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">
+        <img src="${g.url}" style="width:56px;height:40px;object-fit:cover;border-radius:4px;background:var(--surface-raised);flex-shrink:0;" onerror="this.style.opacity=0.3" />
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:11px;color:var(--muted-2);">requested by <strong style="color:var(--text);">@${g.requestedBy}</strong></div>
+          <div style="font-size:11px;color:var(--muted-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">${g.url}</div>
+          <div style="display:flex;align-items:center;gap:6px;margin-top:8px;">
+            <input type="text" value="${g.suggestedName}" id="gifpending-name-${g.id}" class="form-input" placeholder="gif name" style="width:130px;padding:5px 8px;font-size:12px;" />
+            <button class="btn btn-primary btn-sm" onclick="gifLibApprove(${g.id})">Approve</button>
+            <button class="btn btn-danger btn-sm" onclick="gifLibReject(${g.id})">Reject</button>
+          </div>
+        </div>
+      </div>`).join('');
+  }
+
+  function gifLibOpenAdd() {
+    document.getElementById('gifAddName').value = '';
+    document.getElementById('gifAddUrl').value = '';
+    document.getElementById('gifAddModal').style.display = 'flex';
+  }
+
+  async function gifLibAdd() {
+    const name = document.getElementById('gifAddName').value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+    const url = document.getElementById('gifAddUrl').value.trim();
+    if (!name || !url) { showToast('Fill in both fields'); return; }
+    const r = await fetch('/api/gif-library', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name, url }) });
+    const d = await r.json();
+    if (d.ok) { showToast('GIF added: :' + name + ':'); document.getElementById('gifAddModal').style.display = 'none'; await loadGifLibrary(); }
+    else showToast(d.error || 'Failed');
+  }
+
+  async function gifLibApprove(id) {
+    const nameEl = document.getElementById('gifpending-name-' + id);
+    const name = nameEl ? nameEl.value.trim() : '';
+    const r = await fetch('/api/gif-library/approve', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id, name }) });
+    const d = await r.json();
+    if (d.ok) { showToast('Approved as :' + d.name + ':'); await loadGifLibrary(); gifLibSwitchTab('approved'); }
+    else showToast(d.error || 'Failed');
+  }
+
+  async function gifLibReject(id) {
+    await fetch('/api/gif-library/reject', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id }) });
+    showToast('Request rejected');
+    await loadGifLibrary(); _gifRenderPending();
+  }
+
+  async function gifLibRemove(name) {
+    showConfirm('Remove :' + name + '?', 'This GIF will no longer be usable in chat.', async () => {
+      await fetch('/api/gif-library/remove', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name }) });
+      showToast(':' + name + ': removed');
+      await loadGifLibrary(); _gifRenderApproved();
+    });
+  }
+
+  async function gifLibTest(name) {
+    await fetch('/api/gif-library/fire', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ gifName: name }) });
+    showToast('Testing :' + name + ':');
+  }
+
+  // ---- Position canvas ----
+  let _gifPos = { x: 480, y: 270, w: 400, h: 300, duration: 5 };
+
+  async function gifLibLoadPosition() {
+    try { const r = await fetch('/api/gif-library/position'); _gifPos = await r.json(); } catch(e) {}
+    document.getElementById('gifPosX').value = _gifPos.x || 480;
+    document.getElementById('gifPosY').value = _gifPos.y || 270;
+    document.getElementById('gifPosW').value = _gifPos.w || 400;
+    document.getElementById('gifPosH').value = _gifPos.h || 300;
+    document.getElementById('gifPosDuration').value = _gifPos.duration || 5;
+    if (document.getElementById('gifPosCanvas').offsetWidth > 0) gifLibInitPosCanvas();
+  }
+
+  function gifLibInitPosCanvas() {
+    const canvas = document.getElementById('gifPosCanvas');
+    const box = document.getElementById('gifPosBox');
+    if (!canvas || !box) return;
+    const cw = canvas.offsetWidth || 1;
+    const ch = canvas.offsetHeight || 1;
+    canvas.style.height = Math.round(cw * 9 / 16) + 'px';
+    gifLibUpdatePosBox();
+    // Drag logic
+    let mode = null, sx, sy, sl, st, sw, sh;
+    const resize = document.getElementById('gifPosResize');
+    canvas.onmousedown = (e) => {
+      if (e.target === resize) { mode='resize'; sx=e.clientX; sy=e.clientY; sw=box.offsetWidth; sh=box.offsetHeight; e.preventDefault(); return; }
+      if (e.target === box || box.contains(e.target)) { mode='move'; sx=e.clientX; sy=e.clientY; sl=parseFloat(box.style.left)||0; st=parseFloat(box.style.top)||0; box.style.cursor='grabbing'; e.preventDefault(); }
+    };
+    document.onmousemove = (e) => {
+      if (!mode) return;
+      const cw2=canvas.offsetWidth, ch2=canvas.offsetHeight;
+      if (mode==='move') {
+        const nl=Math.max(0,Math.min(cw2-box.offsetWidth, sl+e.clientX-sx));
+        const nt=Math.max(0,Math.min(ch2-box.offsetHeight, st+e.clientY-sy));
+        box.style.left=nl+'px'; box.style.top=nt+'px';
+        document.getElementById('gifPosX').value=Math.round(nl/cw2*GIF_SW);
+        document.getElementById('gifPosY').value=Math.round(nt/ch2*GIF_SH);
+      } else {
+        const nw=Math.max(20, sw+e.clientX-sx), nh=Math.max(15, sh+e.clientY-sy);
+        box.style.width=nw+'px'; box.style.height=nh+'px';
+        document.getElementById('gifPosW').value=Math.round(nw/cw2*GIF_SW);
+        document.getElementById('gifPosH').value=Math.round(nh/ch2*GIF_SH);
+      }
+    };
+    document.onmouseup = () => { if (mode==='move') box.style.cursor='grab'; mode=null; };
+  }
+
+  function gifLibUpdatePosBox() {
+    const canvas = document.getElementById('gifPosCanvas');
+    const box = document.getElementById('gifPosBox');
+    if (!canvas || !box) return;
+    const cw = canvas.offsetWidth || 1, ch = canvas.offsetHeight || 1;
+    const x=parseFloat(document.getElementById('gifPosX').value)||480;
+    const y=parseFloat(document.getElementById('gifPosY').value)||270;
+    const w=parseFloat(document.getElementById('gifPosW').value)||400;
+    const h=parseFloat(document.getElementById('gifPosH').value)||300;
+    box.style.left=(x/GIF_SW*cw)+'px'; box.style.top=(y/GIF_SH*ch)+'px';
+    box.style.width=Math.max(20,w/GIF_SW*cw)+'px'; box.style.height=Math.max(15,h/GIF_SH*ch)+'px';
+  }
+
+  async function gifLibSavePosition() {
+    const pos = {
+      x: parseInt(document.getElementById('gifPosX').value)||480,
+      y: parseInt(document.getElementById('gifPosY').value)||270,
+      w: parseInt(document.getElementById('gifPosW').value)||400,
+      h: parseInt(document.getElementById('gifPosH').value)||300,
+      duration: parseInt(document.getElementById('gifPosDuration').value)||5
+    };
+    await fetch('/api/gif-library/position', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(pos) });
+    showToast('Position saved');
+  }
+
   // Init
   connectChatStream();
   overlayStartVideoSSE();
   overlayLoadSources();
+  // Check GIF pending dot on startup
+  fetch('/api/gif-library').then(r=>r.json()).then(lib => {
+    const count = (lib.pending||[]).length;
+    const dot = document.getElementById('gifPendingDot');
+    if (dot && count > 0) dot.style.display = 'inline-block';
+  }).catch(()=>{});
 </script>
 </body>
 </html>

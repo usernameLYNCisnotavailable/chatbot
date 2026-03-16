@@ -39,9 +39,13 @@ function sendToReactor(message) {
     socket.on('error', () => {});
 }
 
-function fireOverlayCommand(command, args) {
+function fireOverlayCommand(command, args, usernameCtx) {
     const http = require('http');
-    const body = JSON.stringify({ command, args: args || '' });
+    // Parse and strip :gifname: from args before sending as TTS text
+    const parsed = parseGifSyntax(args || '');
+    const cleanArgs = parsed.text;
+    if (parsed.gifName) fireGifOverlay(parsed.gifName, usernameCtx || '');
+    const body = JSON.stringify({ command, args: cleanArgs });
     const options = {
         hostname: '127.0.0.1', port: 3000,
         path: '/api/overlay/fire-command', method: 'POST',
@@ -51,6 +55,29 @@ function fireOverlayCommand(command, args) {
     req.on('error', () => {});
     req.write(body);
     req.end();
+}
+
+function fireGifOverlay(gifName, username) {
+    const http = require('http');
+    const body = JSON.stringify({ gifName, username });
+    const options = {
+        hostname: '127.0.0.1', port: 3000,
+        path: '/api/gif-library/fire', method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+    };
+    const req = http.request(options, () => {});
+    req.on('error', () => {});
+    req.write(body);
+    req.end();
+}
+
+// Parse :gifname: tokens out of a message, return { text, gifName }
+function parseGifSyntax(msg) {
+    const match = msg.match(/:([a-zA-Z0-9_-]+):/);
+    if (!match) return { text: msg, gifName: null };
+    const gifName = match[1].toLowerCase();
+    const text = msg.replace(match[0], '').replace(/\s+/g, ' ').trim();
+    return { text, gifName };
 }
 
 function getCommands() {
@@ -288,7 +315,7 @@ client.on('message', (channel, tags, message, self) => {
             if (isOnCooldown(username, command, c.cooldown ?? 5)) return;
             setCooldown(username, command);
             client.say(channel, c.response);
-            fireOverlayCommand(command, args);
+            fireOverlayCommand(command, args, username);
             return;
         }
 
@@ -301,7 +328,7 @@ client.on('message', (channel, tags, message, self) => {
             setCooldown(username, command);
             lastCommandChannel = channel;
             sendToReactor(`COMMAND:${guestActionKey}:${username}:${message}:${args}:${channel.replace('#','')}`);
-            fireOverlayCommand(command, args);
+            fireOverlayCommand(command, args, username);
             return;
         }
 
@@ -314,7 +341,7 @@ client.on('message', (channel, tags, message, self) => {
             setCooldown(username, command + ':' + sub);
             lastCommandChannel = channel;
             sendToReactor(`COMMAND:${command.slice(1)}:${username}:${message}:${args}:${channel.replace('#','')}`);
-            fireOverlayCommand(command, args);
+            fireOverlayCommand(command, args, username);
             return;
         }
 
@@ -327,7 +354,7 @@ client.on('message', (channel, tags, message, self) => {
             setCooldown(username, '!car:' + sub);
             lastCommandChannel = channel;
             sendToReactor(`COMMAND:car:${username}:${message}:${args}:${channel.replace('#','')}`);
-            fireOverlayCommand(command, args);
+            fireOverlayCommand(command, args, username);
             return;
         }
 
@@ -362,6 +389,43 @@ client.on('message', (channel, tags, message, self) => {
     const actions = getActions();
     const defaults = getDefaults();
 
+    // ── !requestgif <url> <name> ─────────────────────────────────────────────
+    if (command === '!requestgif') {
+        const parts = args.trim().split(' ');
+        const url = parts[0];
+        const suggestedName = parts.slice(1).join(' ').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+        if (!url || !suggestedName) { client.say(channel, `@${username} Usage: !requestgif <url> <name>  e.g. !requestgif https://... hype`); return; }
+        if (!url.startsWith('http')) { client.say(channel, `@${username} Please provide a valid URL.`); return; }
+        const http2 = require('http');
+        const body2 = JSON.stringify({ url, suggestedName, requestedBy: username });
+        const opts2 = { hostname:'127.0.0.1', port:3000, path:'/api/gif-library/request', method:'POST', headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(body2)} };
+        const req2 = http2.request(opts2, (res2) => {
+            let d = ''; res2.on('data', c2 => d += c2); res2.on('end', () => {
+                try { const j = JSON.parse(d); if (j.ok) client.say(channel, `@${username} GIF request submitted! A mod will review it.`); else client.say(channel, `@${username} ${j.error || 'Failed to submit request.'}`); } catch(e) {}
+            });
+        });
+        req2.on('error', () => {}); req2.write(body2); req2.end();
+        return;
+    }
+
+    // ── !removegif <name> ────────────────────────────────────────────────────
+    if (command === '!removegif') {
+        const isMod = tags.mod || tags.badges?.broadcaster || tags.badges?.moderator;
+        if (!isMod) { client.say(channel, `@${username} Only mods can remove GIFs.`); return; }
+        const gifName2 = args.trim().toLowerCase();
+        if (!gifName2) { client.say(channel, `@${username} Usage: !removegif <name>`); return; }
+        const http3 = require('http');
+        const body3 = JSON.stringify({ name: gifName2 });
+        const opts3 = { hostname:'127.0.0.1', port:3000, path:'/api/gif-library/remove', method:'POST', headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(body3)} };
+        const req3 = http3.request(opts3, (res3) => {
+            let d = ''; res3.on('data', c3 => d += c3); res3.on('end', () => {
+                try { const j = JSON.parse(d); client.say(channel, `@${username} ${j.ok ? `GIF "${gifName2}" removed.` : (j.error || 'Not found.')}`); } catch(e) {}
+            });
+        });
+        req3.on('error', () => {}); req3.write(body3); req3.end();
+        return;
+    }
+
     // Text commands (custom)
     if (commands[command]) {
         const c = commands[command];
@@ -370,7 +434,7 @@ client.on('message', (channel, tags, message, self) => {
         if (isOnCooldown(username, command, cd)) return;
         setCooldown(username, command);
         client.say(channel, c.response);
-        fireOverlayCommand(command, args);
+        fireOverlayCommand(command, args, username);
         return;
     }
 
@@ -384,7 +448,7 @@ client.on('message', (channel, tags, message, self) => {
         setCooldown(username, command);
         lastCommandChannel = channel;
         sendToReactor(`COMMAND:${actionKey}:${username}:${message}:${args}:${config.channel}`);
-        fireOverlayCommand(command, args);
+        fireOverlayCommand(command, args, username);
         return;
     }
 
@@ -398,7 +462,7 @@ client.on('message', (channel, tags, message, self) => {
         setCooldown(username, command + ':' + sub);
         lastCommandChannel = channel;
         sendToReactor(`COMMAND:${command.slice(1)}:${username}:${message}:${args}:${config.channel}`);
-        fireOverlayCommand(command, args);
+        fireOverlayCommand(command, args, username);
         return;
     }
 
@@ -412,7 +476,7 @@ client.on('message', (channel, tags, message, self) => {
         setCooldown(username, '!car:' + sub);
         lastCommandChannel = channel;
         sendToReactor(`COMMAND:car:${username}:${message}:${args}:${config.channel}`);
-        fireOverlayCommand(command, args);
+        fireOverlayCommand(command, args, username);
         return;
     }
 

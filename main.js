@@ -1449,7 +1449,7 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
                         const loops = src.clearWithTTS ? 0 : (isGif ? (src.gifLoops || 0) : 0);
                         const displaySeconds = src.clearWithTTS ? 0 : (src.displaySeconds || 5);
                         broadcastVideoCmd({ cmd: 'PLAYIMG', id: src.id, path: src.path, loops, displaySeconds,
-                            x: src.mediaX ?? 480, y: src.mediaY ?? 270, w: src.mediaW || 960, h: src.mediaH || 540,
+                            x: src.mediaX || 0, y: src.mediaY || 0, w: src.mediaW || 960, h: src.mediaH || 540,
                             chromaKey: src.chromaKey || false, chromaColor: src.chromaColor || '#00ff00', chromaThreshold: src.chromaThreshold ?? 40 });
                     } else if (overlayProcess) {
                         // Legacy C++ overlay path
@@ -1463,12 +1463,13 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
                 }
 
                 if (hasVideo && videoWin && !videoWin.isDestroyed()) {
-                    const loops = src.clearWithTTS ? 0 : (hasSound ? 0 : (src.videoLoops || 1));
-                    const px = src.mediaX ?? (videoPositions[src.id]?.x);
-                    const py = src.mediaY ?? (videoPositions[src.id]?.y);
-                    const pw = src.mediaW || videoPositions[src.id]?.w || 960;
-                    const ph = src.mediaH || videoPositions[src.id]?.h || 540;
-                    broadcastVideoCmd({ cmd: 'PLAYVID', id: src.id, path: src.videoPath, loops, videoStart: src.videoStart || 0, videoEnd: src.videoEnd || 0, volume: src.videoVolume ?? 1, x: px, y: py, w: pw, h: ph, chromaKey: src.chromaKey || false, chromaColor: src.chromaColor || '#00ff00', chromaThreshold: src.chromaThreshold ?? 40 });
+                    const loops = hasSound ? 0 : (src.videoLoops || 1);
+                    let px, py, pw, ph;
+                    if (videoPositions[src.id]) {
+                        px = videoPositions[src.id].x; py = videoPositions[src.id].y;
+                        pw = videoPositions[src.id].w; ph = videoPositions[src.id].h;
+                    }
+                    broadcastVideoCmd({ cmd: 'PLAYVID', id: src.id, path: src.videoPath, loops, videoStart: src.videoStart || 0, videoEnd: src.videoEnd || 0, x: px, y: py, w: pw, h: ph });
                 }
 
                 if (hasSound && overlayProcess) {
@@ -1485,6 +1486,123 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
                 }
             }
             res.json({ ok: true, triggered: matches.length });
+        } catch(e) { res.json({ ok: false, error: e.message }); }
+    });
+
+    // ── GIF Library ──────────────────────────────────────────────────────────
+    function getGifLibrary() {
+        const p = getDataPath('gif-library.json');
+        if (!fs.existsSync(p)) return { approved: [], pending: [] };
+        try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch(e) { return { approved: [], pending: [] }; }
+    }
+    function saveGifLibrary(lib) {
+        fs.writeFileSync(getDataPath('gif-library.json'), JSON.stringify(lib, null, 2));
+    }
+
+    server.get('/api/gif-library', (req, res) => {
+        res.json(getGifLibrary());
+    });
+
+    server.post('/api/gif-library', (req, res) => {
+        try {
+            const lib = getGifLibrary();
+            const { name, url } = req.body;
+            if (!name || !url) return res.json({ ok: false, error: 'name and url required' });
+            const safeName = name.toLowerCase().replace(/[^a-z0-9_-]/g, '');
+            if (lib.approved.find(g => g.name === safeName)) return res.json({ ok: false, error: 'Name already taken' });
+            lib.approved.push({ name: safeName, url, addedBy: 'streamer', addedAt: Date.now() });
+            saveGifLibrary(lib);
+            res.json({ ok: true });
+        } catch(e) { res.json({ ok: false, error: e.message }); }
+    });
+
+    server.post('/api/gif-library/request', (req, res) => {
+        try {
+            const lib = getGifLibrary();
+            const { url, suggestedName, requestedBy } = req.body;
+            if (!url || !suggestedName) return res.json({ ok: false, error: 'url and name required' });
+            if (lib.pending.length >= 50) return res.json({ ok: false, error: 'Too many pending requests' });
+            const duplicate = lib.pending.find(g => g.url === url && g.requestedBy === requestedBy);
+            if (duplicate) return res.json({ ok: false, error: 'You already have a pending request' });
+            lib.pending.push({ id: Date.now(), url, suggestedName: suggestedName.toLowerCase().replace(/[^a-z0-9_-]/g, ''), requestedBy, requestedAt: Date.now() });
+            saveGifLibrary(lib);
+            res.json({ ok: true });
+        } catch(e) { res.json({ ok: false, error: e.message }); }
+    });
+
+    server.post('/api/gif-library/approve', (req, res) => {
+        try {
+            const lib = getGifLibrary();
+            const { id, name } = req.body;
+            const idx = lib.pending.findIndex(g => g.id === id);
+            if (idx === -1) return res.json({ ok: false, error: 'Request not found' });
+            const pending = lib.pending[idx];
+            const safeName = (name || pending.suggestedName).toLowerCase().replace(/[^a-z0-9_-]/g, '');
+            if (!safeName) return res.json({ ok: false, error: 'Invalid name' });
+            if (lib.approved.find(g => g.name === safeName)) return res.json({ ok: false, error: 'Name already taken' });
+            lib.approved.push({ name: safeName, url: pending.url, addedBy: pending.requestedBy, addedAt: Date.now() });
+            lib.pending.splice(idx, 1);
+            saveGifLibrary(lib);
+            res.json({ ok: true, name: safeName });
+        } catch(e) { res.json({ ok: false, error: e.message }); }
+    });
+
+    server.post('/api/gif-library/reject', (req, res) => {
+        try {
+            const lib = getGifLibrary();
+            const { id } = req.body;
+            lib.pending = lib.pending.filter(g => g.id !== id);
+            saveGifLibrary(lib);
+            res.json({ ok: true });
+        } catch(e) { res.json({ ok: false, error: e.message }); }
+    });
+
+    server.post('/api/gif-library/remove', (req, res) => {
+        try {
+            const lib = getGifLibrary();
+            const { name } = req.body;
+            const before = lib.approved.length;
+            lib.approved = lib.approved.filter(g => g.name !== name);
+            if (lib.approved.length === before) return res.json({ ok: false, error: 'GIF not found' });
+            saveGifLibrary(lib);
+            res.json({ ok: true });
+        } catch(e) { res.json({ ok: false, error: e.message }); }
+    });
+
+    let activeGifLibId = null;
+
+    server.post('/api/gif-library/fire', async (req, res) => {
+        try {
+            const { gifName } = req.body;
+            const lib = getGifLibrary();
+            const gif = lib.approved.find(g => g.name === (gifName || '').toLowerCase());
+            if (!gif) return res.json({ ok: false, error: 'GIF not found: ' + gifName });
+            const posPath = getDataPath('gif-overlay-position.json');
+            const pos = fs.existsSync(posPath) ? JSON.parse(fs.readFileSync(posPath, 'utf8')) : { x: 480, y: 270, w: 400, h: 300, duration: 5 };
+            const id = 99000 + Math.floor(Math.random() * 999);
+            activeGifLibId = id;
+            if (videoWin && !videoWin.isDestroyed()) {
+                // loops:0 = loop forever, displaySeconds:0 = never auto-clear — wait for TEXTDONE
+                broadcastVideoCmd({ cmd: 'PLAYIMG', id, path: gif.url, loops: 0,
+                    displaySeconds: 0,
+                    x: pos.x || 480, y: pos.y || 270, w: pos.w || 400, h: pos.h || 300,
+                    chromaKey: false, chromaColor: '#00ff00', chromaThreshold: 40 });
+            }
+            res.json({ ok: true, id });
+        } catch(e) { res.json({ ok: false, error: e.message }); }
+    });
+
+    server.get('/api/gif-library/position', (req, res) => {
+        try {
+            const p = getDataPath('gif-overlay-position.json');
+            res.json(fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : { x: 480, y: 270, w: 400, h: 300, duration: 5 });
+        } catch(e) { res.json({ x: 480, y: 270, w: 400, h: 300, duration: 5 }); }
+    });
+
+    server.post('/api/gif-library/position', (req, res) => {
+        try {
+            fs.writeFileSync(getDataPath('gif-overlay-position.json'), JSON.stringify(req.body, null, 2));
+            res.json({ ok: true });
         } catch(e) { res.json({ ok: false, error: e.message }); }
     });
 
@@ -1703,6 +1821,13 @@ Write-Output $sb.ToString().Trim()
             broadcastVideoDashboard({ cmd: 'READY' });
         } else {
             broadcastVideoDashboard({ cmd: body.cmd || 'VIDDONE', id: body.id });
+            // If a GIF library overlay is active, clear it when TTS finishes
+            if ((body.cmd === 'TEXTDONE') && activeGifLibId !== null) {
+                if (videoWin && !videoWin.isDestroyed()) {
+                    broadcastVideoCmd({ cmd: 'CLEARIMG', id: activeGifLibId });
+                }
+                activeGifLibId = null;
+            }
         }
         res.json({ ok: true });
     });
