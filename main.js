@@ -1435,6 +1435,7 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
                         animation: src.animation, animDuration: src.animDuration, maxW: src.maxW, maxH: src.maxH || 0,
                         speak: src.speak || false, voice: src.voice || null,
                         ttsRate: src.ttsRate || 1, ttsPitch: src.ttsPitch || 1, ttsVolume: src.ttsVolume ?? 1,
+                        speakOnly: !!(src.speakOnly || (hasImage || hasVideo)),
                         clearMediaId, clearMediaKind });
                     const textSecs = src.displaySeconds || 0;
                     if (textSecs > 0 && !src.speak) {

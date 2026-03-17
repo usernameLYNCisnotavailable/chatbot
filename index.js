@@ -44,7 +44,18 @@ function fireOverlayCommand(command, args, usernameCtx) {
     // Parse and strip :gifname: from args before sending as TTS text
     const parsed = parseGifSyntax(args || '');
     const cleanArgs = parsed.text;
-    if (parsed.gifName) fireGifOverlay(parsed.gifName, usernameCtx || '');
+    if (parsed.gifName) {
+        // Only fire gif library if the source doesn't already have an image/video assigned.
+        // If it does, the source's own media handles display — firing the lib gif too would
+        // cause two GIFs playing simultaneously with no clean way to clear them.
+        const sourcesPath = path.join(dataDir, 'overlay-sources.json');
+        const sources = (() => { try { return JSON.parse(fs.readFileSync(sourcesPath, 'utf8')); } catch(e) { return []; } })();
+        const sourceHasMedia = sources.some(s =>
+            s.assignedCommand === command &&
+            (s.type === 'image' || s.type === 'image+sound' || s.type === 'video' || s.type === 'video+sound')
+        );
+        if (!sourceHasMedia) fireGifOverlay(parsed.gifName, usernameCtx || '');
+    }
     const body = JSON.stringify({ command, args: cleanArgs });
     const options = {
         hostname: '127.0.0.1', port: 3000,

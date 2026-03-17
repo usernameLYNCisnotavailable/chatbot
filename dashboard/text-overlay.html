@@ -128,11 +128,11 @@ function addText(id, cfg) {
     el.style.visibility = '';
   }
 
-  // Animation
+  // Animation — skip rendering entirely if speakOnly (voice fires but nothing visible)
   const anim = cfg.animation || 'static';
-  el.classList.add('visible');
-
-  if (anim === 'fade') {
+  if (!cfg.speakOnly) {
+    el.classList.add('visible');
+    if (anim === 'fade') {
     el.style.opacity = '0';
     el.style.animation = 'txt-fadein ' + (cfg.animDuration || 1) + 's ease forwards';
   } else if (anim === 'typewriter') {
@@ -161,6 +161,7 @@ function addText(id, cfg) {
   } else {
     el.style.opacity = '1';
   }
+  } // end if (!cfg.speakOnly)
 
   // TTS — speak the text if enabled
   if (cfg.speak && cfg.text) {
