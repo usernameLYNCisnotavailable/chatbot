@@ -204,6 +204,13 @@
 
   /* Commands page */
   .cmd-topbar { display: flex; align-items: center; justify-content: space-between; padding: 20px 20px 0; flex-shrink: 0; }
+  .automod-section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; margin-bottom: 12px; }
+  .automod-section-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .automod-section-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+  .automod-section-sub { font-size: 11px; color: var(--muted); }
+  .automod-tag { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; background: var(--surface-raised); border: 1px solid var(--border); border-radius: 20px; font-size: 12px; }
+  .automod-tag button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; line-height: 1; padding: 0 0 0 2px; }
+  .automod-tag button:hover { color: #e05; }
   .cmd-title { font-size: 20px; font-weight: 600; color: var(--text); letter-spacing: -0.3px; -webkit-text-fill-color: var(--text); background: none; font-family: 'Inter', sans-serif; }
   .cmd-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
   .cmd-add-btn {
@@ -1213,14 +1220,19 @@
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+      <select id="overlayDisplaySelect" class="input" style="font-size:12px;padding:4px 8px;max-width:180px;" onchange="overlaySetDisplay(this.value)" title="Choose which monitor the overlay appears on">
+        <option value="0">Display 1 (primary)</option>
+      </select>
       <button class="btn btn-primary" id="overlayLaunchBtn" onclick="overlayLaunch()" style="padding:5px 16px;font-size:12px;white-space:nowrap;">Launch Overlay</button>
       <button class="btn btn-danger" id="overlayStopBtn" onclick="overlayStop()" style="display:none;padding:5px 16px;font-size:12px;white-space:nowrap;">Stop Overlay</button>
     </div>
   </div>
 
   <!-- Body: Sources left, Controls right -->
-  <div style="display:grid;grid-template-columns:1fr 320px;height:calc(100% - 57px);">
+  <div style="display:grid;grid-template-columns:1fr 320px;grid-template-rows:auto 1fr;height:calc(100% - 57px);">
 
+    <!-- OBS URLs banner -->
+    <div id="overlayObsUrls" style="display:none;grid-column:1/-1;padding:14px 20px;border-bottom:1px solid var(--border);background:var(--surface);"></div>
     <!-- Left: Sources -->
     <div style="padding:18px 20px;border-right:1px solid var(--border);overflow-y:auto;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
@@ -1618,7 +1630,135 @@ const overlayState = { running: false, sources: [] };
 let overlayNextId = 1;
 let overlayMode = 'desktop'; // 'desktop' or 'stream'
 
-function overlaySetMode(mode) {
+// ═══════════════════════════════════════════════
+// AUTOMOD
+// ═══════════════════════════════════════════════
+let automodData = null;
+
+async function loadAutomodPage() {
+  try {
+    const r = await fetch('/api/automod');
+    automodData = await r.json();
+    const d = automodData;
+    document.getElementById('automodMasterToggle').checked = !!d.enabled;
+    document.getElementById('automodEnabledLabel').textContent = d.enabled ? 'Enabled' : 'Disabled';
+    document.getElementById('automodBannedAction').value = d.bannedWords_action || 'timeout';
+    document.getElementById('automodBannedDuration').value = d.bannedWords_duration || 300;
+    automodToggleDur('banned');
+    renderWordList(d.bannedWords || []);
+    const caps = d.caps || {};
+    document.getElementById('automodCapsEnabled').checked = !!caps.enabled;
+    document.getElementById('automodCapsThreshold').value = caps.threshold || 70;
+    document.getElementById('automodCapsThresholdVal').textContent = (caps.threshold || 70) + '%';
+    document.getElementById('automodCapsMinLen').value = caps.minLength || 10;
+    document.getElementById('automodCapsAction').value = caps.action || 'warn';
+    document.getElementById('automodCapsDuration').value = caps.duration || 60;
+    const capsOpts = document.getElementById('automodCapsOptions');
+    if (capsOpts) capsOpts.style.display = caps.enabled ? 'grid' : 'none';
+    automodToggleDur('caps');
+    const links = d.links || {};
+    document.getElementById('automodLinksEnabled').checked = !!links.enabled;
+    document.getElementById('automodLinksAllowSubs').checked = !!links.allowSubs;
+    document.getElementById('automodLinksAction').value = links.action || 'delete';
+    document.getElementById('automodLinksDuration').value = links.duration || 60;
+    const linksOpts = document.getElementById('automodLinksOptions');
+    if (linksOpts) linksOpts.style.display = links.enabled ? 'grid' : 'none';
+    automodToggleDur('links');
+    const spam = d.spam || {};
+    document.getElementById('automodSpamEnabled').checked = !!spam.enabled;
+    document.getElementById('automodSpamMessages').value = spam.messages || 5;
+    document.getElementById('automodSpamSeconds').value = spam.seconds || 3;
+    document.getElementById('automodSpamAction').value = spam.action || 'timeout';
+    document.getElementById('automodSpamDuration').value = spam.duration || 300;
+    const spamOpts = document.getElementById('automodSpamOptions');
+    if (spamOpts) spamOpts.style.display = spam.enabled ? 'grid' : 'none';
+    automodToggleDur('spam');
+    document.getElementById('automodWarningsEnabled').checked = !!(d.warnings && d.warnings.enabled);
+    document.getElementById('automodExemptSubs').checked = !!d.exemptSubs;
+  } catch(e) { console.error('automod load', e); }
+}
+function automodToggleMaster() {
+  const on = document.getElementById('automodMasterToggle').checked;
+  document.getElementById('automodEnabledLabel').textContent = on ? 'Enabled' : 'Disabled';
+}
+function automodToggleSection(section) {
+  const key = section.charAt(0).toUpperCase() + section.slice(1);
+  const enabled = document.getElementById('automod' + key + 'Enabled').checked;
+  const opts = document.getElementById('automod' + key + 'Options');
+  if (opts) opts.style.display = enabled ? 'grid' : 'none';
+}
+function automodToggleDur(section) {
+  const aMap = { banned:'automodBannedAction', caps:'automodCapsAction', links:'automodLinksAction', spam:'automodSpamAction' };
+  const dMap = { banned:'automodBannedDurWrap', caps:'automodCapsDurWrap', links:'automodLinksDurWrap', spam:'automodSpamDurWrap' };
+  const aEl = document.getElementById(aMap[section]); const dEl = document.getElementById(dMap[section]);
+  if (!aEl || !dEl) return;
+  dEl.style.display = aEl.value === 'timeout' ? '' : 'none';
+}
+function renderWordList(words) {
+  const el = document.getElementById('automodWordList'); if (!el) return;
+  el.innerHTML = words.map((w,i) => '<div class="automod-tag">'+w+'<button onclick="automodRemoveWord('+i+')">×</button></div>').join('');
+}
+function automodAddWord() {
+  const inp = document.getElementById('automodWordInput');
+  const word = (inp.value||'').trim().toLowerCase(); if (!word) return;
+  if (!automodData) automodData = {};
+  if (!automodData.bannedWords) automodData.bannedWords = [];
+  if (!automodData.bannedWords.includes(word)) { automodData.bannedWords.push(word); renderWordList(automodData.bannedWords); }
+  inp.value = ''; inp.focus();
+}
+function automodRemoveWord(idx) {
+  if (!automodData || !automodData.bannedWords) return;
+  automodData.bannedWords.splice(idx, 1); renderWordList(automodData.bannedWords);
+}
+async function automodSave() {
+  if (!automodData) automodData = {};
+  automodData.enabled = document.getElementById('automodMasterToggle').checked;
+  automodData.bannedWords_action = document.getElementById('automodBannedAction').value;
+  automodData.bannedWords_duration = parseInt(document.getElementById('automodBannedDuration').value)||300;
+  automodData.caps = { enabled:document.getElementById('automodCapsEnabled').checked, threshold:parseInt(document.getElementById('automodCapsThreshold').value)||70, minLength:parseInt(document.getElementById('automodCapsMinLen').value)||10, action:document.getElementById('automodCapsAction').value, duration:parseInt(document.getElementById('automodCapsDuration').value)||60 };
+  automodData.links = { enabled:document.getElementById('automodLinksEnabled').checked, allowSubs:document.getElementById('automodLinksAllowSubs').checked, action:document.getElementById('automodLinksAction').value, duration:parseInt(document.getElementById('automodLinksDuration').value)||60 };
+  automodData.spam = { enabled:document.getElementById('automodSpamEnabled').checked, messages:parseInt(document.getElementById('automodSpamMessages').value)||5, seconds:parseInt(document.getElementById('automodSpamSeconds').value)||3, action:document.getElementById('automodSpamAction').value, duration:parseInt(document.getElementById('automodSpamDuration').value)||300 };
+  automodData.warnings = { enabled:document.getElementById('automodWarningsEnabled').checked };
+  automodData.exemptSubs = document.getElementById('automodExemptSubs').checked;
+  automodData.exemptMods = true;
+  try { await fetch('/api/automod',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(automodData)}); showToast('AutoMod saved'); }
+  catch(e) { showToast('Save failed'); }
+}
+
+async function overlayLoadDisplays() {
+  try {
+    const r = await fetch('/api/displays');
+    const displays = await r.json();
+    const sel = document.getElementById('overlayDisplaySelect');
+    if (!sel) return;
+    // Hide picker if only one display — nothing to choose
+    if (!displays.length || displays.length === 1) {
+      sel.style.display = 'none';
+      return;
+    }
+    sel.style.display = '';
+    const cfg = await fetch('/api/config').then(r=>r.json()).catch(()=>({}));
+    const current = cfg.overlayDisplay ?? 0;
+    sel.innerHTML = displays.map(d =>
+      `<option value="${d.index}"${d.index === current ? ' selected' : ''}>${d.label}</option>`
+    ).join('');
+  } catch(e) {}
+}
+
+async function overlaySetDisplay(index) {
+  await fetch('/api/overlay/display', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ index: parseInt(index) }) });
+  // If overlay is running, relaunch on new display
+  if (document.getElementById('overlayLaunchBtn') && overlayMode === 'desktop') {
+    await fetch('/api/video-overlay/stop', { method:'POST' });
+    await fetch('/api/text-overlay/stop', { method:'POST' });
+    setTimeout(() => {
+      fetch('/api/video-overlay/launch', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ mode:'desktop' }) });
+      fetch('/api/text-overlay/launch', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ mode:'desktop' }) });
+    }, 500);
+  }
+}
+
+function overlaySetMode(mode, skipServer) {
   overlayMode = mode;
   const dBtn = document.getElementById('overlayModeDesktop');
   const sBtn = document.getElementById('overlayModeStream');
@@ -1629,6 +1769,26 @@ function overlaySetMode(mode) {
     sBtn.style.background = 'var(--accent)'; sBtn.style.color = '#fff';
     dBtn.style.background = 'transparent'; dBtn.style.color = 'var(--muted)';
   }
+  overlayRenderObsUrls();
+  if (!skipServer) {
+    fetch('/api/overlay/setmode', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ mode }) }).catch(()=>{});
+  }
+}
+
+function overlayRenderObsUrls() {
+  const sel = document.getElementById('overlayDisplaySelect');
+  if (sel) sel.style.display = overlayMode === 'stream' ? 'none' : '';
+  const container = document.getElementById('overlayObsUrls');
+  if (!container) return;
+  if (overlayMode !== 'stream') { container.style.display = 'none'; return; }
+  container.style.display = '';
+  const url = 'http://localhost:3000/stream-overlay.html';
+  container.innerHTML = '<div style="font-size:10px;font-weight:600;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Add this as a Browser Source in OBS — set to your stream resolution</div>'
+    + '<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;">'
+    + '<div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:2px;">Stream Overlay (all alerts)</div>'
+    + '<div style="font-size:11px;color:var(--accent);font-family:monospace;">' + url + '</div></div>'
+    + '<button class="btn btn-secondary" style="font-size:11px;padding:4px 10px;flex-shrink:0;" onclick="navigator.clipboard.writeText(\'' + url + '\').then(()=>showToast(\'URL copied\')).catch(()=>{})">Copy</button>'
+    + '</div>';
 }
 
 async function overlayLoadSources() {
@@ -1642,7 +1802,7 @@ async function overlayLoadSources() {
     const statusData = await statusRes.json();
     const videoStatusData = await videoStatusRes.json();
     overlaySetStatus(statusData.running);
-    if (statusData.mode) overlaySetMode(statusData.mode);
+    if (statusData.mode) overlaySetMode(statusData.mode, true);
 
     // If image overlay not running yet, poll until it is
     if (!statusData.running) {
@@ -1651,7 +1811,7 @@ async function overlayLoadSources() {
         attempts++;
         try {
           const s = await fetch('/api/overlay/status').then(r => r.json());
-          if (s.running) { overlaySetStatus(true); if (s.mode) overlaySetMode(s.mode); clearInterval(poll); }
+          if (s.running) { overlaySetStatus(true); if (s.mode) overlaySetMode(s.mode, true); clearInterval(poll); }
         } catch(e) {}
         if (attempts >= 12) clearInterval(poll);
       }, 500);
@@ -3880,14 +4040,80 @@ async function overlayConfirmEdit(id) {
     <div class="cmd-topbar">
       <div class="cmd-title-block">
         <div class="cmd-title">AutoMod</div>
-        <div class="cmd-sub">Filters, banned words, and automatic moderation rules</div>
+        <div class="cmd-sub">Automatic chat moderation — filters, banned words, and actions</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-left:auto;">
+        <span style="font-size:12px;color:var(--muted);" id="automodEnabledLabel">Disabled</span>
+        <label class="toggle" style="width:36px;height:20px;">
+          <input type="checkbox" id="automodMasterToggle" onchange="automodToggleMaster()">
+          <span class="toggle-slider"></span>
+        </label>
+        <button class="btn btn-primary" onclick="automodSave()" style="font-size:12px;padding:5px 16px;">Save</button>
       </div>
     </div>
-    <div style="padding:0 28px;flex:1;display:flex;align-items:center;justify-content:center;">
-      <div style="text-align:center;opacity:0.3;">
-        <div style="font-size:2rem;margin-bottom:12px;">🛡</div>
-        <div style="font-size:0.75rem;color:var(--muted);">AutoMod coming soon</div>
-        <div style="font-size:0.65rem;color:var(--muted-2);margin-top:6px;">Caps filter · link filter · spam · banned words · auto-timeout</div>
+    <div style="padding:20px 28px;flex:1;overflow-y:auto;">
+      <div class="automod-section">
+        <div class="automod-section-header">
+          <div><div class="automod-section-title">🚫 Banned Words</div><div class="automod-section-sub">Messages containing these words will be actioned immediately.</div></div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <select id="automodBannedAction" class="input" style="font-size:12px;padding:4px 8px;width:110px;" onchange="automodToggleDur('banned')">
+              <option value="warn">Warn</option><option value="delete">Delete</option><option value="timeout" selected>Timeout</option><option value="ban">Ban</option>
+            </select>
+            <div style="display:flex;align-items:center;gap:6px;" id="automodBannedDurWrap">
+              <input type="number" id="automodBannedDuration" class="input" value="300" min="1" style="width:70px;font-size:12px;padding:4px 8px;">
+              <span style="font-size:11px;color:var(--muted);">sec</span>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <input type="text" id="automodWordInput" class="input" placeholder="Add a word or phrase..." style="flex:1;font-size:13px;" onkeydown="if(event.key==='Enter')automodAddWord()">
+          <button class="btn btn-secondary" onclick="automodAddWord()" style="font-size:12px;">Add</button>
+        </div>
+        <div id="automodWordList" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;"></div>
+      </div>
+      <div class="automod-section">
+        <div class="automod-section-header">
+          <div><div class="automod-section-title">🔠 Caps Filter</div><div class="automod-section-sub">Triggers when a message has too many capital letters.</div></div>
+          <label class="toggle" style="width:36px;height:20px;"><input type="checkbox" id="automodCapsEnabled" onchange="automodToggleSection('caps')"><span class="toggle-slider"></span></label>
+        </div>
+        <div id="automodCapsOptions" style="display:none;margin-top:14px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;">
+          <div><div class="form-label" style="font-size:11px;">Caps % threshold</div>
+            <div style="display:flex;align-items:center;gap:8px;"><input type="range" id="automodCapsThreshold" min="30" max="100" value="70" style="flex:1;accent-color:var(--accent);" oninput="document.getElementById('automodCapsThresholdVal').textContent=this.value+'%'"><span id="automodCapsThresholdVal" style="font-size:12px;color:var(--muted);min-width:36px;">70%</span></div>
+          </div>
+          <div><div class="form-label" style="font-size:11px;">Min message length</div><input type="number" id="automodCapsMinLen" class="input" value="10" min="1" style="width:100%;font-size:12px;"></div>
+          <div><div class="form-label" style="font-size:11px;">Action</div><select id="automodCapsAction" class="input" style="font-size:12px;" onchange="automodToggleDur('caps')"><option value="warn" selected>Warn</option><option value="delete">Delete</option><option value="timeout">Timeout</option><option value="ban">Ban</option></select></div>
+          <div id="automodCapsDurWrap"><div class="form-label" style="font-size:11px;">Timeout (sec)</div><input type="number" id="automodCapsDuration" class="input" value="60" min="1" style="width:100%;font-size:12px;"></div>
+        </div>
+      </div>
+      <div class="automod-section">
+        <div class="automod-section-header">
+          <div><div class="automod-section-title">🔗 Link Filter</div><div class="automod-section-sub">Removes messages containing URLs.</div></div>
+          <label class="toggle" style="width:36px;height:20px;"><input type="checkbox" id="automodLinksEnabled" onchange="automodToggleSection('links')"><span class="toggle-slider"></span></label>
+        </div>
+        <div id="automodLinksOptions" style="display:none;margin-top:14px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+          <div style="display:flex;align-items:center;gap:8px;padding-top:20px;"><input type="checkbox" id="automodLinksAllowSubs"><label for="automodLinksAllowSubs" style="font-size:12px;cursor:pointer;">Allow subs to post links</label></div>
+          <div><div class="form-label" style="font-size:11px;">Action</div><select id="automodLinksAction" class="input" style="font-size:12px;" onchange="automodToggleDur('links')"><option value="delete" selected>Delete</option><option value="warn">Warn</option><option value="timeout">Timeout</option><option value="ban">Ban</option></select></div>
+          <div id="automodLinksDurWrap" style="display:none;"><div class="form-label" style="font-size:11px;">Timeout (sec)</div><input type="number" id="automodLinksDuration" class="input" value="60" min="1" style="width:100%;font-size:12px;"></div>
+        </div>
+      </div>
+      <div class="automod-section">
+        <div class="automod-section-header">
+          <div><div class="automod-section-title">💬 Spam Filter</div><div class="automod-section-sub">Triggers when a user sends too many messages too fast.</div></div>
+          <label class="toggle" style="width:36px;height:20px;"><input type="checkbox" id="automodSpamEnabled" onchange="automodToggleSection('spam')"><span class="toggle-slider"></span></label>
+        </div>
+        <div id="automodSpamOptions" style="display:none;margin-top:14px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;">
+          <div><div class="form-label" style="font-size:11px;">Max messages</div><input type="number" id="automodSpamMessages" class="input" value="5" min="2" style="width:100%;font-size:12px;"></div>
+          <div><div class="form-label" style="font-size:11px;">In X seconds</div><input type="number" id="automodSpamSeconds" class="input" value="3" min="1" style="width:100%;font-size:12px;"></div>
+          <div><div class="form-label" style="font-size:11px;">Action</div><select id="automodSpamAction" class="input" style="font-size:12px;" onchange="automodToggleDur('spam')"><option value="warn">Warn</option><option value="timeout" selected>Timeout</option><option value="ban">Ban</option></select></div>
+          <div id="automodSpamDurWrap"><div class="form-label" style="font-size:11px;">Timeout (sec)</div><input type="number" id="automodSpamDuration" class="input" value="300" min="1" style="width:100%;font-size:12px;"></div>
+        </div>
+      </div>
+      <div class="automod-section">
+        <div class="automod-section-header"><div><div class="automod-section-title">⚙️ Global Options</div><div class="automod-section-sub">Applies to all rules.</div></div></div>
+        <div style="margin-top:14px;display:flex;flex-direction:column;gap:10px;">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;"><input type="checkbox" id="automodWarningsEnabled" checked> Send a warning message in chat when actioning a user</label>
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;"><input type="checkbox" id="automodExemptSubs"> Exempt subscribers from all filters</label>
+        </div>
       </div>
     </div>
   </div>
@@ -4100,10 +4326,11 @@ async function overlayConfirmEdit(id) {
     if (nav) { nav.classList.add('active'); openNavGroupFor(name); }
     if (name === 'groups') refreshGroupSelects();
     if (name === 'mod-view') loadModChannels();
-    if (name === 'overlay') { overlayLoadSources(); overlayStartVideoSSE(); loadHotkeys(); }
+    if (name === 'overlay') { overlayLoadSources(); overlayStartVideoSSE(); loadHotkeys(); overlayLoadDisplays(); }
     if (name === 'presets') loadPresetsPage();
     if (name === 'songs') loadSongsPage();
     if (name === 'giflibrary') loadGifLibrary();
+    if (name === 'automod') loadAutomodPage();
     if (name !== 'songs' && _songsPollInterval) { clearInterval(_songsPollInterval); _songsPollInterval = null; }
     if (name === 'actions' && inlineEditor) setTimeout(() => inlineEditor.layout(), 50);
   }
@@ -5845,6 +6072,7 @@ checkBotStatus();
     const TTS_FIELDS = [
       { id:'w_textmode', type:'radio', label:'Text mode', options:[{ value:'user', label:'Whatever the user types', sub:'!hype great stream → bot says "great stream"' },{ value:'fixed', label:'Fixed message', sub:'Bot always says the same thing' }], default:'user' },
       { id:'w_text', type:'fixedtext', label:'Fixed message', placeholder:'HYPE! {user} is bringing the energy!', default:'HYPE!' },
+      { id:'w_showtext', type:'toggle', label:'Show text on screen', sub:'Renders the spoken text visually as the bot speaks. Turn off for voice-only.', default:false },
       { id:'w_voice', type:'voice', label:'TTS Voice' },
       { id:'w_volume', type:'volume', label:'TTS Volume', default:80 }
     ];
@@ -5879,6 +6107,7 @@ checkBotStatus();
       const defaultMsg = eventVars[key] || '{username}';
       const EVENT_TTS_FIELDS = [
         { id:'w_text', type:'text', label:'Message (variables shown above)', placeholder: defaultMsg, default: defaultMsg },
+        { id:'w_showtext', type:'toggle', label:'Show text on screen', sub:'Renders the spoken text visually as the bot speaks. Turn off for voice-only.', default:false },
         { id:'w_voice', type:'voice', label:'TTS Voice' },
         { id:'w_volume', type:'volume', label:'TTS Volume', default:80 }
       ];
@@ -6478,11 +6707,11 @@ checkBotStatus();
     const mediaType = d.w_mediatype || 'image';
     const fadeIn = parseFloat(d.w_fadein_dur)||1, fadeOut = parseFloat(d.w_fadeout_dur)||1;
     if (mediaType === 'none') {
-      const newSrc = { id:maxId+1, type:'text', path:null, videoPath:null, soundPath:null, soundStart:0, soundEnd:0, soundVolume:1, videoStart:0, videoEnd:0, videoVolume:1, gifLoops:0, displaySeconds:0, videoLoops:1, clearWithTTS:false, fadeIn:0, fadeOut:0, chromaKey:false, chromaColor:'#00ff00', chromaThreshold:40, assignedCommand:cmd, mediaX:null, mediaY:null, mediaW:null, mediaH:null, text:d.w_textmode==='user'?'{message}':(d.w_text||''), font:'Arial', fontSize:48, color:'#ffffff', bold:false, italic:false, shadow:true, animation:'fade', animDuration:fadeIn, x:100, y:400, maxW:1720, maxH:200, lockDuration:false, speak:true, speakOnly:true, voice:d.w_voice||null, ttsRate:1, ttsPitch:1, ttsVolume:d.w_volume!==undefined?(parseInt(d.w_volume)/100):1 };
+      const newSrc = { id:maxId+1, type:'text', path:null, videoPath:null, soundPath:null, soundStart:0, soundEnd:0, soundVolume:1, videoStart:0, videoEnd:0, videoVolume:1, gifLoops:0, displaySeconds:0, videoLoops:1, clearWithTTS:false, fadeIn:0, fadeOut:0, chromaKey:false, chromaColor:'#00ff00', chromaThreshold:40, assignedCommand:cmd, mediaX:null, mediaY:null, mediaW:null, mediaH:null, text:d.w_textmode==='user'?'{message}':(d.w_text||''), font:'Arial', fontSize:48, color:'#ffffff', bold:false, italic:false, shadow:true, animation:'fade', animDuration:fadeIn, x:100, y:400, maxW:1720, maxH:200, lockDuration:false, speak:true, speakOnly:!d.w_showtext, voice:d.w_voice||null, ttsRate:1, ttsPitch:1, ttsVolume:d.w_volume!==undefined?(parseInt(d.w_volume)/100):1 };
       await _wizSaveSource(filtered, newSrc); await _wizSaveCommand(cmd, 'everyone'); await overlayLoadSources(); return;
     }
     const isVideo = mediaType === 'video';
-    const newSrc = { id:maxId+1, type:isVideo?'video':'image', path:isVideo?null:(d.w_gif||''), videoPath:isVideo?(d.w_gif||''):null, soundPath:null, soundStart:0, soundEnd:0, soundVolume:1, videoStart:isVideo?(parseFloat(d.w_videoStart)||0):0, videoEnd:isVideo?(parseFloat(d.w_videoEnd)||0):0, videoVolume:1, gifLoops:0, displaySeconds:(d.w_clearwithtts!==false)?0:(parseFloat(d.w_duration)||5), videoLoops:1, clearWithTTS:d.w_clearwithtts!==false, fadeIn, fadeOut, chromaKey:isVideo?(d.w_chromakey||false):false, chromaColor:d.w_chromacolor||'#00ff00', chromaThreshold:parseInt(d.w_chromathreshold)||40, assignedCommand:cmd, mediaX:d.mediaX||480, mediaY:d.mediaY||270, mediaW:d.mediaW||960, mediaH:d.mediaH||540, text:d.w_textmode==='user'?'{message}':(d.w_text||'HYPE!'), font:'Arial', fontSize:d.textSize||48, color:'#ffffff', bold:false, italic:false, shadow:true, animation:'fade', animDuration:fadeIn, x:d.textX||100, y:d.textY||400, maxW:d.textMaxW||800, maxH:d.textMaxH||200, lockDuration:false, speak:true, voice:d.w_voice||null, ttsRate:1, ttsPitch:1, ttsVolume:d.w_volume!==undefined?(parseInt(d.w_volume)/100):1 };
+    const newSrc = { id:maxId+1, type:isVideo?'video':'image', path:isVideo?null:(d.w_gif||''), videoPath:isVideo?(d.w_gif||''):null, soundPath:null, soundStart:0, soundEnd:0, soundVolume:1, videoStart:isVideo?(parseFloat(d.w_videoStart)||0):0, videoEnd:isVideo?(parseFloat(d.w_videoEnd)||0):0, videoVolume:1, gifLoops:0, displaySeconds:(d.w_clearwithtts!==false)?0:(parseFloat(d.w_duration)||5), videoLoops:1, clearWithTTS:d.w_clearwithtts!==false, fadeIn, fadeOut, chromaKey:isVideo?(d.w_chromakey||false):false, chromaColor:d.w_chromacolor||'#00ff00', chromaThreshold:parseInt(d.w_chromathreshold)||40, assignedCommand:cmd, mediaX:d.mediaX||480, mediaY:d.mediaY||270, mediaW:d.mediaW||960, mediaH:d.mediaH||540, text:d.w_textmode==='user'?'{message}':(d.w_text||'HYPE!'), font:'Arial', fontSize:d.textSize||48, color:'#ffffff', bold:false, italic:false, shadow:true, animation:'fade', animDuration:fadeIn, x:d.textX||100, y:d.textY||400, maxW:d.textMaxW||800, maxH:d.textMaxH||200, lockDuration:false, speak:true, speakOnly:!d.w_showtext, voice:d.w_voice||null, ttsRate:1, ttsPitch:1, ttsVolume:d.w_volume!==undefined?(parseInt(d.w_volume)/100):1 };
     await _wizSaveSource(filtered, newSrc); await _wizSaveCommand(cmd, 'everyone'); await overlayLoadSources();
   }
 
@@ -6509,7 +6738,7 @@ checkBotStatus();
       font:'Arial', fontSize: d.textSize||48, color:'#ffffff', bold:false, italic:false, shadow:true,
       animation:'fade', animDuration: fadeIn,
       x: d.textX||100, y: d.textY||400, maxW: d.textMaxW||800, maxH: d.textMaxH||200,
-      lockDuration:false, speak:true, voice: d.w_voice||null,
+      lockDuration:false, speak:true, speakOnly:!d.w_showtext, voice: d.w_voice||null,
       ttsRate:1, ttsPitch:1, ttsVolume: d.w_volume!==undefined ? (parseInt(d.w_volume)/100) : 1
     };
     const r = await fetch('/api/eventsub/alert', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ key, src }) });
@@ -6520,7 +6749,7 @@ checkBotStatus();
   async function _wizCreateTts() {
     const d = _wizData, cmd = d.w_cmd || '!tts';
     const { filtered, maxId } = await _wizGetSourcesFiltered(cmd);
-    const newSrc = { id:maxId+1, type:'text', path:null, videoPath:null, soundPath:null, soundStart:0, soundEnd:0, soundVolume:1, videoStart:0, videoEnd:0, videoVolume:1, gifLoops:0, displaySeconds:0, videoLoops:1, clearWithTTS:false, fadeIn:0, fadeOut:0, chromaKey:false, chromaColor:'#00ff00', chromaThreshold:40, assignedCommand:cmd, mediaX:null, mediaY:null, mediaW:null, mediaH:null, text:d.w_textmode==='user'?'{message}':(d.w_text||''), font:'Arial', fontSize:48, color:'#ffffff', bold:false, italic:false, shadow:true, animation:'fade', animDuration:1, x:100, y:400, maxW:1720, maxH:200, lockDuration:false, speak:true, speakOnly:true, voice:d.w_voice||null, ttsRate:1, ttsPitch:1, ttsVolume:d.w_volume!==undefined?(parseInt(d.w_volume)/100):1 };
+    const newSrc = { id:maxId+1, type:'text', path:null, videoPath:null, soundPath:null, soundStart:0, soundEnd:0, soundVolume:1, videoStart:0, videoEnd:0, videoVolume:1, gifLoops:0, displaySeconds:0, videoLoops:1, clearWithTTS:false, fadeIn:0, fadeOut:0, chromaKey:false, chromaColor:'#00ff00', chromaThreshold:40, assignedCommand:cmd, mediaX:null, mediaY:null, mediaW:null, mediaH:null, text:d.w_textmode==='user'?'{message}':(d.w_text||''), font:'Arial', fontSize:48, color:'#ffffff', bold:false, italic:false, shadow:true, animation:'fade', animDuration:1, x:100, y:400, maxW:1720, maxH:200, lockDuration:false, speak:true, speakOnly:!d.w_showtext, voice:d.w_voice||null, ttsRate:1, ttsPitch:1, ttsVolume:d.w_volume!==undefined?(parseInt(d.w_volume)/100):1 };
     await _wizSaveSource(filtered, newSrc); await _wizSaveCommand(cmd, d.w_access||'everyone'); await overlayLoadSources();
   }
 

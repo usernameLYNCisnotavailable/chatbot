@@ -129,7 +129,18 @@ function startBot() {
     });
 
     botProcess.stderr.on('data', (data) => {
-        console.error('[bot error]', data.toString().trim());
+        const msg = data.toString().trim();
+        console.error('[bot error]', msg);
+        if (msg.includes('Login authentication failed') || msg.includes('authentication failed')) {
+            console.log('[bot] token invalid, clearing and triggering re-auth');
+            try {
+                const cfg = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
+                cfg.streamerToken = ''; cfg.token = ''; cfg.loggedIn = false; cfg.setupComplete = false;
+                fs.writeFileSync(getDataPath('config.json'), JSON.stringify(cfg, null, 4));
+            } catch(e) {}
+            if (botProcess) { botProcess.kill(); botProcess = null; }
+            if (mainWindow && !mainWindow.isDestroyed()) mainWindow.loadURL('http://localhost:3000/setup');
+        }
     });
 
     botProcess.on('exit', (code) => {
@@ -157,6 +168,8 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
         const config = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
         if (!config.setupComplete || !config.loggedIn) {
             res.redirect('/setup');
+        } else if (!config.onboardingComplete) {
+            res.sendFile(path.join(appDir, 'dashboard/onboarding.html'));
         } else {
             res.sendFile(path.join(appDir, 'dashboard/index.html'));
         }
@@ -231,7 +244,9 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
 
                 fs.writeFileSync(getDataPath('config.json'), JSON.stringify(config, null, 4));
 
+                if (botProcess) { botProcess.kill(); botProcess = null; }
                 if (config.setupComplete) {
+                    setTimeout(startBot, 1000);
                     if (mainWindow) mainWindow.loadURL('http://localhost:3000/');
                 } else {
                     if (mainWindow) mainWindow.loadURL('http://localhost:3000/setup?streamer_authed=true');
@@ -289,7 +304,8 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
                 config.token = `oauth:${accessToken}`;
                 config.usingMainAccount = false;
                 fs.writeFileSync(getDataPath('config.json'), JSON.stringify(config, null, 4));
-                // Push the Electron app window to the next setup step
+                if (botProcess) { botProcess.kill(); botProcess = null; }
+                if (config.setupComplete) setTimeout(startBot, 1000);
                 if (mainWindow) mainWindow.loadURL('http://localhost:3000/setup?bot_authed=true');
                 // Show a done page in the browser
                 res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{background:#0a0a0a;color:#f0f0f0;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column;gap:12px;}h2{margin:0;font-size:1.1rem;}p{margin:0;color:rgba(255,255,255,0.4);font-size:0.75rem;text-align:center;}</style></head><body><h2>✅ Bot account connected!</h2><p>You can close this tab and go back to the app.</p></body></html>`);
@@ -322,6 +338,9 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
         config.loggedIn = true;
         fs.writeFileSync(getDataPath('config.json'), JSON.stringify(config, null, 4));
         if (!botProcess) setTimeout(startBot, 1000);
+        if (!config.onboardingComplete) {
+            if (mainWindow) mainWindow.loadURL('http://localhost:3000/onboarding');
+        }
         res.json({ success: true });
     });
 
@@ -1226,6 +1245,57 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
         } catch(e) { res.json({ ok: false, error: e.message }); }
     });
 
+    // ---- ONBOARDING ----
+    server.get('/onboarding', (req, res) => {
+        res.sendFile(path.join(appDir, 'dashboard/onboarding.html'));
+    });
+    server.get('/api/onboarding/status', (req, res) => {
+        try {
+            const cfg = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
+            res.json({ complete: !!cfg.onboardingComplete, completed: cfg.onboardingCompleted || [] });
+        } catch(e) { res.json({ complete: false, completed: [] }); }
+    });
+    server.post('/api/onboarding/complete', (req, res) => {
+        try {
+            const cfg = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
+            cfg.onboardingComplete = true;
+            cfg.onboardingCompleted = req.body.completed || [];
+            fs.writeFileSync(getDataPath('config.json'), JSON.stringify(cfg, null, 4));
+            res.json({ ok: true });
+        } catch(e) { res.json({ ok: false, error: e.message }); }
+    });
+    server.post('/api/onboarding/mark', (req, res) => {
+        try {
+            const cfg = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
+            if (!cfg.onboardingCompleted) cfg.onboardingCompleted = [];
+            if (req.body.key && !cfg.onboardingCompleted.includes(req.body.key)) cfg.onboardingCompleted.push(req.body.key);
+            fs.writeFileSync(getDataPath('config.json'), JSON.stringify(cfg, null, 4));
+            res.json({ ok: true });
+        } catch(e) { res.json({ ok: false, error: e.message }); }
+    });
+
+    // ---- AUTOMOD ----
+    function getAutomodDefaults() {
+        return {
+            enabled: false, bannedWords: [], bannedWords_action: 'timeout', bannedWords_duration: 300,
+            caps: { enabled: true, threshold: 70, minLength: 10, action: 'warn', duration: 60 },
+            links: { enabled: false, allowSubs: true, action: 'delete', duration: 60 },
+            spam: { enabled: true, messages: 5, seconds: 3, action: 'timeout', duration: 300 },
+            warnings: { enabled: true }, exemptMods: true, exemptSubs: false
+        };
+    }
+    server.get('/api/automod', (req, res) => {
+        const p = getDataPath('automod.json');
+        if (!fs.existsSync(p)) return res.json(getAutomodDefaults());
+        try { res.json(JSON.parse(fs.readFileSync(p, 'utf8'))); } catch(e) { res.json(getAutomodDefaults()); }
+    });
+    server.post('/api/automod', (req, res) => {
+        try {
+            fs.writeFileSync(getDataPath('automod.json'), JSON.stringify(req.body, null, 2));
+            res.json({ ok: true });
+        } catch(e) { res.json({ ok: false, error: e.message }); }
+    });
+
     // ---- ROUTES_OVERLAY ----
     server.get('/api/overlay/sources', (req, res) => {
         try {
@@ -1355,6 +1425,49 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
 
     server.get('/api/overlay/status', (req, res) => { res.json({ running: !!overlayProcess, mode: overlayCurrentMode }); });
 
+    server.get('/stream-overlay.html', (req, res) => {
+        res.sendFile(path.join(appDir, 'dashboard/stream-overlay.html'));
+    });
+
+    server.post('/api/overlay/setmode', (req, res) => {
+        const mode = (req.body && req.body.mode) || 'desktop';
+        overlayCurrentMode = mode; videoWinMode = mode; textWinMode = mode;
+        if (videoWin && !videoWin.isDestroyed()) { videoWin.destroy(); videoWin = null; }
+        if (textWin && !textWin.isDestroyed()) { textWin.destroy(); textWin = null; }
+        launchVideoOverlay(mode);
+        launchTextOverlay(mode);
+        res.json({ ok: true, mode });
+    });
+
+    server.get('/api/overlay/obs-urls', (req, res) => {
+        res.json({ streamOverlay: 'http://localhost:3000/stream-overlay.html' });
+    });
+
+    server.get('/api/displays', (req, res) => {
+        const { screen } = require('electron');
+        const displays = screen.getAllDisplays();
+        const primary = screen.getPrimaryDisplay();
+        res.json(displays.map((d, i) => ({
+            index: i,
+            id: d.id,
+            label: `Display ${i + 1}${d.id === primary.id ? ' (primary)' : ''} — ${d.size.width}×${d.size.height}`,
+            width: d.size.width,
+            height: d.size.height,
+            x: d.bounds.x,
+            y: d.bounds.y,
+            primary: d.id === primary.id
+        })));
+    });
+
+    server.post('/api/overlay/display', (req, res) => {
+        try {
+            const cfg = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
+            cfg.overlayDisplay = req.body.index ?? 0;
+            fs.writeFileSync(getDataPath('config.json'), JSON.stringify(cfg, null, 4));
+            res.json({ ok: true });
+        } catch(e) { res.json({ ok: false, error: e.message }); }
+    });
+
     server.post('/api/overlay/launch', (req, res) => {
         const mode = (req.body && req.body.mode) || 'desktop';
         launchOverlay(mode);
@@ -1425,7 +1538,7 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
                 const hasText  = src.type === 'text' || !!(src.speak && src.text);
                 const isGif = hasImage && src.path && src.path.toLowerCase().endsWith('.gif');
 
-                if (hasText && textWin && !textWin.isDestroyed()) {
+                if (hasText && (textWinMode === 'stream' ? textOverlayClients.length > 0 : (textWin && !textWin.isDestroyed()))) {
                     const clearMediaId = (src.clearWithTTS && (hasImage || hasVideo)) ? src.id : null;
                     const clearMediaKind = clearMediaId ? (hasImage ? 'image' : 'video') : null;
                     broadcastTextCmd({ cmd: 'ADDTEXT', id: src.id, text: resolveText(src),
@@ -1435,7 +1548,7 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
                         animation: src.animation, animDuration: src.animDuration, maxW: src.maxW, maxH: src.maxH || 0,
                         speak: src.speak || false, voice: src.voice || null,
                         ttsRate: src.ttsRate || 1, ttsPitch: src.ttsPitch || 1, ttsVolume: src.ttsVolume ?? 1,
-                        speakOnly: !!(src.speakOnly || (hasImage || hasVideo)),
+                        speakOnly: !!src.speakOnly,
                         clearMediaId, clearMediaKind });
                     const textSecs = src.displaySeconds || 0;
                     if (textSecs > 0 && !src.speak) {
@@ -1445,7 +1558,7 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
 
                 if (hasImage) {
                     const hasPositionData = src.mediaX !== undefined || src.mediaY !== undefined;
-                    if (hasPositionData && videoWin && !videoWin.isDestroyed()) {
+                    if (hasPositionData && (videoWinMode === 'stream' ? videoOverlayClients.length > 0 : (videoWin && !videoWin.isDestroyed()))) {
                         // Use video overlay PLAYIMG — supports position, size, clearWithTTS
                         const loops = src.clearWithTTS ? 0 : (isGif ? (src.gifLoops || 0) : 0);
                         const displaySeconds = src.clearWithTTS ? 0 : (src.displaySeconds || 5);
@@ -1463,7 +1576,7 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
                     }
                 }
 
-                if (hasVideo && videoWin && !videoWin.isDestroyed()) {
+                if (hasVideo && (videoWinMode === 'stream' ? videoOverlayClients.length > 0 : (videoWin && !videoWin.isDestroyed()))) {
                     const loops = hasSound ? 0 : (src.videoLoops || 1);
                     let px, py, pw, ph;
                     if (videoPositions[src.id]) {
@@ -1651,21 +1764,21 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
             const hasVideo = src.type === 'video' || src.type === 'video+sound';
             const hasText  = !!(src.speak && src.text);
             const isGif = hasImage && src.path && src.path.toLowerCase().includes('.gif');
-            if (hasImage && videoWin && !videoWin.isDestroyed()) {
+            if (hasImage && (videoWinMode === 'stream' ? videoOverlayClients.length > 0 : (videoWin && !videoWin.isDestroyed()))) {
                 const loops = src.clearWithTTS ? 0 : (isGif ? 0 : 1);
                 const displaySeconds = src.clearWithTTS ? 0 : (src.displaySeconds || 5);
                 broadcastVideoCmd({ cmd: 'PLAYIMG', id: srcId, path: src.path, loops, displaySeconds,
                     x: src.mediaX ?? 480, y: src.mediaY ?? 270, w: src.mediaW || 960, h: src.mediaH || 540,
                     chromaKey: src.chromaKey || false, chromaColor: src.chromaColor || '#00ff00', chromaThreshold: src.chromaThreshold ?? 40 });
             }
-            if (hasVideo && videoWin && !videoWin.isDestroyed()) {
+            if (hasVideo && (videoWinMode === 'stream' ? videoOverlayClients.length > 0 : (videoWin && !videoWin.isDestroyed()))) {
                 const loops = src.clearWithTTS ? 0 : (src.videoLoops || 1);
                 broadcastVideoCmd({ cmd: 'PLAYVID', id: srcId, path: src.videoPath, loops,
                     videoStart: src.videoStart || 0, videoEnd: src.videoEnd || 0, volume: src.videoVolume ?? 1,
                     x: src.mediaX ?? 480, y: src.mediaY ?? 270, w: src.mediaW || 960, h: src.mediaH || 540,
                     chromaKey: src.chromaKey || false, chromaColor: src.chromaColor || '#00ff00', chromaThreshold: src.chromaThreshold ?? 40 });
             }
-            if (hasText && textWin && !textWin.isDestroyed()) {
+            if (hasText && (textWinMode === 'stream' ? textOverlayClients.length > 0 : (textWin && !textWin.isDestroyed()))) {
                 const clearMediaId = src.clearWithTTS ? srcId : null;
                 const clearMediaKind = clearMediaId ? (hasImage ? 'image' : 'video') : null;
                 broadcastTextCmd({ cmd: 'ADDTEXT', id: srcId, text: src.text,
@@ -1676,6 +1789,7 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
                     maxW: src.maxW || 1720, maxH: src.maxH || 200,
                     speak: true, voice: src.voice || null,
                     ttsRate: src.ttsRate || 1, ttsPitch: src.ttsPitch || 1, ttsVolume: src.ttsVolume ?? 1,
+                    speakOnly: !!src.speakOnly,
                     clearMediaId, clearMediaKind });
             }
             res.json({ ok: true });
@@ -1778,12 +1892,20 @@ Write-Output $sb.ToString().Trim()
 
     function launchVideoOverlay(mode) {
         videoWinMode = mode || 'desktop';
+        if (videoWinMode === 'stream') {
+            if (videoWin && !videoWin.isDestroyed()) { videoWin.destroy(); videoWin = null; }
+            return;
+        }
         if (videoWin && !videoWin.isDestroyed()) return;
         const { screen } = require('electron');
-        const { width, height } = screen.getPrimaryDisplay().size;
+        const _vDisplays = screen.getAllDisplays();
+        const _vCfg = (() => { try { return JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8')); } catch(e) { return {}; } })();
+        const _vDisplay = _vDisplays[_vCfg.overlayDisplay ?? 0] || screen.getPrimaryDisplay();
+        const { width, height } = _vDisplay.size;
         videoWin = new BrowserWindow({
             width, height,
-            x: 0, y: 0,
+            x: _vDisplay.bounds.x,
+            y: _vDisplay.bounds.y,
             frame: false,
             transparent: true,
             alwaysOnTop: true,
@@ -1802,7 +1924,6 @@ Write-Output $sb.ToString().Trim()
         videoWin.setIgnoreMouseEvents(true, { forward: true });
         videoWin.loadURL('http://localhost:3000/media-overlay.html');
         videoWin.on('closed', () => { videoWin = null; });
-        // Re-enable mouse when over a source (video-overlay sends a flag)
         videoWin.webContents.on('did-finish-load', () => {
             console.log('[video-overlay] loaded, mode:', videoWinMode);
         });
@@ -1929,12 +2050,20 @@ Write-Output $sb.ToString().Trim()
 
     function launchTextOverlay(mode) {
         textWinMode = mode || 'desktop';
+        if (textWinMode === 'stream') {
+            if (textWin && !textWin.isDestroyed()) { textWin.destroy(); textWin = null; }
+            return;
+        }
         if (textWin && !textWin.isDestroyed()) return;
         const { screen } = require('electron');
-        const { width, height } = screen.getPrimaryDisplay().size;
+        const _tDisplays = screen.getAllDisplays();
+        const _tCfg = (() => { try { return JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8')); } catch(e) { return {}; } })();
+        const _tDisplay = _tDisplays[_tCfg.overlayDisplay ?? 0] || screen.getPrimaryDisplay();
+        const { width, height } = _tDisplay.size;
         textWin = new BrowserWindow({
             width, height,
-            x: 0, y: 0,
+            x: _tDisplay.bounds.x,
+            y: _tDisplay.bounds.y,
             frame: false,
             transparent: true,
             alwaysOnTop: true,
@@ -2143,14 +2272,14 @@ Write-Output $sb.ToString().Trim()
                 try { fs.writeFileSync(overlayCmdTmp, line); fs.renameSync(overlayCmdTmp, overlayCmdPath); } catch(e) {}
             }
 
-            if (hasImage && videoWin && !videoWin.isDestroyed()) {
+            if (hasImage && (videoWinMode === 'stream' ? videoOverlayClients.length > 0 : (videoWin && !videoWin.isDestroyed()))) {
                 const loops = src.clearWithTTS ? 0 : 0;
                 const displaySeconds = src.clearWithTTS ? 0 : (isGif ? (src.gifLoops || 0) : (src.displaySeconds || 0));
                 broadcastVideoCmd({ cmd: 'PLAYIMG', id: src.id, path: src.path, loops, displaySeconds,
                     x: src.mediaX || 0, y: src.mediaY || 0, w: src.mediaW || 400, h: src.mediaH || 300,
                     chromaKey: src.chromaKey || false, chromaColor: src.chromaColor || '#00ff00', chromaThreshold: src.chromaThreshold ?? 40 });
             }
-            if (hasVideo && videoWin && !videoWin.isDestroyed()) {
+            if (hasVideo && (videoWinMode === 'stream' ? videoOverlayClients.length > 0 : (videoWin && !videoWin.isDestroyed()))) {
                 const loops = src.clearWithTTS ? 0 : (hasSound ? 0 : (src.videoLoops || 1));
                 broadcastVideoCmd({ cmd: 'PLAYVID', id: src.id, path: src.videoPath, loops,
                     videoStart: src.videoStart || 0, videoEnd: src.videoEnd || 0, volume: src.videoVolume ?? 1,
@@ -2356,6 +2485,24 @@ function _eventsubHandleEvent(type, event) {
     };
     const key = keyMap[type];
     console.log('[eventsub] event received:', type, '->', key, '| alerts keys:', Object.keys(alerts));
+
+    if (key === 'redeem' && event.reward?.title) {
+        const rewardTitle = event.reward.title.trim().toLowerCase();
+        try {
+            const sources = JSON.parse(fs.readFileSync(getDataPath('overlay-sources.json'), 'utf8'));
+            const match = sources.find(s => s.channelPointName && s.channelPointName.trim().toLowerCase() === rewardTitle);
+            if (match) {
+                const src = Object.assign({}, match);
+                if (src.text && event.user_input) src.text = src.text.replace('{message}', event.user_input);
+                const body = JSON.stringify({ eventsubSrc: src });
+                const http = require('http');
+                const opts = { hostname: '127.0.0.1', port: 3000, path: '/api/eventsub/fire', method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } };
+                const req = http.request(opts, () => {}); req.on('error', () => {}); req.write(body); req.end();
+                return;
+            }
+        } catch(e) {}
+    }
+
     if (!key || !alerts[key]) { console.log('[eventsub] no alert configured for:', key); return; }
 
     const src = Object.assign({}, alerts[key]);

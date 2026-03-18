@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ChatCommander — Quick Setup</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0f; --surface: #13131e; --surface2: #1c1c2e;
+    --border: rgba(255,255,255,0.08); --border-s: rgba(255,255,255,0.14);
+    --accent: #7c5cfc; --accent-soft: rgba(124,92,252,0.14);
+    --text: #e4e4f0; --muted: #6b6b8a; --muted2: #44445a;
+    --green: #2ecc71; --green-soft: rgba(46,204,113,0.12);
+  }
+  html, body { height: 100%; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
+    overflow: hidden; }
+
+  .shell { display: flex; flex-direction: column; height: 100vh; }
+  .top { padding: 28px 40px 0; flex-shrink: 0; }
+  .logo { font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
+  .headline { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+  .subline { font-size: 13px; color: var(--muted); margin-top: 5px; line-height: 1.5; }
+  .body { flex: 1; overflow-y: auto; padding: 24px 40px; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+  .foot { padding: 10px 40px 20px; flex-shrink: 0; border-top: 1px solid var(--border);
+    display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  @keyframes rainbow { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+  .skip-btn {
+    font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer;
+    padding: 9px 32px; border-radius: 10px; border: 2px solid transparent;
+    background: linear-gradient(#0a0a0f,#0a0a0f) padding-box,
+                linear-gradient(90deg,#ff6b6b,#ffd93d,#6bcb77,#4d96ff,#ff6bff,#ff6b6b) border-box;
+    background-size: 300% 300%;
+    color: var(--text);
+    animation: rainbow 2.5s linear infinite;
+    transition: transform 0.15s, opacity 0.15s;
+  }
+  .skip-btn:hover { transform: translateY(-1px); opacity: 0.9; }
+  .primary-btn { padding: 10px 26px; background: var(--accent); color: #fff; border: none;
+    border-radius: 10px; font-size: 13px; font-weight: 600; font-family: inherit;
+    cursor: pointer; transition: all 0.2s; align-self: flex-end; }
+  .primary-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+  .foot-row { display: flex; width: 100%; align-items: center; justify-content: flex-end; }
+
+  .hub-grid { display: flex; flex-direction: column; gap: 10px; }
+  .hub-card { display: flex; align-items: center; gap: 16px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.34,1.56,0.64,1); }
+  .hub-card:hover { border-color: var(--border-s); transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0,0,0,0.35); }
+  .hub-card.done { border-color: rgba(46,204,113,0.3); background: rgba(46,204,113,0.04); cursor: default; }
+  .hub-card.done:hover { transform: none; box-shadow: none; }
+  .hub-icon { width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .hub-name { font-size: 15px; font-weight: 600; margin-bottom: 3px; }
+  .hub-desc { font-size: 12px; color: var(--muted); line-height: 1.4; }
+  .hub-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; padding: 3px 9px;
+    border-radius: 20px; flex-shrink: 0; white-space: nowrap; }
+  .hub-badge.todo { background: rgba(124,92,252,0.12); color: var(--accent); border: 1px solid rgba(124,92,252,0.25); }
+  .hub-badge.done { background: var(--green-soft); color: var(--green); border: 1px solid rgba(46,204,113,0.3); }
+  .hub-arrow { color: var(--muted2); font-size: 16px; flex-shrink: 0; }
+
+  .checkpoint { display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 40px 20px; gap: 14px; }
+  .cp-icon { width: 68px; height: 68px; border-radius: 50%; background: var(--green-soft);
+    border: 2px solid rgba(46,204,113,0.4); display: flex; align-items: center; justify-content: center;
+    font-size: 30px; animation: pop 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+  @keyframes pop { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .cp-title { font-size: 20px; font-weight: 700; }
+  .cp-sub { font-size: 13px; color: var(--muted); max-width: 360px; line-height: 1.6; }
+
+  .wiz-progress { display: flex; gap: 6px; margin-bottom: 22px; }
+  .wiz-dot { height: 3px; border-radius: 3px; flex: 1; background: var(--surface2); transition: background 0.3s; }
+  .wiz-dot.active { background: var(--accent); }
+  .wiz-dot.done { background: var(--green); }
+  .wiz-q { font-size: 18px; font-weight: 700; margin-bottom: 5px; }
+  .wiz-hint { font-size: 12px; color: var(--muted); margin-bottom: 18px; line-height: 1.6; }
+  .wiz-fields { display: flex; flex-direction: column; gap: 14px; }
+
+  .f-label { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .f-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 9px;
+    padding: 10px 14px; font-size: 13px; color: var(--text); font-family: inherit; outline: none; transition: border-color 0.2s; }
+  .f-input:focus { border-color: rgba(124,92,252,0.5); }
+  .f-input option { background: #1c1c2e; }
+
+  .radio-opt { display: flex; align-items: center; gap: 14px; padding: 12px 16px;
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 12px;
+    cursor: pointer; transition: all 0.15s; }
+  .radio-opt:hover { border-color: var(--border-s); }
+  .radio-opt.sel { border-color: rgba(124,92,252,0.45); background: var(--accent-soft); }
+  .r-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--muted2); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+  .radio-opt.sel .r-dot { border-color: var(--accent); background: var(--accent); }
+  .r-inner { width: 7px; height: 7px; border-radius: 50%; background: #fff; display: none; }
+  .radio-opt.sel .r-inner { display: block; }
+  .r-label { font-size: 13px; font-weight: 600; }
+  .r-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .media-opt { display: flex; align-items: center; gap: 14px; padding: 14px 18px;
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 12px;
+    cursor: pointer; transition: all 0.15s; }
+  .media-opt:hover { border-color: var(--border-s); }
+  .media-opt.sel { border-color: rgba(124,92,252,0.45); background: var(--accent-soft); }
+  .m-icon { font-size: 22px; }
+  .m-title { font-size: 13px; font-weight: 600; }
+  .m-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .browse-row { display: flex; gap: 8px; }
+  .browse-row .f-input { flex: 1; }
+  .browse-btn { padding: 10px 14px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 9px; color: var(--muted); font-size: 12px; font-family: inherit;
+    cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  .browse-btn:hover { border-color: var(--border-s); color: var(--text); }
+
+  .vol-row { display: flex; align-items: center; gap: 12px; }
+  .vol-row input[type=range] { flex: 1; height: 4px; accent-color: var(--accent); cursor: pointer; }
+  .vol-val { font-size: 12px; color: var(--muted); min-width: 36px; text-align: right; }
+
+  .info-box { background: rgba(124,92,252,0.07); border: 1px solid rgba(124,92,252,0.2);
+    border-radius: 10px; padding: 12px 16px; font-size: 12px; color: var(--muted); line-height: 1.7; }
+  .info-box strong { color: var(--text); }
+  .toggle-row { display:flex;align-items:center;justify-content:space-between;background:var(--surface2);
+    border:1px solid var(--border);border-radius:12px;padding:13px 16px;cursor:pointer;transition:border-color 0.15s; }
+  .toggle-row:hover { border-color: var(--border-s); }
+  .toggle-info { flex:1; }
+  .toggle-title { font-size:13px;font-weight:600; }
+  .toggle-sub { font-size:11px;color:var(--muted);margin-top:2px; }
+  .wiz-toggle { position:relative;width:40px;height:24px;flex-shrink:0; }
+  .wiz-toggle input { opacity:0;width:0;height:0; }
+  .wiz-toggle-track { position:absolute;inset:0;background:var(--muted2);border-radius:12px;cursor:pointer;transition:background 0.2s; }
+  .wiz-toggle input:checked + .wiz-toggle-track { background:var(--accent); }
+  .wiz-toggle-track::before { content:'';position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;left:3px;top:3px;transition:transform 0.2s; }
+  .wiz-toggle input:checked + .wiz-toggle-track::before { transform:translateX(16px); }
+
+  .screen { animation: fadein 0.22s ease; }
+  @keyframes fadein { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="top">
+    <div class="logo">ChatCommander</div>
+    <div class="headline" id="headline">Let's get you set up ⚡</div>
+    <div class="subline" id="subline">Pick which alerts you want to configure. You can skip any of them and do it later from the Presets tab.</div>
+  </div>
+  <div class="body" id="body"></div>
+  <div class="foot">
+    <button class="skip-btn" id="skipBtn" onclick="onSkip()">Skip for now</button>
+    <div class="foot-row">
+      <button class="primary-btn" id="primBtn" style="display:none" onclick="onPrimary()">Continue</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const FLOWS = [
+  { key:'tts',     icon:'🔊', color:'124,92,252', name:'TTS Command',
+    desc:'Let viewers type a command and the bot speaks their message on stream.' },
+  { key:'sub',     icon:'🌟', color:'147,71,255', name:'New Subscriber Alert',
+    desc:'Play a GIF or image when someone subscribes to your channel.' },
+  { key:'giftsub', icon:'🎁', color:'236,72,153', name:'Gift Sub Alert',
+    desc:'Play a GIF or image when someone gifts subs to your community.' },
+];
+
+let completed = [];
+let screen = 'hub';
+let flow = null;
+let step = 0;
+let steps = [];
+let data = {};
+
+async function boot() {
+  try {
+    const r = await fetch('/api/onboarding/status');
+    const d = await r.json();
+    completed = d.completed || [];
+  } catch(e) {}
+  if (typeof speechSynthesis !== 'undefined') {
+    speechSynthesis.onvoiceschanged = () => {};
+    speechSynthesis.getVoices();
+  }
+  renderHub();
+}
+
+function renderHub() {
+  screen = 'hub'; flow = null;
+  setHeader('Let\'s get you set up ⚡', 'Pick an alert to configure. You can skip any and set them up later from the Presets tab.');
+  showSkip('Skip all — Go to app'); hidePrim();
+  const allDone = FLOWS.every(f => completed.includes(f.key));
+  document.getElementById('body').innerHTML = `<div class="hub-grid screen">
+    ${FLOWS.map(f => {
+      const done = completed.includes(f.key);
+      return `<div class="hub-card${done?' done':''}" ${done?'':'onclick="startFlow(\''+f.key+'\')"'}>
+        <div class="hub-icon" style="background:rgba(${f.color},0.12)">${f.icon}</div>
+        <div style="flex:1"><div class="hub-name">${f.name}</div><div class="hub-desc">${f.desc}</div></div>
+        ${done
+          ? '<span class="hub-badge done">✓ Done</span>'
+          : '<span class="hub-badge todo">Set up</span><div class="hub-arrow">›</div>'}
+      </div>`;
+    }).join('')}
+    ${allDone ? `<div style="text-align:center;padding:16px 0">
+      <button class="primary-btn" onclick="finishAll()" style="padding:12px 40px;font-size:14px">Go to app →</button>
+    </div>` : ''}
+  </div>`;
+}
+
+function startFlow(key) {
+  flow = FLOWS.find(f => f.key === key);
+  data = {}; step = 0;
+  steps = buildSteps(key);
+  screen = 'wizard';
+  renderStep();
+}
+
+function buildSteps(key) {
+  if (key === 'tts') {
+    const baseSteps = [
+      { id:'mediatype', q:'What kind of media do you want to display?',
+        hint:'Pick the type of media that plays when the command is used.',
+        fields:[{ id:'w_mediatype', type:'mediatype3' }]},
+      { id:'cmd', q:'What should the command be?',
+        hint:'Viewers type this in chat to trigger the alert.',
+        fields:[
+          { id:'w_cmd', type:'text', label:'Command name', placeholder:'!tts', default:'!tts' }
+        ]},
+      { id:'media', q:'Pick your GIF or image.',
+        hint:'This plays on screen when the command is used.',
+        showIf:() => data.w_mediatype !== 'none' && data.w_mediatype !== 'video',
+        fields:[{ id:'w_gif', type:'file', label:'GIF / Image file', placeholder:'C:\\path\\to\\file.gif', accept:'image' }]},
+      { id:'video', q:'Pick your video file.',
+        hint:'This plays on screen when the command is used.',
+        showIf:() => data.w_mediatype === 'video',
+        fields:[{ id:'w_gif', type:'file', label:'Video file', placeholder:'C:\\path\\to\\file.mp4', accept:'video' }]},
+      { id:'chroma', q:'Is it a green screen video?',
+        hint:'Enable chroma key to remove the background colour.',
+        showIf:() => data.w_mediatype === 'video',
+        fields:[
+          { id:'w_chromakey', type:'toggle', label:'Enable chroma key (green screen)', sub:'Removes the background colour', default:false },
+          { id:'w_chromacolor', type:'color', label:'Background colour to remove', default:'#00ff00' },
+          { id:'w_chromathreshold', type:'slider', label:'Threshold', min:0, max:100, default:40 }
+        ]},
+      { id:'options', q:'How should it behave?',
+        hint:'Sensible defaults are already set. Expand Customize to change timings.',
+        showIf:() => data.w_mediatype !== 'none',
+        fields:[
+          { id:'w_clearwithtts', type:'toggle', label:'Media disappears when TTS finishes', sub:'Keeps media visible while bot speaks, clears when done', default:true },
+          { id:'w_customize', type:'customize', label:'Customize timings', fields:[
+            { id:'w_fadein_dur',  type:'number', label:'Fade in duration (seconds)', placeholder:'1', default:'1' },
+            { id:'w_fadeout_dur', type:'number', label:'Fade out duration (seconds)', placeholder:'1', default:'1' },
+            { id:'w_duration',    type:'number', label:'Manual duration (seconds, used if TTS toggle is off)', placeholder:'5', default:'5' }
+          ]}
+        ]},
+      { id:'tts', q:'What should the bot say?',
+        hint:'Configure the TTS voice and message.',
+        fields:[
+          { id:'w_textmode', type:'radio', label:'Text mode', options:[
+            { v:'user',  l:'Whatever the user types', s:'!tts great stream → bot says "great stream"' },
+            { v:'fixed', l:'Fixed message', s:'Bot always says the same thing' }
+          ], default:'user' },
+          { id:'w_text', type:'fixedtext', label:'Fixed message', placeholder:'HYPE! {user} is bringing the energy!', default:'HYPE!' },
+          { id:'w_showtext', type:'toggle', label:'Show text on screen', sub:'Renders the spoken text visually as the bot speaks. Turn off for voice-only.', default:false },
+          { id:'w_voice', type:'voice', label:'TTS Voice' },
+          { id:'w_volume', type:'volume', label:'TTS Volume', default:80 }
+        ]},
+      { id:'access', q:'Who can trigger this?',
+        hint:'Pick the minimum viewer role needed.',
+        fields:[
+          { id:'w_access', type:'radio', label:'Access level', options:[
+            { v:'everyone',   l:'Everyone',          s:'Any viewer' },
+            { v:'subscriber', l:'Subscribers only',  s:'Must be subbed' },
+            { v:'moderator',  l:'Moderators',        s:'Mods and above' }
+          ], default:'everyone' }
+        ]},
+      { id:'chanpoint', q:'Make this a channel point reward?',
+        hint:'Viewers can spend channel points to trigger TTS instead of typing the command.',
+        fields:[
+          { id:'w_cp', type:'radio', label:'Channel point reward', options:[
+            { v:'yes', l:'Yes — set it up as a reward', s:'One extra step to enter the reward name' },
+            { v:'no',  l:'No — chat command only',      s:'Anyone with the right access just types the command' }
+          ], default:'no' }
+        ]},
+      { id:'cpname', q:'Name your channel point reward',
+        showIf:() => data.w_cp === 'yes',
+        hint:'Go to Twitch Creator Dashboard → Viewer Rewards → Channel Points → Manage Rewards → Add New Reward. Give it a name, then type that exact name below.',
+        fields:[
+          { id:'w_cpname', type:'text', label:'Reward name (must match Twitch exactly)', placeholder:'e.g. TTS' },
+          { type:'info', text:'<strong>Tip:</strong> ChatCommander matches this name case-insensitively. Once a viewer redeems it, the bot speaks their redemption message automatically.' }
+        ]}
+    ];
+    return baseSteps;
+  }
+
+  const vars = { sub:'{username} just subscribed!', giftsub:'{gifter} gifted {count} subs!' };
+  const defaultMsg = vars[key];
+  return [
+    { id:'media', q:'What should play when this fires?',
+      hint:'Choose what appears on stream when the event triggers.',
+      fields:[{ id:'w_mediatype', type:'mediatype' }]},
+    { id:'file', q:'Pick your GIF or image',
+      hint:'This shows on screen automatically when the event fires.',
+      showIf:() => data.w_mediatype !== 'none',
+      fields:[{ id:'w_gif', type:'file', label:'GIF / Image file', placeholder:'C:\\path\\to\\file.gif' }]},
+    { id:'tts', q:'What should the bot say?',
+      hint:'Variables: ' + defaultMsg,
+      fields:[
+        { id:'w_text',   type:'text',   label:'Message', placeholder:defaultMsg, default:defaultMsg },
+        { id:'w_showtext', type:'toggle', label:'Show text on screen', sub:'Renders the spoken text visually on stream. Turn off for voice-only.', default:false },
+        { id:'w_voice',  type:'voice',  label:'Voice' },
+        { id:'w_volume', type:'volume', label:'Volume', default:80 }
+      ]}
+  ];
+}
+
+function visibleSteps() { return steps.filter(s => !s.showIf || s.showIf()); }
+
+function renderStep() {
+  const vs = visibleSteps();
+  const s = vs[step];
+  setHeader(flow.name, `Step ${step+1} of ${vs.length}`);
+  showSkip('Skip this alert →');
+  showPrim(step === vs.length-1 ? 'Finish ✓' : 'Next →');
+
+  const dots = vs.map((_,i) =>
+    `<div class="wiz-dot${i<step?' done':i===step?' active':''}"></div>`).join('');
+
+  let fHtml = '';
+  for (const f of s.fields) fHtml += renderField(f);
+
+  document.getElementById('body').innerHTML = `<div class="screen">
+    <div class="wiz-progress">${dots}</div>
+    <div class="wiz-q">${s.q}</div>
+    <div class="wiz-hint">${s.hint}</div>
+    <div class="wiz-fields">${fHtml}</div>
+  </div>`;
+
+  for (const f of s.fields) restoreField(f);
+  if (s.fields.some(f => f.type==='voice')) populateVoice();
+}
+
+function renderField(f) {
+  const saved = data[f.id];
+  const val = saved !== undefined ? saved : (f.default||'');
+
+  if (f.type === 'info') return `<div class="info-box">${f.text}</div>`;
+
+  if (f.type === 'text') return `<div>
+    <div class="f-label">${f.label}</div>
+    <input class="f-input" id="${f.id}" type="text" placeholder="${f.placeholder||''}" value="${val}">
+  </div>`;
+
+  if (f.type === 'radio') {
+    const opts = f.options.map(o => {
+      const sel = val===o.v ? ' sel' : '';
+      return `<div class="radio-opt${sel}" onclick="pickRadio('${f.id}','${o.v}',this)">
+        <div class="r-dot"><div class="r-inner"></div></div>
+        <div><div class="r-label">${o.l}</div>${o.s?`<div class="r-sub">${o.s}</div>`:''}</div>
+      </div>`;
+    }).join('');
+    return `<div>
+      <div class="f-label">${f.label}</div>
+      <div style="display:flex;flex-direction:column;gap:6px" data-rg="${f.id}">${opts}</div>
+    </div>`;
+  }
+
+  if (f.type === 'mediatype') {
+    const cur = data.w_mediatype||'image';
+    return `<div style="display:flex;flex-direction:column;gap:8px">
+      ${[
+        { v:'image', icon:'🖼', t:'GIF or Image', s:'PNG, JPG, GIF — great for animated reactions' },
+        { v:'none',  icon:'🔊', t:'TTS only — no media', s:'Just the bot speaking, nothing shown on screen' }
+      ].map(o => `<div class="media-opt${cur===o.v?' sel':''}" onclick="pickMedia('${o.v}',this)">
+        <div class="m-icon">${o.icon}</div>
+        <div><div class="m-title">${o.t}</div><div class="m-sub">${o.s}</div></div>
+      </div>`).join('')}
+    </div>`;
+  }
+
+  if (f.type === 'file') return `<div>
+    <div class="f-label">${f.label}</div>
+    <div class="browse-row">
+      <input class="f-input" id="${f.id}" type="text" placeholder="${f.placeholder||''}" value="${val}">
+      <button class="browse-btn" onclick="browseFile('${f.id}')">Browse</button>
+    </div>
+  </div>`;
+
+  if (f.type === 'voice') return `<div>
+    <div class="f-label">${f.label}</div>
+    <select class="f-input" id="${f.id}"><option value="">Default voice</option></select>
+  </div>`;
+
+  if (f.type === 'volume') {
+    const v = saved !== undefined ? saved : (f.default||80);
+    return `<div>
+      <div class="f-label">${f.label}</div>
+      <div class="vol-row">
+        <input type="range" id="${f.id}" min="0" max="100" value="${v}"
+          oninput="document.getElementById('${f.id}-v').textContent=this.value+'%'">
+        <span class="vol-val" id="${f.id}-v">${v}%</span>
+      </div>
+    </div>`;
+  }
+  if (f.type === 'toggle') {
+    const chk = (saved !== undefined ? saved : f.default) ? 'checked' : '';
+    return `<div class="toggle-row" onclick="document.getElementById('${f.id}').click()">
+      <div class="toggle-info"><div class="toggle-title">${f.label}</div>${f.sub?`<div class="toggle-sub">${f.sub}</div>`:''}</div>
+      <label class="wiz-toggle" onclick="event.stopPropagation()">
+        <input type="checkbox" id="${f.id}" ${chk} onchange="collectField('${f.id}','toggle')">
+        <div class="wiz-toggle-track"></div>
+      </label>
+    </div>`;
+  }
+  if (f.type === 'color') {
+    const cv = saved||f.default||'#00ff00';
+    return `<div>
+      <div class="f-label">${f.label}</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <input type="color" id="${f.id}" value="${cv}" style="width:48px;height:36px;padding:2px;cursor:pointer;border-radius:8px;border:1px solid var(--border);background:none;flex-shrink:0">
+        <span style="font-size:12px;color:var(--muted)">Click to pick colour</span>
+      </div>
+    </div>`;
+  }
+  if (f.type === 'slider') {
+    const sv = saved!==undefined ? saved : (f.default||40);
+    return `<div>
+      <div class="f-label">${f.label}</div>
+      <div class="vol-row">
+        <input type="range" id="${f.id}" min="${f.min||0}" max="${f.max||100}" value="${sv}"
+          oninput="document.getElementById('${f.id}-v').textContent=this.value">
+        <span class="vol-val" id="${f.id}-v">${sv}</span>
+      </div>
+    </div>`;
+  }
+  if (f.type === 'customize') {
+    const inner = f.fields.map(cf => {
+      const cv2 = data[cf.id]!==undefined ? data[cf.id] : (cf.default||'');
+      return `<div><div class="f-label">${cf.label}</div><input type="number" class="f-input" id="${cf.id}" placeholder="${cf.placeholder||''}" value="${cv2}" style="padding:8px 12px;font-size:13px"></div>`;
+    }).join('');
+    return `<div id="wiz-cust-wrap">
+      <button type="button" onclick="toggleCustomize()" style="display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 16px;cursor:pointer;width:100%;color:var(--muted);font-size:13px;font-family:inherit;transition:all 0.15s" onmouseover="this.style.borderColor='var(--border-s)'" onmouseout="this.style.borderColor='var(--border)'">
+        <span id="wiz-cust-arrow" style="font-size:10px;transition:transform 0.2s">▶</span>
+        <span>${f.label}</span>
+      </button>
+      <div id="wiz-cust-panel" style="display:none;flex-direction:column;gap:12px;padding:14px 4px 4px">${inner}</div>
+    </div>`;
+  }
+  if (f.type === 'fixedtext') {
+    const modeVal = data.w_textmode||'user';
+    return `<div id="wiz-fixedtext-wrap" style="display:${modeVal==='fixed'?'block':'none'}">
+      <div class="f-label">${f.label}</div>
+      <input class="f-input" id="${f.id}" type="text" placeholder="${f.placeholder||''}" value="${saved||f.default||''}">
+    </div>`;
+  }
+  if (f.type === 'mediatype3') {
+    const cur = data.w_mediatype||'image';
+    return `<div style="display:flex;flex-direction:column;gap:8px">
+      ${[
+        { v:'image', icon:'🖼', t:'GIF or Image', s:'PNG, JPG, GIF — great for animated reactions' },
+        { v:'video', icon:'📹', t:'Video', s:'MP4 — supports green screen / chroma key' },
+        { v:'none',  icon:'🔊', t:'TTS only — no media', s:'Just the bot speaking, nothing shown on screen' }
+      ].map(o => `<div class="media-opt${cur===o.v?' sel':''}" onclick="pickMedia('${o.v}',this)">
+        <div class="m-icon">${o.icon}</div>
+        <div><div class="m-title">${o.t}</div><div class="m-sub">${o.s}</div></div>
+      </div>`).join('')}
+    </div>`;
+  }
+  return '';
+}
+
+function restoreField(f) {
+  if (f.type==='radio'||f.type==='mediatype'||f.type==='info') return;
+  const el = document.getElementById(f.id);
+  if (!el) return;
+  const saved = data[f.id];
+  if (saved !== undefined) el.value = saved;
+}
+
+function populateVoice() {
+  const sel = document.getElementById('w_voice');
+  if (!sel) return;
+  const cur = data.w_voice||'';
+  const vs = typeof speechSynthesis!=='undefined' ? speechSynthesis.getVoices() : [];
+  sel.innerHTML = '<option value="">Default voice</option>';
+  vs.forEach(v => {
+    const o = document.createElement('option');
+    o.value = v.name; o.textContent = v.name;
+    if (v.name === cur) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+function pickRadio(fid, val, el) {
+  data[fid] = val;
+  el.closest(`[data-rg="${fid}"]`).querySelectorAll('.radio-opt').forEach(r => r.classList.remove('sel'));
+  el.classList.add('sel');
+  // Show/hide fixed text input when textmode changes
+  if (fid === 'w_textmode') {
+    const wrap = document.getElementById('wiz-fixedtext-wrap');
+    if (wrap) wrap.style.display = val === 'fixed' ? 'block' : 'none';
+  }
+}
+
+function pickMedia(val, el) {
+  data.w_mediatype = val;
+  document.querySelectorAll('.media-opt').forEach(o => o.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+async function browseFile(fieldId) {
+  try {
+    const r = await fetch('/api/overlay/browse?type=image');
+    const d = await r.json();
+    if (d.path) document.getElementById(fieldId).value = d.path;
+  } catch(e) {}
+}
+
+function collectStep() {
+  const s = visibleSteps()[step];
+  for (const f of s.fields) {
+    if (f.type==='info') continue;
+    const el = document.getElementById(f.id);
+    if (f.type==='mediatype'||f.type==='mediatype3') { if (!data.w_mediatype) data.w_mediatype='image'; continue; }
+    if (f.type==='radio') { if (!data[f.id]) data[f.id] = f.default||''; continue; }
+    if (f.type==='toggle') { if (el) data[f.id] = el.checked; continue; }
+    if (f.type==='customize') {
+      for (const cf of f.fields) {
+        const cel = document.getElementById(cf.id);
+        if (cel) data[cf.id] = cel.value;
+      }
+      continue;
+    }
+    if (f.type==='fixedtext') { if (el) data[f.id] = el.value; continue; }
+    if (!el) continue;
+    data[f.id] = el.value;
+  }
+}
+
+function onPrimary() {
+  if (screen==='checkpoint') { renderHub(); return; }
+  collectStep();
+  const vs = visibleSteps();
+  if (step < vs.length-1) { step++; renderStep(); }
+  else finishFlow();
+}
+
+function onSkip() {
+  if (screen==='wizard'||screen==='checkpoint') { renderHub(); return; }
+  finishAll();
+}
+
+async function finishFlow() {
+  try {
+    if (flow.key==='tts') await saveTts();
+    else await saveEvent(flow.key);
+    await fetch('/api/onboarding/mark', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({key:flow.key}) });
+    completed.push(flow.key);
+    showCheckpoint();
+  } catch(e) { alert('Something went wrong: ' + e.message); }
+}
+
+async function saveTts() {
+  const d = data;
+  const cmd = d.w_cmd||'!tts';
+  const mediaType = d.w_mediatype||'none';
+  const isVideo = mediaType === 'video';
+  const hasMedia = mediaType !== 'none';
+  const fadeIn = parseFloat(d.w_fadein_dur)||1;
+  const fadeOut = parseFloat(d.w_fadeout_dur)||1;
+  const clearWithTTS = d.w_clearwithtts !== false && d.w_clearwithtts !== undefined ? !!d.w_clearwithtts : true;
+  const ttsText = d.w_textmode==='user' ? '{message}' : (d.w_text||'HYPE!');
+
+  const srcRes = await fetch('/api/overlay/sources');
+  const sources = await srcRes.json().catch(()=>[]);
+  const filtered = sources.filter(s => s.assignedCommand !== cmd);
+  const maxId = sources.length ? Math.max(...sources.map(s=>s.id)) : 0;
+
+  const newSrc = {
+    id: maxId+1,
+    type: hasMedia ? (isVideo ? 'video' : 'image') : 'text',
+    path: (!isVideo && hasMedia) ? (d.w_gif||'') : null,
+    videoPath: isVideo ? (d.w_gif||'') : null,
+    soundPath: null, soundStart:0, soundEnd:0, soundVolume:1,
+    videoStart:0, videoEnd:0, videoVolume:1,
+    gifLoops:0,
+    displaySeconds: hasMedia ? (clearWithTTS ? 0 : (parseFloat(d.w_duration)||5)) : 0,
+    videoLoops:1,
+    clearWithTTS: hasMedia ? clearWithTTS : false,
+    fadeIn, fadeOut,
+    chromaKey: isVideo ? (!!d.w_chromakey) : false,
+    chromaColor: d.w_chromacolor||'#00ff00',
+    chromaThreshold: parseInt(d.w_chromathreshold)||40,
+    assignedCommand: cmd,
+    mediaX: hasMedia ? 480 : null,
+    mediaY: hasMedia ? 270 : null,
+    mediaW: hasMedia ? 960 : null,
+    mediaH: hasMedia ? 540 : null,
+    text: ttsText,
+    font:'Arial', fontSize:48, color:'#ffffff',
+    bold:false, italic:false, shadow:true,
+    animation:'fade', animDuration:fadeIn,
+    x:100, y:400, maxW:1720,
+    maxH: hasMedia ? 0 : 0,  // speakOnly when no media — never render text visually for TTS command
+    lockDuration:false,
+    speak:true, speakOnly:!d.w_showtext,
+    voice:d.w_voice||null, ttsRate:1, ttsPitch:1,
+    ttsVolume: d.w_volume !== undefined ? parseInt(d.w_volume)/100 : 1,
+    channelPointName: d.w_cp==='yes' ? (d.w_cpname||'').trim() : null
+  };
+
+  await fetch('/api/overlay/sources', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify([...filtered, newSrc]) });
+  await fetch('/api/commands', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ command:cmd, response:'', cooldown:10, access:d.w_access||'everyone', enabled:true }) });
+  const pr = await fetch('/api/presets');
+  const presets = await pr.json().catch(()=>({}));
+  presets.tts = { cmd, access:d.w_access||'everyone', configured:true };
+  await fetch('/api/presets', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(presets) });
+}
+
+async function saveEvent(key) {
+  const d = data;
+  const mediaType = d.w_mediatype||'image';
+  const src = {
+    type: mediaType==='none' ? 'text' : 'image',
+    path: mediaType!=='none' ? (d.w_gif||'') : null,
+    videoPath:null, soundPath:null, soundStart:0, soundEnd:0, soundVolume:1,
+    videoStart:0, videoEnd:0, videoVolume:1, gifLoops:0, displaySeconds:0,
+    videoLoops:1, clearWithTTS:true, fadeIn:1, fadeOut:1,
+    chromaKey:false, chromaColor:'#00ff00', chromaThreshold:40,
+    mediaX:480, mediaY:270, mediaW:960, mediaH:540,
+    text:d.w_text||'',
+    font:'Arial', fontSize:48, color:'#ffffff', bold:false, italic:false, shadow:true,
+    animation:'fade', animDuration:1,
+    x:100, y:400, maxW:1720, maxH: mediaType==='none' ? 0 : 200,
+    lockDuration:false, speak:true, speakOnly:!d.w_showtext, voice:d.w_voice||null, ttsRate:1, ttsPitch:1,
+    ttsVolume: d.w_volume !== undefined ? parseInt(d.w_volume)/100 : 1
+  };
+  const r = await fetch('/api/eventsub/alert', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({key, src}) });
+  const res = await r.json();
+  if (!res.ok) throw new Error(res.error||'Failed to save alert');
+}
+
+function showCheckpoint() {
+  screen = 'checkpoint';
+  const allDone = FLOWS.every(f => completed.includes(f.key));
+  setHeader('Nice work!', allDone ? 'All three are set up. Ready to stream!' : 'Want to set up another, or head to the app?');
+  const skipVisible = !allDone;
+  document.getElementById('skipBtn').style.visibility = skipVisible ? '' : 'hidden';
+  showSkip('Go to app →');
+  showPrim(allDone ? 'Go to app →' : 'Set up another');
+
+  const detail = flow.key==='tts'
+    ? `The <strong>${data.w_cmd||'!tts'}</strong> command is ready.${data.w_cp==='yes'&&data.w_cpname ? ` Viewers can also trigger it by redeeming the "<strong>${data.w_cpname}</strong>" channel point reward on Twitch.` : ''}`
+    : `The alert will fire automatically on the next ${flow.name.toLowerCase()} event.`;
+
+  document.getElementById('body').innerHTML = `<div class="checkpoint screen">
+    <div class="cp-icon">${flow.icon}</div>
+    <div class="cp-title">${flow.name} is live ✓</div>
+    <div class="cp-sub">${detail}</div>
+  </div>`;
+}
+
+async function finishAll() {
+  await fetch('/api/onboarding/complete', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({completed}) });
+  window.location.href = '/';
+}
+
+function setHeader(h, s) {
+  document.getElementById('headline').textContent = h;
+  document.getElementById('subline').textContent = s;
+}
+function showSkip(t) { document.getElementById('skipBtn').textContent = t; }
+function showPrim(t) { const b=document.getElementById('primBtn'); b.textContent=t; b.style.display=''; }
+function hidePrim() { document.getElementById('primBtn').style.display='none'; }
+
+function toggleCustomize() {
+  const panel = document.getElementById('wiz-cust-panel');
+  const arrow = document.getElementById('wiz-cust-arrow');
+  if (!panel) return;
+  const open = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : 'flex';
+  if (arrow) arrow.style.transform = open ? '' : 'rotate(90deg)';
+}
+
+function collectField(id, type) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (type === 'toggle') data[id] = el.checked;
+  else data[id] = el.value;
+}
+
+boot();
+</script>
+</body>
+</html>
