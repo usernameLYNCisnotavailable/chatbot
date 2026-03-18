@@ -1420,7 +1420,6 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
         if (!overlayProcess) launchOverlay('desktop');
         launchVideoOverlay('desktop');
         launchTextOverlay('desktop');
-        launchSongPlayer();
     }, 3000);
 
     server.get('/api/overlay/status', (req, res) => { res.json({ running: !!overlayProcess, mode: overlayCurrentMode }); });
