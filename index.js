@@ -306,9 +306,6 @@ function buildCommandsList() {
         ...Object.entries(actions).filter(([,v]) => v.enabled !== false).map(([k]) => '!' + k),
         ...(defaults['!so'] !== false ? ['!so'] : []),
         ...(defaults['!commands'] !== false ? ['!commands'] : []),
-        ...(defaults['!bank'] !== false ? ['!bank'] : []),
-        ...(defaults['!gamble'] !== false ? ['!gamble'] : []),
-        ...(defaults['!car'] !== false ? ['!car'] : []),
     ];
     return [...new Set(all)].join(' | ');
 }
@@ -399,32 +396,6 @@ client.on('message', (channel, tags, message, self) => {
             setCooldown(username, command);
             lastCommandChannel = channel;
             sendToReactor(`COMMAND:${guestActionKey}:${username}:${message}:${args}:${channel.replace('#','')}`);
-            fireOverlayCommand(command, args, username);
-            return;
-        }
-
-        // !bank / !gamble
-        if (command === '!bank' || command === '!gamble') {
-            if (guestDefaults[command] === false) return;
-            const sub = args.split(' ')[0] || '';
-            const cd = guestDefaults[command + '_sub_' + sub] ?? guestDefaults[command + '_cd'] ?? 5;
-            if (isOnCooldown(username, command + ':' + sub, cd)) return;
-            setCooldown(username, command + ':' + sub);
-            lastCommandChannel = channel;
-            sendToReactor(`COMMAND:${command.slice(1)}:${username}:${message}:${args}:${channel.replace('#','')}`);
-            fireOverlayCommand(command, args, username);
-            return;
-        }
-
-        // !car
-        if (command === '!car') {
-            if (guestDefaults['!car'] === false) return;
-            const sub = args.split(' ')[0] || '';
-            const cd = guestDefaults['!car_sub_' + sub] ?? guestDefaults['!car_cd'] ?? 5;
-            if (isOnCooldown(username, '!car:' + sub, cd)) return;
-            setCooldown(username, '!car:' + sub);
-            lastCommandChannel = channel;
-            sendToReactor(`COMMAND:car:${username}:${message}:${args}:${channel.replace('#','')}`);
             fireOverlayCommand(command, args, username);
             return;
         }
@@ -522,34 +493,6 @@ client.on('message', (channel, tags, message, self) => {
         setCooldown(username, command);
         lastCommandChannel = channel;
         sendToReactor(`COMMAND:${actionKey}:${username}:${message}:${args}:${config.channel}`);
-        fireOverlayCommand(command, args, username);
-        return;
-    }
-
-    // !bank / !gamble
-    if (command === '!bank' || command === '!gamble') {
-        if (defaults[command] === false) return;
-        const sub = args.split(' ')[0] || '';
-        const cdKey = sub ? (command + '_sub_' + sub) : (command + '_cd');
-        const cd = defaults[cdKey] ?? defaults[command + '_cd'] ?? 5;
-        if (isOnCooldown(username, command + ':' + sub, cd)) return;
-        setCooldown(username, command + ':' + sub);
-        lastCommandChannel = channel;
-        sendToReactor(`COMMAND:${command.slice(1)}:${username}:${message}:${args}:${config.channel}`);
-        fireOverlayCommand(command, args, username);
-        return;
-    }
-
-    // !car
-    if (command === '!car') {
-        if (defaults['!car'] === false) return;
-        const sub = args.split(' ')[0] || '';
-        const cdKey = sub ? ('!car_sub_' + sub) : '!car_cd';
-        const cd = defaults[cdKey] ?? defaults['!car_cd'] ?? 5;
-        if (isOnCooldown(username, '!car:' + sub, cd)) return;
-        setCooldown(username, '!car:' + sub);
-        lastCommandChannel = channel;
-        sendToReactor(`COMMAND:car:${username}:${message}:${args}:${config.channel}`);
         fireOverlayCommand(command, args, username);
         return;
     }

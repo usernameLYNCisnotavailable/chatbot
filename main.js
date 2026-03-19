@@ -48,19 +48,20 @@ function getDataPath(file) {
 
 function startReactor() {
     const reactorPath = app.isPackaged
-        ? path.join(process.resourcesPath, 'reactor.exe')
-        : path.join(__dirname, 'reactor.exe');
+        ? path.join(process.resourcesPath, 'app.asar', 'reactor.js')
+        : path.join(__dirname, 'reactor.js');
 
     if (!fs.existsSync(reactorPath)) {
-        console.log('reactor.exe not found at:', reactorPath);
+        console.log('reactor.js not found at:', reactorPath);
         return;
     }
 
-    reactorProcess = spawn(reactorPath, [], {
+    reactorProcess = spawn(process.execPath, [reactorPath], {
     cwd: path.dirname(reactorPath),
     env: {
         ...process.env,
-        CHATCOMMANDER_DATA_PATH: app.getPath('userData')
+        CHATCOMMANDER_DATA_PATH: app.getPath('userData'),
+        ELECTRON_RUN_AS_NODE: '1',
     },
     stdio: 'pipe'
 });
@@ -655,6 +656,7 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
         let result = '';
         socket.connect(9000, '127.0.0.1', () => {
             socket.write(`COMPILE:${name}:${code}`);
+            socket.end();
         });
         socket.on('data', (data) => { result += data.toString(); });
         socket.on('close', () => {
