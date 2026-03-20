@@ -165,6 +165,10 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
 
     server.get('/test', (req, res) => res.send('working'));
 
+    server.get('/dashboard/home.html', (req, res) => {
+        res.sendFile(path.join(appDir, 'dashboard', 'home.html'));
+    });
+
     server.get('/', (req, res) => {
         const config = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
         if (!config.setupComplete || !config.loggedIn) {
@@ -561,6 +565,93 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
     server.get('/api/config', (req, res) => {
         const config = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
         res.json(config);
+    });
+
+
+    // ── CLIP COMMAND ──────────────────────────────────────────────────────────────
+    server.post('/api/clip', async (req, res) => {
+        try {
+            const config = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
+            const token = (config.streamerToken || '').replace('oauth:', '');
+            const channel = (config.channel || config.streamerUsername || '').replace('#', '');
+            if (!token) return res.json({ ok: false, error: 'Not authenticated' });
+
+            // Get broadcaster ID
+            const brRes = await axios.get(`https://api.twitch.tv/helix/users?login=${channel}`, {
+                headers: { 'Authorization': `Bearer ${token}`, 'Client-Id': TWITCH_CLIENT_ID }
+            });
+            const broadcasterId = brRes.data.data[0]?.id;
+            if (!broadcasterId) return res.json({ ok: false, error: 'Could not resolve broadcaster' });
+
+            // Create clip
+            const clipRes = await axios.post(
+                `https://api.twitch.tv/helix/clips?broadcaster_id=${broadcasterId}`,
+                {},
+                { headers: { 'Authorization': `Bearer ${token}`, 'Client-Id': TWITCH_CLIENT_ID } }
+            );
+            const clipId = clipRes.data.data[0]?.id;
+            if (!clipId) return res.json({ ok: false, error: 'Clip creation failed' });
+
+            const clipUrl = `https://clips.twitch.tv/${clipId}`;
+
+            // Get stream info for VOD timestamp offset
+            let startedAt = null;
+            let vodUrl = `https://www.twitch.tv/${channel}/videos`;
+            try {
+                const streamRes = await axios.get(`https://api.twitch.tv/helix/streams?user_login=${channel}`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Client-Id': TWITCH_CLIENT_ID }
+                });
+                const stream = streamRes.data.data[0];
+                if (stream) {
+                    startedAt = stream.started_at;
+                    // Calculate offset from stream start
+                    const offsetMs = Date.now() - new Date(startedAt).getTime();
+                    const offsetSecs = Math.max(0, Math.floor(offsetMs / 1000) - 30); // 30s buffer
+                    const h = Math.floor(offsetSecs / 3600);
+                    const m = Math.floor((offsetSecs % 3600) / 60);
+                    const s = offsetSecs % 60;
+                    const tParam = h > 0 ? `${h}h${m}m${s}s` : `${m}m${s}s`;
+                    vodUrl = `https://www.twitch.tv/${channel}/videos?t=${tParam}`;
+                }
+            } catch(e) {}
+
+            // Log the clip
+            const clipsPath = getDataPath('clips.json');
+            let clips = [];
+            try { if (fs.existsSync(clipsPath)) clips = JSON.parse(fs.readFileSync(clipsPath, 'utf8')); } catch(e) {}
+            const entry = {
+                id: clipId,
+                url: clipUrl,
+                vodUrl,
+                startedAt,
+                triggeredAt: new Date().toISOString(),
+                triggeredBy: req.body.username || 'unknown',
+                offsetLabel: vodUrl.includes('?t=') ? vodUrl.split('?t=')[1] : null
+            };
+            clips.unshift(entry);
+            if (clips.length > 100) clips = clips.slice(0, 100);
+            fs.writeFileSync(clipsPath, JSON.stringify(clips, null, 2));
+
+            res.json({ ok: true, clipUrl, vodUrl, entry });
+        } catch(e) {
+            console.error('[clip]', e.message);
+            res.json({ ok: false, error: e.message });
+        }
+    });
+
+    server.get('/api/clips', (req, res) => {
+        try {
+            const clipsPath = getDataPath('clips.json');
+            if (!fs.existsSync(clipsPath)) return res.json([]);
+            res.json(JSON.parse(fs.readFileSync(clipsPath, 'utf8')));
+        } catch(e) { res.json([]); }
+    });
+
+    server.delete('/api/clips', (req, res) => {
+        try {
+            fs.writeFileSync(getDataPath('clips.json'), '[]');
+            res.json({ ok: true });
+        } catch(e) { res.json({ ok: false }); }
     });
 
     // ---- OBS SETTINGS ----

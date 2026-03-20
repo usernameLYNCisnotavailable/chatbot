@@ -497,6 +497,39 @@ client.on('message', (channel, tags, message, self) => {
         return;
     }
 
+
+    // !clip
+    if (command === '!clip') {
+        const clipDefaults = getDefaults();
+        if (clipDefaults['!clip'] === false) return;
+        const cd = clipDefaults['!clip_cd'] ?? 30;
+        if (isOnCooldown(username, '!clip', cd)) return;
+        setCooldown(username, '!clip');
+        const http = require('http');
+        const body = JSON.stringify({ username });
+        const req2 = http.request({
+            hostname: '127.0.0.1', port: 3000, path: '/api/clip', method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+        }, (resp) => {
+            let data = '';
+            resp.on('data', d => data += d);
+            resp.on('end', () => {
+                try {
+                    const d = JSON.parse(data);
+                    if (d.ok) {
+                        client.say(channel, `✂️ Clip created by @${username}! ${d.clipUrl}`);
+                    } else {
+                        client.say(channel, `@${username} Couldn't create clip: ${d.error || 'unknown error'}`);
+                    }
+                } catch(e) {}
+            });
+        });
+        req2.on('error', () => client.say(channel, `@${username} Clip failed — try again.`));
+        req2.write(body);
+        req2.end();
+        return;
+    }
+
     // !alerts
     const alertsFilePath = path.join(dataDir, 'alerts.json');
     if (fs.existsSync(alertsFilePath)) {

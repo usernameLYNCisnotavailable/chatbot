@@ -28,6 +28,7 @@
   <aside class="sidebar">
 
     <!-- BOT -->
+    <div class="nav-item active" id="nav-home" onclick="showPage('home')"><span class="nav-icon">⌂</span> Home</div>
     <div class="nav-section">Bot</div>
 
     <!-- Commands group -->
@@ -37,7 +38,7 @@
         <span class="nav-group-chevron">▶</span>
       </div>
       <div class="nav-group-children open" id="navgc-commands">
-        <div class="nav-item active" id="nav-commands" onclick="showPage('commands')">Chat Commands</div>
+        <div class="nav-item" id="nav-commands" onclick="showPage('commands')">Chat Commands</div>
         <div class="nav-item" id="nav-actions" onclick="showPage('actions')">Actions</div>
         <div class="nav-item" id="nav-groups" onclick="showPage('groups')">Groups</div>
       </div>
@@ -137,7 +138,8 @@
   <main class="main">
 
     <!-- COMMANDS PAGE -->
-    <div class="page active" id="page-commands">
+    <div class="page active" id="page-home" style="height:100%;overflow:hidden;"><iframe src="/dashboard/home.html" id="homeFrame" style="width:100%;height:100%;border:none;background:var(--bg);"></iframe></div>
+    <div class="page" id="page-commands">
       <div class="cmd-page-wrap">
         <div class="cmd-topbar">
           <div class="cmd-title-block">
@@ -434,7 +436,7 @@
       <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.2);margin-bottom:14px;">Chat & Stream Tools</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;">
         <div class="preset-card" id="preset-autoso" style="--card-color:244,63,94;--card-glow:rgba(244,63,94,0.25);"><div class="preset-icon">📣</div><div class="preset-name">Auto Shoutout</div><div class="preset-desc">Automatically shouts out raiders and returning streamers in chat</div><div class="preset-status" id="preset-autoso-status">Not configured</div><button class="preset-btn" onclick="showToast('Coming soon')">Set Up</button></div>
-        <div class="preset-card" id="preset-clip" style="--card-color:239,68,68;--card-glow:rgba(239,68,68,0.25);"><div class="preset-icon">✂️</div><div class="preset-name">Clip Command</div><div class="preset-desc">!clip creates a Twitch clip and posts the link in chat automatically</div><div class="preset-status" id="preset-clip-status">Not configured</div><button class="preset-btn" onclick="showToast('Coming soon')">Set Up</button></div>
+        <div class="preset-card" id="preset-clip" style="--card-color:239,68,68;--card-glow:rgba(239,68,68,0.25);"><div class="preset-icon">✂️</div><div class="preset-name">Clip Command</div><div class="preset-desc">!clip creates a Twitch clip and posts the link in chat automatically</div><div class="preset-status" id="preset-clip-status">Not configured</div><button class="preset-btn" onclick="toggleClipPreset(this)">Enable</button></div>
         <div class="preset-card" id="preset-hypetext" style="--card-color:20,184,166;--card-glow:rgba(20,184,166,0.25);"><div class="preset-icon">⚡</div><div class="preset-name">Hype Text</div><div class="preset-desc">Animated text overlay that pops up when chat uses a command</div><div class="preset-status" id="preset-hypetext-status">Not configured</div><button class="preset-btn" onclick="showToast('Coming soon')">Set Up</button></div>
         <div class="preset-card" id="preset-hydrate" style="--card-color:56,189,248;--card-glow:rgba(56,189,248,0.25);"><div class="preset-icon">💧</div><div class="preset-name">Hydration Alert</div><div class="preset-desc">Drink water reminder — image + sound triggered by chat command</div><div class="preset-status" id="preset-hydrate-status">Not configured</div><button class="preset-btn" onclick="showToast('Coming soon')">Set Up</button></div>
       </div>
@@ -3817,6 +3819,19 @@ async function overlayConfirmEdit(id) {
   function setModalCode(code) { if (modalEditor) modalEditor.setValue(code || ''); }
 
   // ---- NAV ----
+
+  function toggleClipPreset(btn) {
+    fetch('/api/defaults').then(r=>r.json()).then(d => {
+      const isEnabled = d['!clip'] !== false;
+      fetch('/api/defaults', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ '!clip': !isEnabled }) })
+        .then(() => {
+          btn.textContent = !isEnabled ? 'Disable' : 'Enable';
+          const s = document.getElementById('preset-clip-status');
+          if (s) { s.textContent = !isEnabled ? 'Active' : 'Disabled'; s.className = !isEnabled ? 'preset-status configured' : 'preset-status'; }
+          showToast('!clip ' + (!isEnabled ? 'enabled' : 'disabled'));
+        });
+    });
+  }
   function showPage(name) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -3833,6 +3848,7 @@ async function overlayConfirmEdit(id) {
     if (name === 'automod') loadAutomodPage();
     if (name !== 'songs' && _songsPollInterval) { clearInterval(_songsPollInterval); _songsPollInterval = null; }
     if (name === 'actions' && inlineEditor) setTimeout(() => inlineEditor.layout(), 50);
+    if (name === 'home') { try { const hf = document.getElementById('homeFrame'); if (hf && hf.contentWindow && hf.contentWindow.homeRefreshStream) hf.contentWindow.homeRefreshStream(); } catch(e) {} }
   }
 
   function toggleNavGroup(id) {
@@ -6377,6 +6393,17 @@ checkBotStatus();
   </div>
 </div>
 
+<div class="chat-handle" id="chatHandle">
+  <div class="chat-handle-header">
+    <div class="chat-handle-dot"></div>
+    First Timers
+    <span class="chat-handle-badge" id="chatHandleBadge" style="display:none">0</span>
+  </div>
+  <div class="chat-handle-body" id="chatHandleBody">
+    <div class="chat-handle-empty">New chatters<br>will appear here</div>
+  </div>
+</div>
+
 <script>
   // -- SECTION: CHAT_WINDOW -------------------------------------------------
 
@@ -6396,6 +6423,52 @@ checkBotStatus();
   fetch('/api/config').then(r => r.json()).then(cfg => {
     if (cfg.channel) chatChannel.textContent = '#' + cfg.channel.replace('#','');
   });
+
+
+  // -- SECTION: FIRST_TIMERS ------------------------------------------------
+  const chatHandle = document.getElementById('chatHandle');
+  const chatHandleBody = document.getElementById('chatHandleBody');
+  const chatHandleBadge = document.getElementById('chatHandleBadge');
+  const seenChatters = new Set();
+  const firstTimers = [];
+
+  function positionHandle() {
+    if (!chatVisible || chatMinimized) {
+      chatHandle.classList.remove('visible');
+      return;
+    }
+    const rect = chatWindow.getBoundingClientRect();
+    chatHandle.style.left = (rect.right) + 'px';
+    chatHandle.style.top = rect.top + 'px';
+    chatHandle.style.height = rect.height + 'px';
+    chatHandle.classList.add('visible');
+    chatHandle.classList.remove('minimized-hide');
+  }
+
+  function addFirstTimer(username, message, color, time) {
+    if (seenChatters.has(username.toLowerCase())) return;
+    seenChatters.add(username.toLowerCase());
+    firstTimers.unshift({ username, message, color, time });
+    if (firstTimers.length > 50) firstTimers.pop();
+    renderHandle();
+    // badge
+    chatHandleBadge.textContent = firstTimers.length;
+    chatHandleBadge.style.display = 'inline-block';
+  }
+
+  function renderHandle() {
+    if (!firstTimers.length) {
+      chatHandleBody.innerHTML = '<div class="chat-handle-empty">New chatters will appear here</div>';
+      return;
+    }
+    chatHandleBody.innerHTML = firstTimers.map(ft => `
+      <div class="chat-handle-entry">
+        <div class="chat-handle-user" style="color:${ft.color || '#d0f0ff'}">${ft.username}</div>
+        <div class="chat-handle-msg">${ft.message.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+        <div class="chat-handle-time">${ft.time}</div>
+      </div>
+    `).join('');
+  }
 
   // -- SECTION: CHAT_SSE ----------------------------------------------------
   let chatSource = null;
@@ -6436,6 +6509,13 @@ checkBotStatus();
     el.innerHTML = `<span class="chat-msg-badges">${badgeStr}</span><span class="chat-msg-user" style="color:${color}">${escapeHtml(msg.username)}</span><span style="color:rgba(255,255,255,0.3)">: </span><span class="chat-msg-text">${escapeHtml(msg.message)}</span><span class="chat-msg-ts">${time}</span>`;
     chatBody.appendChild(el);
     chatBody.scrollTop = chatBody.scrollHeight;
+    try { const hf = document.getElementById('homeFrame'); if (hf && hf.contentWindow && hf.contentWindow.homeAddChat) hf.contentWindow.homeAddChat(msg.username, msg.message, msg.color); } catch(e) {}
+    try { if (msg.isBot && msg.message && msg.message.includes('clips.twitch.tv')) { const hf2 = document.getElementById('homeFrame'); if (hf2 && hf2.contentWindow && hf2.contentWindow.loadClips) hf2.contentWindow.loadClips(); } } catch(e) {}
+    // first-timers handle
+    if (!msg.isBot) {
+      const time = new Date(msg.ts).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+      addFirstTimer(msg.username || '', msg.message || '', msg.color || '#d0f0ff', time);
+    }
   }
 
   function escapeHtml(str) {
@@ -6540,11 +6620,13 @@ checkBotStatus();
     chatVisible = !chatVisible;
     chatWindow.style.display = chatVisible ? 'flex' : 'none';
     if (chatNavItem) chatNavItem.classList.toggle('active', chatVisible);
+    positionHandle();
   }
 
   function toggleChatMinimize() {
     chatMinimized = !chatMinimized;
     chatWindow.classList.toggle('minimized', chatMinimized);
+    positionHandle();
   }
 
   // -- SECTION: CHAT_DRAG ---------------------------------------------------
@@ -6589,10 +6671,12 @@ checkBotStatus();
 
   document.addEventListener('mousemove', (e) => {
     if (isDragging) {
+      positionHandle();
       let x = Math.max(0, Math.min(window.innerWidth  - chatWindow.offsetWidth,  e.clientX - dragOffsetX));
       let y = Math.max(0, Math.min(window.innerHeight - chatWindow.offsetHeight, e.clientY - dragOffsetY));
       chatWindow.style.left = x + 'px';
       chatWindow.style.top  = y + 'px';
+      positionHandle();
       return;
     }
     if (!isResizing) return;
