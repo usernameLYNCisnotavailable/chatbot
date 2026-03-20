@@ -471,6 +471,42 @@ client.on('message', (channel, tags, message, self) => {
         return;
     }
 
+
+    // ── @mention detection ────────────────────────────────────────────────────
+    const mentionMatches = msg.match(/@([a-zA-Z0-9_]+)/g);
+    if (mentionMatches) {
+        const cfg = (() => {
+            try {
+                const d = JSON.parse(fs.readFileSync(path.join(dataDir, 'mention-config.json'), 'utf8'));
+                return d;
+            } catch(e) { return null; }
+        })();
+        if (cfg && cfg.enabled && cfg.webhook) {
+            const access = cfg.access || 'everyone';
+            const isMod  = tags.mod || false;
+            const isSub  = tags.subscriber || false;
+            const isBroadcaster = username === homeChannel;
+            const allowed = access === 'everyone'
+                || (access === 'subscriber'  && (isSub || isMod || isBroadcaster))
+                || (access === 'moderator'   && (isMod || isBroadcaster))
+                || (access === 'broadcaster' && isBroadcaster);
+            if (allowed) {
+                mentionMatches.forEach(m => {
+                    const mentionedUser = m.slice(1);
+                    const http = require('http');
+                    const body = JSON.stringify({ mentionedUser, channel: config.channel });
+                    const req2 = http.request({
+                        hostname: '127.0.0.1', port: 3000,
+                        path: '/api/mentions/fire', method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+                    }, () => {});
+                    req2.on('error', () => {});
+                    req2.write(body); req2.end();
+                });
+            }
+        }
+    }
+
     // Text commands (custom)
     if (commands[command]) {
         const c = commands[command];
@@ -494,39 +530,6 @@ client.on('message', (channel, tags, message, self) => {
         lastCommandChannel = channel;
         sendToReactor(`COMMAND:${actionKey}:${username}:${message}:${args}:${config.channel}`);
         fireOverlayCommand(command, args, username);
-        return;
-    }
-
-
-    // !clip
-    if (command === '!clip') {
-        const clipDefaults = getDefaults();
-        if (clipDefaults['!clip'] === false) return;
-        const cd = clipDefaults['!clip_cd'] ?? 30;
-        if (isOnCooldown(username, '!clip', cd)) return;
-        setCooldown(username, '!clip');
-        const http = require('http');
-        const body = JSON.stringify({ username });
-        const req2 = http.request({
-            hostname: '127.0.0.1', port: 3000, path: '/api/clip', method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
-        }, (resp) => {
-            let data = '';
-            resp.on('data', d => data += d);
-            resp.on('end', () => {
-                try {
-                    const d = JSON.parse(data);
-                    if (d.ok) {
-                        client.say(channel, `✂️ Clip created by @${username}! ${d.clipUrl}`);
-                    } else {
-                        client.say(channel, `@${username} Couldn't create clip: ${d.error || 'unknown error'}`);
-                    }
-                } catch(e) {}
-            });
-        });
-        req2.on('error', () => client.say(channel, `@${username} Clip failed — try again.`));
-        req2.write(body);
-        req2.end();
         return;
     }
 

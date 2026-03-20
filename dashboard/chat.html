@@ -197,10 +197,68 @@
   }
 
   .chat-send-btn:hover { background: var(--accent-hover); }
+
+  /* ── First Timers handle ── */
+  .app-wrap {
+    display: flex;
+    flex-direction: row;
+    height: 100vh;
+    overflow: hidden;
+  }
+  .chat-window {
+    flex: 1;
+    min-width: 0;
+  }
+  .first-timers {
+    width: 180px;
+    flex-shrink: 0;
+    display: none;
+    flex-direction: column;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    border-radius: 0 8px 8px 0;
+    overflow: hidden;
+  }
+  .first-timers.open { display: flex; }
+  .ft-resize {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    width: 5px;
+    cursor: ew-resize;
+    z-index: 10;
+    background: transparent;
+  }
+  .ft-resize:hover { background: rgba(145,71,255,0.3); }
+  .first-timers { position: relative; }
+  .ft-header {
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted-2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    -webkit-app-region: drag;
+  }
+  .ft-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); opacity: 0.7; flex-shrink: 0; }
+  .ft-badge { margin-left: auto; background: var(--accent-soft); color: var(--accent-hover); font-size: 10px; padding: 1px 6px; border-radius: 10px; font-weight: 700; display: none; }
+  .ft-body { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+  .ft-empty { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--muted-2); padding: 16px 10px; text-align: center; line-height: 1.6; }
+  .ft-entry { padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.1s; }
+  .ft-entry:last-child { border-bottom: none; }
+  .ft-entry:hover { background: rgba(255,255,255,0.03); }
+  .ft-user { font-size: 12px; font-weight: 600; margin-bottom: 2px; }
+  .ft-msg { font-size: 11px; color: var(--muted); line-height: 1.4; word-break: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .ft-time { font-size: 10px; color: var(--muted-2); margin-top: 3px; }
 </style>
 </head>
 <body>
 
+<div class="app-wrap">
 <div class="chat-window">
   <div class="chat-header" id="chatDragHandle">
     <div class="chat-header-dot offline" id="chatDot"></div>
@@ -208,6 +266,7 @@
     <div class="chat-header-channel" id="chatChannel">—</div>
     <div class="chat-header-btns">
       <button class="chat-hbtn" id="alwaysOnTopBtn" onclick="toggleAlwaysOnTop()" title="Always on top">📌</button>
+      <button class="chat-hbtn" id="ftToggleBtn" onclick="toggleFirstTimers()" title="First timers">👋</button>
       <button class="chat-hbtn" onclick="fetch('/api/chat/close',{method:'POST'})" title="Close">✕</button>
     </div>
   </div>
@@ -224,6 +283,19 @@
     <button class="chat-send-btn" onclick="sendChatMessage()">↑</button>
   </div>
 </div>
+
+<div class="first-timers" id="firstTimersPanel">
+  <div class="ft-header" id="ftHeader">
+    <div class="ft-dot"></div>
+    First Timers
+    <span class="ft-badge" id="ftBadge">0</span>
+  </div>
+  <div class="ft-body" id="ftBody">
+    <div class="ft-empty">New chatters<br>will appear here</div>
+  </div>
+</div>
+
+</div><!-- end app-wrap -->
 
 <script>
   const chatBody  = document.getElementById('chatBody');
@@ -267,6 +339,7 @@
     el.innerHTML = `<span class="chat-msg-badges">${badgeStr}</span><span class="chat-msg-user" style="color:${color}">${escapeHtml(msg.username)}</span><span style="color:rgba(255,255,255,0.3)">: </span><span class="chat-msg-text">${escapeHtml(msg.message)}</span><span class="chat-msg-ts">${time}</span>`;
     chatBody.appendChild(el);
     chatBody.scrollTop = chatBody.scrollHeight;
+    checkFirstTimer(msg);
   }
 
   function escapeHtml(str) {
@@ -293,6 +366,74 @@
       body: JSON.stringify({ value: alwaysOnTop })
     });
     document.getElementById('alwaysOnTopBtn').style.opacity = alwaysOnTop ? '1' : '0.3';
+  }
+
+
+  // ── First Timers ──────────────────────────────────────────────────────────
+  const ftBody = document.getElementById('ftBody');
+  const ftBadge = document.getElementById('ftBadge');
+  const seenChatters = new Set();
+  const firstTimers = [];
+
+  function checkFirstTimer(msg) {
+    if (msg.isBot) return;
+    const user = (msg.username || '').toLowerCase();
+    if (seenChatters.has(user)) return;
+    seenChatters.add(user);
+    const time = new Date(msg.ts).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    firstTimers.unshift({ username: msg.username, message: msg.message, color: msg.color || '#d0f0ff', time });
+    if (firstTimers.length > 50) firstTimers.pop();
+    renderFirstTimers();
+    ftBadge.textContent = firstTimers.length;
+    ftBadge.style.display = 'inline-block';
+  }
+
+  function renderFirstTimers() {
+    if (!firstTimers.length) {
+      ftBody.innerHTML = '<div class="ft-empty">New chatters<br>will appear here</div>';
+      return;
+    }
+    ftBody.innerHTML = firstTimers.map(ft => `
+      <div class="ft-entry">
+        <div class="ft-user" style="color:${ft.color}">${escapeHtml(ft.username)}</div>
+        <div class="ft-msg">${escapeHtml(ft.message)}</div>
+        <div class="ft-time">${ft.time}</div>
+      </div>
+    `).join('');
+  }
+
+  // ── First timers resize ───────────────────────────────────────────────────
+  const ftPanel = document.getElementById('firstTimersPanel');
+  let ftResizing = false, ftStartX = 0, ftStartW = 0;
+
+  // inject resize handle
+  const ftResizeEl = document.createElement('div');
+  ftResizeEl.className = 'ft-resize';
+  ftPanel.appendChild(ftResizeEl);
+
+  ftResizeEl.addEventListener('mousedown', (e) => {
+    ftResizing = true;
+    ftStartX = e.clientX;
+    ftStartW = ftPanel.offsetWidth || 180;
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!ftResizing) return;
+    const dx = ftStartX - e.clientX;
+    const newW = Math.max(140, Math.min(400, ftStartW + dx));
+    ftPanel.style.width = newW + 'px';
+  });
+
+  document.addEventListener('mouseup', () => { ftResizing = false; });
+
+  function toggleFirstTimers() {
+    const panel = document.querySelector('.first-timers');
+    const btn = document.getElementById('ftToggleBtn');
+    const isOpen = panel.classList.toggle('open');
+    if (isOpen && !panel.style.width) panel.style.width = '180px';
+    btn.style.opacity = isOpen ? '1' : '0.4';
+    btn.style.color = isOpen ? 'var(--accent)' : '';
   }
 
   connectChatStream();
