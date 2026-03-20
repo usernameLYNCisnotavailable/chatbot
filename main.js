@@ -3,7 +3,8 @@ const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
 const { autoUpdater } = require('electron-updater');
-const { registerMentionRoutes } = require('./system-commands');
+const { registerSystemRoutes } = require('./system-commands');
+const { registerPresetRoutes } = require('./presets');
 let mainWindow;
 let botProcess = null;
 let reactorProcess = null;
@@ -168,6 +169,10 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
 
     server.get('/dashboard/home.html', (req, res) => {
         res.sendFile(path.join(appDir, 'dashboard', 'home.html'));
+    });
+
+    server.get('/dashboard/presets.html', (req, res) => {
+        res.sendFile(path.join(appDir, 'dashboard', 'presets.html'));
     });
 
     server.get('/dashboard/home.html', (req, res) => {
@@ -730,8 +735,54 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
         try { fs.writeFileSync(getDataPath('clips.json'), '[]'); res.json({ ok: true }); } catch(e) { res.json({ ok: false }); }
     });
 
-    // ── MENTION COMMAND ──────────────────────────────────────────────────────
-    registerMentionRoutes(server, getDataPath);
+    // ── SYSTEM COMMANDS ──────────────────────────────────────────────────────
+    registerSystemRoutes(server, getDataPath);
+
+    // ── PRESET ROUTES ────────────────────────────────────────────────────────
+    registerPresetRoutes(server, getDataPath);
+
+
+    // ── STREAM INFO EDIT ──────────────────────────────────────────────────────
+    server.patch('/api/stream-info', async (req, res) => {
+        try {
+            const config = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
+            const token = (config.streamerToken || '').replace('oauth:', '');
+            const channel = (config.channel || config.streamerUsername || '').replace('#', '');
+
+            // Get broadcaster ID
+            const brRes = await axios.get(`https://api.twitch.tv/helix/users?login=${channel}`, {
+                headers: { 'Authorization': `Bearer ${token}`, 'Client-Id': TWITCH_CLIENT_ID }
+            });
+            const broadcasterId = brRes.data.data[0]?.id;
+            if (!broadcasterId) return res.json({ ok: false, error: 'Could not resolve broadcaster' });
+
+            const body = {};
+            if (req.body.title !== undefined) body.title = req.body.title;
+            if (req.body.gameId !== undefined) body.game_id = req.body.gameId;
+
+            await axios.patch(`https://api.twitch.tv/helix/channels?broadcaster_id=${broadcasterId}`, body, {
+                headers: { 'Authorization': `Bearer ${token}`, 'Client-Id': TWITCH_CLIENT_ID, 'Content-Type': 'application/json' }
+            });
+            res.json({ ok: true });
+        } catch(e) {
+            console.error('[stream-info]', e.message);
+            res.json({ ok: false, error: e.message });
+        }
+    });
+
+    // ── GAME SEARCH ───────────────────────────────────────────────────────────
+    server.get('/api/search-games', async (req, res) => {
+        try {
+            const config = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
+            const token = (config.streamerToken || '').replace('oauth:', '');
+            const q = req.query.q || '';
+            if (!q) return res.json([]);
+            const r = await axios.get(`https://api.twitch.tv/helix/search/categories?query=${encodeURIComponent(q)}&first=8`, {
+                headers: { 'Authorization': `Bearer ${token}`, 'Client-Id': TWITCH_CLIENT_ID }
+            });
+            res.json(r.data.data || []);
+        } catch(e) { res.json([]); }
+    });
 
     // ---- OBS SETTINGS ----
     server.get('/api/obs-settings', (req, res) => {
@@ -1405,17 +1456,7 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
     });
 
     // ---- PRESETS ----
-    server.get('/api/presets', (req, res) => {
-        const p = getDataPath('presets.json');
-        try { res.json(JSON.parse(fs.readFileSync(p, 'utf8'))); }
-        catch(e) { res.json({}); }
-    });
-    server.post('/api/presets', (req, res) => {
-        try {
-            fs.writeFileSync(getDataPath('presets.json'), JSON.stringify(req.body, null, 2));
-            res.json({ ok: true });
-        } catch(e) { res.json({ ok: false, error: e.message }); }
-    });
+    // /api/presets routes moved to presets.js
 
     // ---- ONBOARDING ----
     server.get('/onboarding', (req, res) => {

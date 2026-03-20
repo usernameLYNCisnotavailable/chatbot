@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Presets — ChatCommander</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/dashboard.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  body { display: flex; flex-direction: column; }
+  .page { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+</style>
+</head>
+<body>
+
+<div class="page" id="page-presets" style="display:flex;">
+  <div class="cmd-page-wrap">
+    <div class="cmd-topbar">
+      <div class="cmd-title-block">
+        <div class="cmd-title">Presets</div>
+        <div class="cmd-sub">Step-by-step setup wizards — no overlay knowledge needed</div>
+      </div>
+    </div>
+    <div style="padding:20px 24px;flex:1;overflow-y:auto;">
+      <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.2);margin-bottom:14px;">Twitch Event Alerts</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-bottom:26px;">
+        <div class="preset-card" id="preset-follow" style="--card-color:99,102,241;--card-glow:rgba(99,102,241,0.25);"><div class="preset-icon">🎉</div><div class="preset-name">New Follower</div><div class="preset-desc">Fires when someone follows your channel</div><div class="preset-status" id="preset-follow-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('follow')">Set Up</button></div>
+        <div class="preset-card" id="preset-sub" style="--card-color:147,71,255;--card-glow:rgba(147,71,255,0.25);"><div class="preset-icon">🌟</div><div class="preset-name">New Sub</div><div class="preset-desc">Fires when someone subscribes to your channel</div><div class="preset-status" id="preset-sub-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('sub')">Set Up</button></div>
+        <div class="preset-card" id="preset-giftsub" style="--card-color:236,72,153;--card-glow:rgba(236,72,153,0.25);"><div class="preset-icon">🎁</div><div class="preset-name">Gift Subs</div><div class="preset-desc">Fires when someone gifts subs to your community</div><div class="preset-status" id="preset-giftsub-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('giftsub')">Set Up</button></div>
+        <div class="preset-card" id="preset-raid" style="--card-color:249,115,22;--card-glow:rgba(249,115,22,0.25);"><div class="preset-icon">⚔️</div><div class="preset-name">Raid</div><div class="preset-desc">Fires when another streamer raids your channel</div><div class="preset-status" id="preset-raid-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('raid')">Set Up</button></div>
+        <div class="preset-card" id="preset-ttsgif" style="--card-color:99,102,241;--card-glow:rgba(99,102,241,0.25);"><div class="preset-icon">🎬</div><div class="preset-name">TTS + GIF</div><div class="preset-desc">Chat command plays a GIF while the bot speaks a message</div><div class="preset-status" id="preset-ttsgif-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('ttsgif')">Set Up</button></div>
+      </div>
+      <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.2);margin-bottom:14px;">Chat & Stream Tools</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;">
+        <div class="preset-card" id="preset-autoso" style="--card-color:244,63,94;--card-glow:rgba(244,63,94,0.25);"><div class="preset-icon">📣</div><div class="preset-name">Auto Shoutout</div><div class="preset-desc">Automatically shouts out raiders and returning streamers in chat</div><div class="preset-status" id="preset-autoso-status">Not configured</div><button class="preset-btn" onclick="showToast('Coming soon')">Set Up</button></div>
+        <div class="preset-card" id="preset-clip" style="--card-color:239,68,68;--card-glow:rgba(239,68,68,0.25);"><div class="preset-icon">✂️</div><div class="preset-name">Clip Command</div><div class="preset-desc">!clip creates a Twitch clip and posts the link in chat automatically</div><div class="preset-status" id="preset-clip-status">Not configured</div><button class="preset-btn" onclick="toggleClipPreset(this)">Enable</button></div>
+        <div class="preset-card" id="preset-mentions" style="--card-color:88,101,242;--card-glow:rgba(88,101,242,0.25);"><div class="preset-icon">🔔</div><div class="preset-name">@ Mention Alerts</div><div class="preset-desc">Notifies viewers via Discord when they get @mentioned in chat</div><div class="preset-status" id="preset-mentions-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('mentions')">Set Up</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- WIZARD MODAL -->
+<div id="wizardOverlay" style="display:none;position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,0.88);backdrop-filter:blur(16px);align-items:center;justify-content:center;">
+  <div id="wizardBox" style="width:100%;max-width:560px;height:90vh;background:#131316;border:1px solid rgba(255,255,255,0.1);border-radius:24px;box-shadow:0 40px 120px rgba(0,0,0,0.7);display:flex;flex-direction:column;animation:wiz-modal-in 0.25s cubic-bezier(0.4,0,0.2,1);">
+    <div style="padding:22px 24px 0;display:flex;align-items:center;gap:14px;flex-shrink:0;border-radius:24px 24px 0 0;background:#131316;">
+      <div id="wizHeaderIcon" style="font-size:1.8rem;width:48px;height:48px;display:flex;align-items:center;justify-content:center;border-radius:14px;flex-shrink:0;"></div>
+      <div style="flex:1;min-width:0;"><div id="wizHeaderTitle" style="font-size:17px;font-weight:700;color:#fff;"></div><div id="wizHeaderSub" style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:2px;"></div></div>
+      <button onclick="wizardClose()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:rgba(255,255,255,0.35);font-size:15px;width:30px;height:30px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;" onmouseover="this.style.background='rgba(235,4,0,0.15)';this.style.color='rgba(255,100,100,0.8)'" onmouseout="this.style.background='rgba(255,255,255,0.06)';this.style.color='rgba(255,255,255,0.35)'">✕</button>
+    </div>
+    <div id="wizDots" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:14px 24px 0;flex-shrink:0;"></div>
+    <div id="wizViewport" style="flex:1;overflow:hidden;min-height:0;position:relative;">
+      <div id="wizSlides" style="display:flex;transition:transform 0.4s cubic-bezier(0.4,0,0.2,1);align-items:flex-start;height:100%;"></div>
+    </div>
+    <div style="padding:16px 24px 22px;display:flex;align-items:center;gap:10px;flex-shrink:0;border-top:1px solid rgba(255,255,255,0.06);border-radius:0 0 24px 24px;background:#131316;">
+      <button id="wizBackBtn" onclick="wizPrev()" style="display:none;padding:10px 20px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:rgba(255,255,255,0.5);font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.09)';this.style.color='#fff'" onmouseout="this.style.background='rgba(255,255,255,0.05)';this.style.color='rgba(255,255,255,0.5)'">← Back</button>
+      <div style="flex:1;"></div>
+      <button id="wizNextBtn" onclick="wizNext()" style="padding:10px 28px;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;color:#fff;transition:all 0.2s;"></button>
+    </div>
+  </div>
+</div>
+<input type="hidden" id="wizMediaX" value="0"><input type="hidden" id="wizMediaY" value="0"><input type="hidden" id="wizMediaW" value="960"><input type="hidden" id="wizMediaH" value="540"><input type="hidden" id="wizTextX" value="100"><input type="hidden" id="wizTextY" value="400"><input type="hidden" id="wizTextMaxW" value="800"><input type="hidden" id="wizTextMaxH" value="200"><input type="hidden" id="wizTextSize" value="48">
+
+<script>
+  // ── URL param: auto-open a wizard ─────────────────────────────────────────
+  const _urlParams = new URLSearchParams(window.location.search);
+  const _autoWizard = _urlParams.get('wizard');
+
+  function showToast(msg) {
+    // bubble up to parent if in iframe
+    try { window.parent.showToast(msg); } catch(e) {}
+  }
+
+  function toggleClipPreset(btn) {
+    fetch('/api/defaults').then(r=>r.json()).then(d => {
+      const isEnabled = d['!clip'] !== false;
+      fetch('/api/defaults', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ '!clip': !isEnabled }) })
+        .then(() => {
+          btn.textContent = !isEnabled ? 'Disable' : 'Enable';
+          const s = document.getElementById('preset-clip-status');
+          if (s) { s.textContent = !isEnabled ? 'Active' : 'Disabled'; s.className = !isEnabled ? 'preset-status configured' : 'preset-status'; }
+          showToast('!clip ' + (!isEnabled ? 'enabled' : 'disabled'));
+        });
+    });
+  }
+
+  // ── SYSTEM COMMANDS TAB ───────────────────────────────────────────────────
+  let mentionCfg = { enabled: false, webhook: '', message: '@{mentioned} you were mentioned in chat!', cooldown: 300, access: 'everyone' };
+
+  async function loadMentionConfig() {
+    try {
+      const r = await fetch('/api/mentions/config');
+      mentionCfg = await r.json();
+    } catch(e) {}
+  }
+
+  async function saveMentionConfig(patch) {
+    mentionCfg = Object.assign({}, mentionCfg, patch);
+    await fetch('/api/mentions/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(mentionCfg)
+    });
+  }
+
+  async function renderSystemTab() {
+    await loadMentionConfig();
+    document.getElementById('addCmdBtnWrap').style.display = 'none';
+    document.getElementById('cmdCount').textContent = '1 system command';
+    const enabled  = mentionCfg.enabled;
+    const rowId    = 'sys-mentions';
+    const access   = mentionCfg.access || 'everyone';
+    const cooldown = mentionCfg.cooldown ?? 300;
+    const webhook  = (mentionCfg.webhook || '').replace(/"/g, '&quot;');
+    const message  = (mentionCfg.message || '').replace(/"/g, '&quot;');
+
+    const expandRow = `
+      <tr class="cmd-expand-row" id="${rowId}-expand">
+        <td colspan="5">
+          <div class="cmd-expand-panel">
+            <div class="expand-grid">
+              <div class="expand-field">
+                <div class="expand-label">Cooldown (per user)</div>
+                <div style="display:flex;align-items:center;gap:6px">
+                  <input class="cmd-cd-input" type="number" value="${cooldown}" min="0"
+                    onblur="saveMentionConfig({ cooldown: parseInt(this.value) || 300 })" />
+                  <span style="font-size:0.65rem;color:rgba(255,255,255,0.35);font-weight:500">sec</span>
+                </div>
+              </div>
+              <div class="expand-field">
+                <div class="expand-label">Access</div>
+                <select class="cmd-access" onchange="saveMentionConfig({ access: this.value })">
+                  ${['everyone','subscriber','moderator','broadcaster'].map(a => `<option value="${a}" ${access===a?'selected':''}>${a.charAt(0).toUpperCase()+a.slice(1)}</option>`).join('')}
+                </select>
+              </div>
+            </div>
+            <div class="expand-field" style="margin-top:10px;">
+              <div class="expand-label">Discord Webhook URL</div>
+              <input class="form-input" type="text" value="${webhook}" placeholder="https://discord.com/api/webhooks/..."
+                style="width:100%;margin-top:4px;"
+                onblur="saveMentionConfig({ webhook: this.value })" />
+            </div>
+            <div class="expand-field" style="margin-top:10px;">
+              <div class="expand-label" style="margin-bottom:6px;">Message <span style="color:var(--muted-2);font-weight:400;text-transform:none;letter-spacing:0">— use {mentioned} for the username</span></div>
+              <textarea style="width:100%;min-height:80px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;padding:8px 10px;outline:none;resize:vertical;transition:border-color 0.15s;"
+                onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)';saveMentionConfig({ message: this.value })"
+              >${message}</textarea>
+            </div>
+          </div>
+        </td>
+      </tr>`;
+
+    const row = `
+      <tr class="cmd-row" onclick="toggleExpand('${rowId}')">
+        <td><div class="cmd-name">@user mentions</div></td>
+        <td><span class="cmd-response-text">Discord webhook notification</span></td>
+        <td><span class="cmd-type-badge custom">System</span></td>
+        <td></td>
+        <td>
+          <div class="cmd-actions-cell">
+            <span class="cmd-chevron">›</span>
+            <label class="toggle" onclick="event.stopPropagation()">
+              <input type="checkbox" ${enabled ? 'checked' : ''} onchange="saveMentionConfig({ enabled: this.checked })" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </td>
+      </tr>
+      ${expandRow}`;
+
+    document.getElementById('cmdTableBody').innerHTML = row;
+    // re-attach expand logic
+    document.querySelectorAll('.cmd-expand-row').forEach(r => r.classList.remove('open'));
+  }
+
+  let presetsConfig = {};
+  let eventsubConfig = {};
+  let _wizKey = null, _wizStep = 0, _wizSteps = [], _wizData = {}, _wizColorStr = '147,71,255';
+
+  async function loadPresetsPage() {
+    try { const r = await fetch('/api/presets'); presetsConfig = await r.json(); } catch(e) { presetsConfig = {}; }
+    try { const r = await fetch('/api/eventsub/alerts'); eventsubConfig = await r.json(); } catch(e) { eventsubConfig = {}; }
+    _wizRenderStatuses();
+  }
+
+  function _wizRenderStatuses() {
+    ['ttsgif','follow','sub','giftsub','cheer','raid','redeem','hype','autoso','clip','hypetext','hydrate'].forEach(k => {
+      const el = document.getElementById('preset-' + k + '-status');
+      const btn = document.querySelector('#preset-' + k + ' .preset-btn');
+      if (!el) return;
+      const isEvent = ['follow','sub','giftsub','cheer','raid','redeem','hype'].includes(k);
+      const configured = isEvent ? !!(eventsubConfig[k]) : !!(presetsConfig[k]);
+      if (configured) { el.textContent = 'Configured'; el.className = 'preset-status configured'; if (btn) btn.textContent = 'Edit'; }
+      else { el.textContent = 'Not configured'; el.className = 'preset-status'; if (btn) btn.textContent = 'Set Up'; }
+    });
+  }
+
+  // ---- Wizard type meta ----
+  const _WIZ_META = {
+    ttsgif:   { name: 'TTS + GIF',       icon: '🎬', color: '99,102,241',  desc: 'GIF or image plays while the bot speaks' },
+    follow:   { name: 'New Follower',     icon: '🎉', color: '99,102,241',  desc: 'Fires when someone follows your channel' },
+    sub:      { name: 'New Sub',          icon: '🌟', color: '147,71,255',  desc: 'Fires when someone subscribes' },
+    giftsub:  { name: 'Gift Subs',        icon: '🎁', color: '236,72,153',  desc: 'Fires when someone gifts subs' },
+    cheer:    { name: 'Bits / Cheer',     icon: '💎', color: '234,179,8',   desc: 'Fires when someone cheers bits' },
+    raid:     { name: 'Raid',             icon: '⚔️', color: '249,115,22',  desc: 'Fires when someone raids your channel' },
+    redeem:   { name: 'Channel Points',   icon: '🏆', color: '0,200,83',    desc: 'Fires when a viewer redeems a reward' },
+    mentions: { name: '@ Mention Alerts',  icon: '🔔', color: '88,101,242',  desc: 'Notify viewers via Discord when @mentioned' },
+    hype:     { name: 'Hype Train',       icon: '🔥', color: '239,68,68',   desc: 'Fires when a hype train starts' },
+  };
+
+  function _wizBuildSteps(key, data) {
+    const CMD  = { id:'cmd', question:'What should the command be?', hint:'Viewers type this in chat to trigger the alert.', fields:[{ id:'w_cmd', type:'text', label:'Command name', placeholder:'!hype', default:'!hype' }] };
+    const ACCS = { id:'access', question:'Who can trigger this?', hint:'Pick the minimum viewer role needed.', fields:[{ id:'w_access', type:'radio', label:'Access level', options:[{ value:'everyone', label:'Everyone', sub:'Any viewer' },{ value:'subscriber', label:'Subscribers only', sub:'Must be subbed' },{ value:'moderator', label:'Moderators', sub:'Mods and above' }], default:'everyone' }] };
+    const TTS_FIELDS = [
+      { id:'w_textmode', type:'radio', label:'Text mode', options:[{ value:'user', label:'Whatever the user types', sub:'!hype great stream → bot says "great stream"' },{ value:'fixed', label:'Fixed message', sub:'Bot always says the same thing' }], default:'user' },
+      { id:'w_text', type:'fixedtext', label:'Fixed message', placeholder:'HYPE! {user} is bringing the energy!', default:'HYPE!' },
+      { id:'w_showtext', type:'toggle', label:'Show text on screen', sub:'Renders the spoken text visually as the bot speaks. Turn off for voice-only.', default:false },
+      { id:'w_voice', type:'voice', label:'TTS Voice' },
+      { id:'w_volume', type:'volume', label:'TTS Volume', default:80 }
+    ];
+    const CHROMA_FIELDS = [
+      { id:'w_chromakey', type:'toggle', label:'Enable chroma key (green screen)', sub:'Removes the background colour', default:false },
+      { id:'w_chromacolor', type:'color', label:'Background colour to remove', default:'#00ff00' },
+      { id:'w_chromathreshold', type:'slider', label:'Threshold', min:0, max:100, default:40 }
+    ];
+    const OPTIONS_STEP = { id:'options', question:'How should it behave?', hint:'Sensible defaults are already set. Tap Customize to change timings.', fields:[
+      { id:'w_clearwithtts', type:'toggle', label:'Media disappears when TTS finishes', sub:'Keeps media visible while bot speaks, clears when done', default:true },
+      { id:'w_customize', type:'customize', label:'Customize timings', fields:[
+        { id:'w_fadein_dur',  type:'number', label:'Fade in duration (seconds)', placeholder:'1', default:'1' },
+        { id:'w_fadeout_dur', type:'number', label:'Fade out duration (seconds)', placeholder:'1', default:'1' },
+        { id:'w_duration',    type:'number', label:'Manual duration (seconds, used if TTS toggle is off)', placeholder:'5', default:'5' }
+      ]}
+    ]};
+    const OPTIONS_STEP_NOTTS = { id:'options', question:'How should it behave?', hint:'Sensible defaults are already set. Tap Customize to change timings.', fields:[
+      { id:'w_customize', type:'customize', label:'Customize timings', fields:[
+        { id:'w_fadein_dur',  type:'number', label:'Fade in duration (seconds)', placeholder:'1', default:'1' },
+        { id:'w_fadeout_dur', type:'number', label:'Fade out duration (seconds)', placeholder:'1', default:'1' },
+        { id:'w_duration',    type:'number', label:'Display duration (seconds, 0 = stay forever)', placeholder:'5', default:'5' }
+      ]}
+    ]};
+    const TTS_WANT_STEP = { id:'wanttts', question:'Add TTS to this alert?', hint:'The bot can speak a message when this triggers.', fields:[
+      { id:'w_wanttts', type:'radio', label:'TTS', options:[{ value:'yes', label:'Yes — bot speaks when triggered', sub:'Choose voice and message on the next step' },{ value:'no', label:'No — just the media', sub:'Silent alert' }], default:'no' }
+    ]};
+    // EventSub event types
+    const EVENT_KEYS = ['follow','sub','giftsub','cheer','raid','redeem','hype'];
+    if (EVENT_KEYS.includes(key)) {
+      const mediaType = data.w_mediatype || 'image';
+      const eventVars = { follow:'{username} just followed!', sub:'{username} just subscribed!', giftsub:'{gifter} gifted {count} subs!', cheer:'{username} cheered {bits} bits!', raid:'{raider} is raiding with {viewers} viewers!', redeem:'{username} redeemed {reward}!', hype:'Hype Train is live!' };
+      const defaultMsg = eventVars[key] || '{username}';
+      const EVENT_TTS_FIELDS = [
+        { id:'w_text', type:'text', label:'Message (variables shown above)', placeholder: defaultMsg, default: defaultMsg },
+        { id:'w_showtext', type:'toggle', label:'Show text on screen', sub:'Renders the spoken text visually as the bot speaks. Turn off for voice-only.', default:false },
+        { id:'w_voice', type:'voice', label:'TTS Voice' },
+        { id:'w_volume', type:'volume', label:'TTS Volume', default:80 }
+      ];
+      if (mediaType === 'none') {
+        return [{ id:'text', question:'What should the bot say?', hint:'Variables: ' + defaultMsg, fields: EVENT_TTS_FIELDS }];
+      }
+      const isVideo = mediaType === 'video';
+      const steps = [];
+      steps.push({ id:'media', question: isVideo ? 'Pick your video file.' : 'Pick your GIF or image.', hint:'This plays automatically when the event fires.',
+        fields:[{ id:'w_gif', type: isVideo ? 'videofile' : 'file', label: isVideo ? 'Video file' : 'GIF / Image file', placeholder: isVideo ? 'C:\\\\path\\\\to\\\\file.mp4' : 'C:\\\\path\\\\to\\\\file.gif', accept: isVideo ? 'video' : 'image' }]
+      });
+      if (isVideo) steps.push({ id:'chroma', question:'Is it a green screen video?', hint:'Enable chroma key to remove the background colour.', fields: CHROMA_FIELDS });
+      steps.push(OPTIONS_STEP);
+      steps.push({ id:'text', question:'What should the bot say?', hint:'Variables: ' + defaultMsg, fields: EVENT_TTS_FIELDS, canvas:true });
+      return steps;
+    }
+
+    if (key === 'ttsgif') {
+      const mediaType = data.w_mediatype || 'image';
+      if (mediaType === 'none') return [CMD, Object.assign({}, {id:'text',question:'What should the bot say?',hint:'TTS only — no media will show on screen.',fields:TTS_FIELDS}), ACCS];
+      const isVideo = mediaType === 'video';
+      const steps = [CMD];
+      steps.push({ id:'media', question: isVideo ? 'Pick your video file.' : 'Pick your GIF or image.', hint:'This plays on screen when the command is used.',
+        fields:[{ id:'w_gif', type: isVideo ? 'videofile' : 'file', label: isVideo ? 'Video file' : 'GIF / Image file', placeholder: isVideo ? 'C:\\path\\to\\file.mp4' : 'C:\\path\\to\\file.gif', accept: isVideo ? 'video' : 'image' }]
+      });
+      if (isVideo) steps.push({ id:'chroma', question:'Is it a green screen video?', hint:'Enable chroma key to remove the background colour.', fields: CHROMA_FIELDS });
+      steps.push(OPTIONS_STEP);
+      steps.push({ id:'text', question:'What should the bot say?', hint:'Configure the TTS voice and message.', fields: TTS_FIELDS, canvas:true });
+      return steps;
+    }
+    if (key === 'tts') return [CMD, { id:'text', question:'What should the bot say?', hint:'Configure the TTS voice and message.', fields: TTS_FIELDS }, ACCS];
+    if (key === 'imagealert') return [CMD, { id:'media', question:'Pick your image.', hint:'This shows on stream when the command is used.', fields:[{ id:'w_gif', type:'file', label:'Image file', placeholder:'C:\\path\\to\\file.png', accept:'image' }] }, TTS_WANT_STEP, OPTIONS_STEP_NOTTS, ACCS];
+    if (key === 'soundalert') return [CMD, { id:'media', question:'Pick your sound file.', hint:'This plays when the command is used.', fields:[{ id:'w_sound', type:'file', label:'Sound file', placeholder:'C:\\path\\to\\file.mp3', accept:'sound' },{ id:'w_volume', type:'volume', label:'Volume', default:80 }] }, ACCS];
+    if (key === 'videoalert') return [CMD, { id:'media', question:'Pick your video file.', hint:'This plays on stream when the command is used.', fields:[{ id:'w_gif', type:'videofile', label:'Video file', placeholder:'C:\\path\\to\\file.mp4', accept:'video' }] }, { id:'chroma', question:'Is it a green screen video?', hint:'Enable chroma key to remove the background colour.', fields: CHROMA_FIELDS }, TTS_WANT_STEP, OPTIONS_STEP_NOTTS, ACCS];
+    if (key === 'greenscreen') return [CMD, { id:'media', question:'Pick your green screen video.', hint:'The background will be removed automatically.', fields:[{ id:'w_gif', type:'videofile', label:'Video file', placeholder:'C:\\path\\to\\file.mp4', accept:'video' }] }, { id:'chroma', question:'Chroma key settings.', hint:'Dial in the colour removal so the background disappears cleanly.', fields:[{ id:'w_chromacolor', type:'color', label:'Background colour to remove', default:'#00ff00' },{ id:'w_chromathreshold', type:'slider', label:'Threshold — higher = removes more', min:0, max:100, default:40 }] }, OPTIONS_STEP_NOTTS, ACCS];
+    return [CMD];
+  }
+
+  function wizardOpen(key) {
+    _wizKey = null; _wizStep = 0; _wizData = {}; _wizSteps = [];
+    document.getElementById('wizardOverlay').style.display = 'flex';
+    const EVENT_KEYS = ['follow','sub','giftsub','cheer','raid','redeem','hype'];
+    if (key === 'mentions') { _wizKey = key; _wizStartFlow(key); return; }
+    if (key === 'ttsgif' || EVENT_KEYS.includes(key)) {
+      _wizKey = key;
+      _wizShowMediaTypePicker();
+    } else if (_WIZ_META[key]) { _wizStartFlow(key); }
+    else { _wizShowPicker(); }
+  }
+
+  function _wizShowPicker() {
+    _wizKey = null;
+    _wizSetHeader('⚡', '99,102,241', 'New Preset', 'What do you want to set up?');
+    document.getElementById('wizDots').innerHTML = '';
+    document.getElementById('wizBackBtn').style.display = 'none';
+    document.getElementById('wizNextBtn').style.display = 'none';
+    const vp = document.getElementById('wizViewport');
+    vp.innerHTML = '<div style="padding:20px 24px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;height:100%;">' +
+      Object.entries(_WIZ_META).map(([k,m]) =>
+        '<div onclick="_wizStartFlow(\'' + k + '\')" style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.background=\'rgba(255,255,255,0.08)\'" onmouseout="this.style.background=\'rgba(255,255,255,0.04)\'">' +
+        '<div style="width:40px;height:40px;border-radius:12px;background:rgba(' + m.color + ',0.15);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;">' + m.icon + '</div>' +
+        '<div><div style="font-size:14px;font-weight:600;color:#fff;">' + m.name + '</div><div style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:2px;">' + m.desc + '</div></div>' +
+        '<div style="margin-left:auto;color:rgba(255,255,255,0.2);font-size:16px;">›</div></div>'
+      ).join('') + '</div>';
+  }
+
+  function _wizShowMediaTypePicker() {
+    const m = _WIZ_META[_wizKey] || { icon:'⚡', color:'99,102,241', name:'Alert' };
+    _wizSetHeader(m.icon, m.color, m.name, 'Pick your media type');
+    document.getElementById('wizDots').innerHTML = '';
+    document.getElementById('wizBackBtn').style.display = 'none';
+    document.getElementById('wizNextBtn').style.display = 'none';
+    const vp = document.getElementById('wizViewport');
+    vp.innerHTML = '<div style="padding:24px;display:flex;flex-direction:column;gap:12px;">' +
+      '<div style="font-size:13px;color:rgba(255,255,255,0.4);margin-bottom:4px;">What kind of media do you want to display when this fires?</div>' +
+      '<div onclick="_wizPickMediaType(\'image\')" style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.background=\'rgba(255,255,255,0.08)\'" onmouseout="this.style.background=\'rgba(255,255,255,0.04)\'">' +
+      '<div style="font-size:1.8rem;">🖼</div><div><div style="font-size:14px;font-weight:600;color:#fff;">GIF or Image</div><div style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:2px;">PNG, JPG, GIF — great for animated reactions</div></div><div style="margin-left:auto;color:rgba(255,255,255,0.2);font-size:16px;">›</div></div>' +
+      '<div onclick="_wizPickMediaType(\'video\')" style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.background=\'rgba(255,255,255,0.08)\'" onmouseout="this.style.background=\'rgba(255,255,255,0.04)\'">' +
+      '<div style="font-size:1.8rem;">📹</div><div><div style="font-size:14px;font-weight:600;color:#fff;">Video</div><div style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:2px;">MP4 — supports green screen / chroma key</div></div><div style="margin-left:auto;color:rgba(255,255,255,0.2);font-size:16px;">›</div></div>' +
+      '<div onclick="_wizPickMediaType(\'none\')" style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.background=\'rgba(255,255,255,0.08)\'" onmouseout="this.style.background=\'rgba(255,255,255,0.04)\'">' +
+      '<div style="font-size:1.8rem;">🔊</div><div><div style="font-size:14px;font-weight:600;color:#fff;">TTS only — no media</div><div style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:2px;">Just the bot speaking, nothing on screen</div></div><div style="margin-left:auto;color:rgba(255,255,255,0.2);font-size:16px;">›</div></div>' +
+      '</div>';
+  }
+
+  function _wizPickMediaType(type) {
+    _wizStopVideoPreview();
+    _wizData.w_mediatype = type;
+    _wizStartFlow(_wizKey || 'ttsgif');
+  }
+
+  function _wizStartFlow(key) {
+    _wizKey = key; _wizStep = 0;
+    _wizTrimDragSetup = false;
+    _wizData = Object.assign({}, presetsConfig[key] || {}, { w_mediatype: _wizData.w_mediatype });
+    _wizColorStr = _WIZ_META[key].color;
+    _wizSteps = _wizBuildSteps(key, _wizData);
+    const m = _WIZ_META[key]; const saved = presetsConfig[key] || {};
+    _wizSetHeader(m.icon, m.color, m.name, _wizSteps.length + ' steps to set up');
+    document.getElementById('wizNextBtn').style.display = '';
+    const vp = document.getElementById('wizViewport');
+    vp.innerHTML = '<div id="wizSlides" style="display:flex;transition:transform 0.38s cubic-bezier(0.4,0,0.2,1);align-items:flex-start;height:100%;"></div>';
+    const slidesEl = document.getElementById('wizSlides');
+    _wizSteps.forEach(step => { const slide = document.createElement('div'); slide.className = 'wiz-step'; slide.innerHTML = _wizBuildSlide(step, saved); slidesEl.appendChild(slide); });
+    setTimeout(() => {
+      _wizUpdateDots(); _wizUpdateFooter();
+      ['wizMediaX','wizMediaY','wizMediaW','wizMediaH','wizTextX','wizTextY','wizTextMaxW','wizTextMaxH','wizTextSize'].forEach(id => {
+        const el = document.getElementById(id);
+        const k2 = id.replace('wiz','').replace('Media','media').replace('Text','text'); const k3 = k2.charAt(0).toLowerCase()+k2.slice(1);
+        if (el && saved[k3] !== undefined) el.value = saved[k3];
+      });
+      _wizMaybeStartVideoPreview();
+    }, 20);
+  }
+
+  function _wizSetHeader(icon, color, title, sub) {
+    const box = document.getElementById('wizardBox');
+    box.style.setProperty('--wiz-color', color); box.dataset['w_textmode'] = 'user';
+    document.getElementById('wizHeaderIcon').textContent = icon;
+    document.getElementById('wizHeaderIcon').style.background = 'rgba(' + color + ',0.15)';
+    document.getElementById('wizHeaderTitle').textContent = title;
+    document.getElementById('wizHeaderSub').textContent = sub;
+    _wizColorStr = color;
+  }
+
+  function _wizBuildSlide(step, saved) {
+    let h = `<div style="font-size:21px;font-weight:700;color:#fff;line-height:1.3;letter-spacing:-0.3px;">${step.question}</div>`;
+    if (step.hint) h += `<div style="font-size:12px;color:rgba(255,255,255,0.3);margin-top:-8px;line-height:1.6;">${step.hint}</div>`;
+    step.fields.forEach(f => {
+      const val = saved[f.id] !== undefined ? saved[f.id] : (f.default !== undefined ? f.default : '');
+      if (f.type === 'toggle') {
+        const checked = saved[f.id] !== undefined ? saved[f.id] : f.default;
+        h += `<label class="wiz-toggle-row" style="cursor:pointer;"><div><div class="wiz-toggle-title">${f.label}</div>${f.sub?`<div class="wiz-toggle-sub">${f.sub}</div>`:''}</div><label class="wiz-toggle" onclick="event.stopPropagation()"><input type="checkbox" id="${f.id}" ${checked?'checked':''}><span class="wiz-toggle-slider"></span></label></label>`;
+      } else if (f.type === 'radio') {
+        const v = saved[f.id] !== undefined ? saved[f.id] : f.default;
+        h += `<div><span class="wiz-label">${f.label}</span><div style="display:flex;flex-direction:column;gap:8px;">${f.options.map(o=>`<div style="display:flex;align-items:center;gap:14px;padding:12px 16px;background:rgba(255,255,255,0.04);border:1px solid ${v===o.value?`rgba(${_wizColorStr},0.4)`:'rgba(255,255,255,0.08)'};border-radius:12px;cursor:pointer;transition:all 0.15s;" id="wiz-radio-label-${f.id}-${o.value}" onclick="_wizRadioSelect('${f.id}','${o.value}','${_wizColorStr}')"><div style="width:18px;height:18px;border-radius:50%;border:2px solid ${v===o.value?`rgb(${_wizColorStr})`:'rgba(255,255,255,0.2)'};background:${v===o.value?`rgb(${_wizColorStr})`:'transparent'};flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.15s;" id="wiz-radio-dot-${f.id}-${o.value}">${v===o.value?`<div style="width:7px;height:7px;border-radius:50%;background:#fff;"></div>`:''}</div><div><div style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.85);">${o.label}</div>${o.sub?`<div style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:2px;">${o.sub}</div>`:''}</div></div>`).join('')}</div></div>`;
+      } else if (f.type === 'videofile') {
+        h += `<div><span class="wiz-label">${f.label}</span><div class="wiz-file-row"><input type="text" id="${f.id}" class="wiz-input" placeholder="${f.placeholder}" value="${val}" oninput="_wizVideoPathChanged('${f.id}',this.value)"><button class="wiz-browse" onclick="_wizBrowse('${f.id}','video')">Browse</button></div>
+          <div id="wiz-video-preview-wrap" style="display:${val?'block':'none'};margin-top:10px;background:#000;border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);">
+            <video id="wiz-video-preview" src="${val?'http://localhost:3000/api/localfile?path='+encodeURIComponent(val):''}" preload="auto" style="width:100%;max-height:160px;display:block;" playsinline></video>
+            <div style="padding:10px 12px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><span style="font-size:11px;color:rgba(255,255,255,0.4);">Trim</span><span id="wiz-video-dur-label" style="font-size:11px;color:rgba(99,102,241,0.8);">Duration: --</span></div>
+              <div id="wiz-video-slider-wrap" style="position:relative;height:20px;margin-bottom:8px;">
+                <div style="position:absolute;top:50%;left:0;right:0;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;transform:translateY(-50%);"></div>
+                <div id="wiz-video-range-bar" style="position:absolute;top:50%;height:4px;background:rgb(99,102,241);border-radius:2px;transform:translateY(-50%);left:0%;width:100%;"></div>
+                <div id="wiz-video-playhead" style="position:absolute;top:0;bottom:0;width:2px;background:#fff;border-radius:1px;transform:translateX(-50%);left:0%;pointer-events:none;opacity:0.9;"></div>
+                <div id="wiz-video-handle-start" style="position:absolute;top:50%;width:14px;height:14px;background:#fff;border-radius:50%;transform:translate(-50%,-50%);cursor:pointer;left:0%;box-shadow:0 1px 4px rgba(0,0,0,0.5);z-index:2;"></div>
+                <div id="wiz-video-handle-end" style="position:absolute;top:50%;width:14px;height:14px;background:#fff;border-radius:50%;transform:translate(-50%,-50%);cursor:pointer;left:100%;box-shadow:0 1px 4px rgba(0,0,0,0.5);z-index:2;"></div>
+              </div>
+              <div style="display:flex;gap:8px;">
+                <div style="flex:1;"><label style="font-size:10px;color:rgba(255,255,255,0.3);display:block;margin-bottom:3px;">Start (s)</label><input type="number" id="wiz-video-start" class="wiz-input" value="0" min="0" step="0.1" style="padding:6px 10px;font-size:12px;"></div>
+                <div style="flex:1;"><label style="font-size:10px;color:rgba(255,255,255,0.3);display:block;margin-bottom:3px;">End (s)</label><input type="number" id="wiz-video-end" class="wiz-input" value="0" min="0" step="0.1" style="padding:6px 10px;font-size:12px;"></div>
+              </div>
+            </div>
+          </div></div>`;
+        if (!_wizTrimDragSetup) { _wizTrimDragSetup = true; setTimeout(_wizSetupVideoTrimDrag, 50); }
+      } else if (f.type === 'customize') {
+        const innerFields = f.fields.map(cf => {
+          const cv = saved[cf.id] !== undefined ? saved[cf.id] : (cf.default !== undefined ? cf.default : '');
+          return `<div><span class="wiz-label">${cf.label}</span><input type="number" id="${cf.id}" class="wiz-input" placeholder="${cf.placeholder||''}" value="${cv}" style="padding:10px 14px;font-size:14px;"></div>`;
+        }).join('');
+        h += `<div id="wiz-customize-wrap">
+          <button type="button" onclick="_wizToggleCustomize()" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px 16px;cursor:pointer;width:100%;color:rgba(255,255,255,0.5);font-size:13px;font-family:Inter,sans-serif;transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.07)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">
+            <span id="wiz-customize-arrow" style="font-size:10px;transition:transform 0.2s;">▶</span>
+            <span>${f.label}</span>
+          </button>
+          <div id="wiz-customize-panel" style="display:none;flex-direction:column;gap:12px;padding:14px 4px 4px;">${innerFields}</div>
+        </div>`;
+      } else if (f.type === 'file') {
+        h += `<div><span class="wiz-label">${f.label}</span><div class="wiz-file-row"><input type="text" id="${f.id}" class="wiz-input" placeholder="${f.placeholder}" value="${val}"><button class="wiz-browse" onclick="_wizBrowse('${f.id}','${f.accept||'image'}')">Browse</button></div></div>`;
+      } else if (f.type === 'number') {
+        h += `<div><span class="wiz-label">${f.label}</span><input type="number" id="${f.id}" class="wiz-input" placeholder="${f.placeholder}" value="${val}"></div>`;
+      } else if (f.type === 'voice') {
+        h += `<div style="position:relative;"><span class="wiz-label">${f.label}</span><div id="wiz-voice-box" class="wiz-input" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;font-size:13px;" onclick="_wizVoiceToggle()"><span id="wiz-voice-label">Loading voices...</span><span style="color:rgba(255,255,255,0.3);font-size:10px;">▾</span></div><div id="wiz-voice-dropdown" style="display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);background:#1c1c1e;border:1px solid rgba(255,255,255,0.12);border-radius:12px;z-index:9999;max-height:220px;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.5);"></div><input type="hidden" id="${f.id}" value="${saved[f.id]||''}"></div>`;
+      } else if (f.type === 'volume') {
+        const v2 = saved[f.id] !== undefined ? saved[f.id] : (f.default || 80);
+        h += `<div><span class="wiz-label">${f.label}</span><div style="display:flex;align-items:center;gap:12px;"><input type="range" id="${f.id}" min="0" max="100" value="${v2}" style="-webkit-appearance:none;flex:1;height:4px;background:rgba(255,255,255,0.12);border-radius:2px;outline:none;cursor:pointer;accent-color:rgb(${_wizColorStr});" oninput="document.getElementById('${f.id}-val').textContent=this.value+'%'"><span id="${f.id}-val" style="font-size:12px;color:rgba(255,255,255,0.4);min-width:36px;text-align:right;">${v2}%</span></div></div>`;
+      } else if (f.type === 'color') {
+        const cv = saved[f.id] !== undefined ? saved[f.id] : (f.default || '#00ff00');
+        h += `<div><span class="wiz-label">${f.label}</span><div style="display:flex;align-items:center;gap:12px;"><input type="color" id="${f.id}" value="${cv}" style="width:48px;height:38px;padding:2px;cursor:pointer;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:none;flex-shrink:0;"><span style="font-size:12px;color:rgba(255,255,255,0.3);">Click to pick colour</span></div></div>`;
+      } else if (f.type === 'slider') {
+        const sv = saved[f.id] !== undefined ? saved[f.id] : (f.default || 40);
+        h += `<div><span class="wiz-label">${f.label}</span><div style="display:flex;align-items:center;gap:12px;"><input type="range" id="${f.id}" min="${f.min||0}" max="${f.max||100}" value="${sv}" style="-webkit-appearance:none;flex:1;height:4px;background:rgba(255,255,255,0.12);border-radius:2px;outline:none;cursor:pointer;accent-color:rgb(${_wizColorStr});" oninput="document.getElementById('${f.id}-val').textContent=this.value"><span id="${f.id}-val" style="font-size:12px;color:rgba(255,255,255,0.4);min-width:28px;text-align:right;">${sv}</span></div></div>`;
+      } else if (f.type === 'fixedtext') {
+        const modeVal = document.getElementById('wizardBox') ? (document.getElementById('wizardBox').dataset['w_textmode'] || 'user') : 'user';
+        h += `<div id="wiz-text-wrap" style="display:${modeVal==='fixed'?'block':'none'}"><span class="wiz-label">${f.label}</span><input type="text" id="${f.id}" class="wiz-input" placeholder="${f.placeholder||''}" value="${val}" oninput="_wizTextLiveUpdate()"></div>`;
+      } else if (f.type === 'textarea') {
+        h += `<div><span class="wiz-label">${f.label}</span><textarea id="${f.id}" class="wiz-input" rows="4" style="resize:vertical;min-height:90px;" placeholder="${f.placeholder||''}">${(val||'').replace(/</g,'&lt;')}</textarea></div>`;
+      } else if (f.type === 'textarea') {
+        h += `<div><span class="wiz-label">${f.label}</span><textarea id="${f.id}" class="wiz-input" rows="4" style="resize:vertical;min-height:90px;" placeholder="${f.placeholder||''}">${(val||'').replace(/</g,'&lt;')}</textarea></div>`;
+      } else {
+        h += `<div><span class="wiz-label">${f.label}</span><input type="text" id="${f.id}" class="wiz-input" placeholder="${f.placeholder||''}" value="${val}" oninput="_wizTextLiveUpdate()"></div>`;
+      }
+    });
+    if (step.canvas) {
+      h += `<div><span class="wiz-label">Preview — drag to reposition · corner handle to resize · slider to change text size</span>
+        <div style="display:flex;align-items:stretch;gap:10px;">
+          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;flex-shrink:0;">
+            <span style="font-size:9px;color:rgba(255,255,255,0.25);letter-spacing:1px;">BIG</span>
+            <input type="range" id="wizFontSlider" min="8" max="200" value="48" orient="vertical" style="-webkit-appearance:slider-vertical;writing-mode:vertical-lr;direction:rtl;width:24px;height:140px;cursor:pointer;accent-color:rgb(99,102,241);" oninput="_wizFontSliderChange(this.value)">
+            <span style="font-size:9px;color:rgba(255,255,255,0.25);letter-spacing:1px;">SML</span>
+          </div>
+          <div id="wizCanvas" style="position:relative;flex:1;background:#111;border:1px solid var(--border);border-radius:6px;overflow:hidden;user-select:none;">
+            <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 10%,rgba(255,255,255,0.018) 10%,rgba(255,255,255,0.018) 10.5%),repeating-linear-gradient(90deg,transparent,transparent 17.7%,rgba(255,255,255,0.018) 17.7%,rgba(255,255,255,0.018) 18.2%);pointer-events:none;"></div>
+            <div id="wizMediaBox" style="display:none;position:absolute;left:10%;top:10%;width:40%;height:40%;cursor:grab;border:2px dashed rgba(99,102,241,0.7);border-radius:4px;background:rgba(99,102,241,0.08);align-items:center;justify-content:center;min-width:20px;min-height:12px;box-sizing:border-box;">
+              <span style="font-size:10px;color:rgba(99,102,241,0.9);font-weight:600;letter-spacing:0.5px;pointer-events:none;">GIF</span>
+              <div id="wizMediaResize" style="position:absolute;bottom:-5px;right:-5px;width:12px;height:12px;background:rgb(99,102,241);border-radius:3px;cursor:se-resize;z-index:2;"></div>
+            </div>
+            <div id="wizTextBox" style="position:absolute;cursor:grab;min-width:32px;min-height:12px;overflow:hidden;border:1px dashed rgba(99,102,241,0.45);border-radius:3px;box-sizing:border-box;">
+              <div id="wizTextPreview" style="font-family:Arial;font-size:14px;color:rgba(255,255,255,0.4);font-style:italic;text-shadow:1px 1px 4px rgba(0,0,0,0.8);white-space:pre-wrap;word-break:break-word;line-height:1.25;pointer-events:none;box-sizing:border-box;width:100%;padding:2px 4px;overflow:hidden;">{message}</div>
+              <div id="wizTextResize" style="position:absolute;bottom:-5px;right:-5px;width:14px;height:14px;background:rgb(99,102,241);border-radius:3px;cursor:se-resize;z-index:2;"></div>
+            </div>
+          </div>
+        </div></div>`;
+    }
+    return h;
+  }
+
+  function _wizRadioSelect(fieldId, value, colorStr) {
+    document.getElementById('wizardBox').dataset[fieldId] = value;
+    ['user','fixed','yes','no','everyone','subscriber','moderator'].forEach(o => {
+      const lbl = document.getElementById(`wiz-radio-label-${fieldId}-${o}`);
+      const dot = document.getElementById(`wiz-radio-dot-${fieldId}-${o}`);
+      if (!lbl || !dot) return;
+      const active = o === value;
+      lbl.style.borderColor = active ? `rgba(${colorStr},0.4)` : 'rgba(255,255,255,0.08)';
+      dot.style.borderColor = active ? `rgb(${colorStr})` : 'rgba(255,255,255,0.2)';
+      dot.style.background  = active ? `rgb(${colorStr})` : 'transparent';
+      dot.innerHTML = active ? `<div style="width:7px;height:7px;border-radius:50%;background:#fff;"></div>` : '';
+    });
+    const wrap = document.getElementById('wiz-text-wrap');
+    if (wrap && fieldId === 'w_textmode') wrap.style.display = value === 'fixed' ? '' : 'none';
+    const prev = document.getElementById('wizTextPreview');
+    if (prev && fieldId === 'w_textmode') {
+      if (value === 'user') { prev.textContent = '{message}'; prev.style.color = 'rgba(255,255,255,0.4)'; prev.style.fontStyle = 'italic'; }
+      else { const inp = document.getElementById('w_text'); prev.textContent = inp ? (inp.value || 'HYPE!') : 'HYPE!'; prev.style.color = '#fff'; prev.style.fontStyle = 'normal'; }
+    }
+  }
+
+  async function _wizBrowse(fieldId, type) {
+    try {
+      const r = await fetch('/api/overlay/browse?type=' + type);
+      const d = await r.json();
+      if (!d.path) return;
+      document.getElementById(fieldId).value = d.path;
+      if (type === 'video') { _wizInitVideoPreview(d.path); }
+      else { const mb = document.getElementById('wizMediaBox'); if (mb) mb.style.display = 'flex'; _wizUpdateCanvasBoxes(); }
+    } catch(e) {}
+  }
+
+  function _wizVideoPathChanged(fieldId, path) {
+    if (!path) return;
+    const ext = path.split('.').pop().toLowerCase();
+    if (['mp4','webm','mov','avi','mkv'].includes(ext)) _wizInitVideoPreview(path);
+  }
+
+  let _wizVideoDur = 0, _wizVideoLoopTimer = null, _wizTrimDragSetup = false;
+
+  function _wizStopVideoPreview() {
+    if (_wizVideoLoopTimer) { clearInterval(_wizVideoLoopTimer); _wizVideoLoopTimer = null; }
+    const vid = document.getElementById('wiz-video-preview');
+    if (vid) { vid.pause(); }
+  }
+
+  function _wizMaybeStartVideoPreview() {
+    if (!_wizSteps.length) return;
+    const step = _wizSteps[_wizStep];
+    if (!step || !step.fields) return;
+    // Stop video if not on a video step
+    if (!step.fields.some(f => f.type === 'videofile')) {
+      _wizStopVideoPreview();
+    } else {
+      const pathEl = document.getElementById('w_gif');
+      if (pathEl && pathEl.value) setTimeout(() => _wizInitVideoPreview(pathEl.value), 50);
+    }
+    // Load voices if this step has a voice field
+    if (step.fields.some(f => f.type === 'voice')) {
+      setTimeout(_wizLoadVoices, 100);
+    }
+  }
+
+  function _wizInitVideoPreview(path) {
+    const wrap = document.getElementById('wiz-video-preview-wrap');
+    const vid  = document.getElementById('wiz-video-preview');
+    if (!wrap || !vid) return;
+    _wizStopVideoPreview();
+    wrap.style.display = 'block';
+    vid.src = 'http://localhost:3000/api/localfile?path=' + encodeURIComponent(path);
+    vid.onloadedmetadata = () => {
+      _wizVideoDur = vid.duration;
+      document.getElementById('wiz-video-dur-label').textContent = 'Duration: ' + vid.duration.toFixed(1) + 's';
+      document.getElementById('wiz-video-start').value = '0';
+      document.getElementById('wiz-video-end').value = vid.duration.toFixed(1);
+      _wizVideoUpdateSlider();
+      vid.currentTime = 0; vid.play().catch(() => {});
+      if (_wizVideoLoopTimer) clearInterval(_wizVideoLoopTimer);
+      _wizVideoLoopTimer = setInterval(() => {
+        const s = parseFloat(document.getElementById('wiz-video-start')?.value) || 0;
+        const e = parseFloat(document.getElementById('wiz-video-end')?.value) || _wizVideoDur;
+        const ph = document.getElementById('wiz-video-playhead');
+        if (ph && _wizVideoDur > 0) ph.style.left = (vid.currentTime / _wizVideoDur * 100) + '%';
+        if (!vid.paused && vid.currentTime >= e - 0.05) { vid.currentTime = s; vid.play().catch(() => {}); }
+      }, 50);
+    };
+  }
+
+  function _wizVideoUpdateSlider() {
+    const dur = _wizVideoDur; if (!dur) return;
+    const s = parseFloat(document.getElementById('wiz-video-start')?.value) || 0;
+    const e = parseFloat(document.getElementById('wiz-video-end')?.value) || dur;
+    const sp = (s/dur)*100, ep = (e/dur)*100;
+    const hs = document.getElementById('wiz-video-handle-start');
+    const he = document.getElementById('wiz-video-handle-end');
+    const rb = document.getElementById('wiz-video-range-bar');
+    if (hs) hs.style.left = sp + '%';
+    if (he) he.style.left = ep + '%';
+    if (rb) { rb.style.left = sp + '%'; rb.style.width = (ep-sp) + '%'; }
+  }
+
+  function _wizSetupVideoTrimDrag() {
+    let drag = null;
+    document.addEventListener('mousedown', (e) => {
+      if (e.target.id === 'wiz-video-handle-start') { drag = 'start'; e.preventDefault(); }
+      else if (e.target.id === 'wiz-video-handle-end') { drag = 'end'; e.preventDefault(); }
+    });
+    document.addEventListener('mousemove', (e) => {
+      if (!drag || !_wizVideoDur) return;
+      const wrap = document.getElementById('wiz-video-slider-wrap'); if (!wrap) return;
+      const rect = wrap.getBoundingClientRect();
+      const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      const t = pct * _wizVideoDur;
+      const vid = document.getElementById('wiz-video-preview');
+      if (drag === 'start') {
+        const end = parseFloat(document.getElementById('wiz-video-end')?.value) || _wizVideoDur;
+        document.getElementById('wiz-video-start').value = Math.min(t, end - 0.1).toFixed(1);
+        if (vid) vid.currentTime = t;
+      } else {
+        const start = parseFloat(document.getElementById('wiz-video-start')?.value) || 0;
+        document.getElementById('wiz-video-end').value = Math.max(Math.min(t, _wizVideoDur), start + 0.1).toFixed(1);
+        if (vid) vid.currentTime = t;
+      }
+      _wizVideoUpdateSlider();
+    });
+    document.addEventListener('mouseup', () => { drag = null; });
+  }
+
+  function _wizToggleCustomize() {
+    const panel = document.getElementById('wiz-customize-panel');
+    const arrow = document.getElementById('wiz-customize-arrow');
+    if (!panel) return;
+    const open = panel.style.display === 'flex';
+    panel.style.display = open ? 'none' : 'flex';
+    if (arrow) arrow.style.transform = open ? '' : 'rotate(90deg)';
+  }
+
+  function _wizVoiceToggle() {
+    const dd = document.getElementById('wiz-voice-dropdown');
+    if (dd) dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+  }
+
+  function _wizVoiceSelect(value, label) {
+    const inp = document.getElementById('w_voice');
+    const lbl = document.getElementById('wiz-voice-label');
+    const dd = document.getElementById('wiz-voice-dropdown');
+    if (inp) inp.value = value;
+    if (lbl) { lbl.textContent = label; lbl.style.color = '#fff'; }
+    if (dd) dd.style.display = 'none';
+  }
+
+  document.addEventListener('click', (e) => {
+    const box = document.getElementById('wiz-voice-box');
+    const dd = document.getElementById('wiz-voice-dropdown');
+    if (dd && box && !box.contains(e.target) && !dd.contains(e.target)) dd.style.display = 'none';
+  });
+
+  async function _wizLoadVoices() {
+    const dd = document.getElementById('wiz-voice-dropdown');
+    if (!dd) return;
+    const savedVal = (presetsConfig[_wizKey] || {}).w_voice || _wizData.w_voice || '';
+    const itemStyle = 'padding:10px 14px;font-size:13px;color:rgba(255,255,255,0.8);cursor:pointer;transition:background 0.1s;';
+    const groupStyle = 'padding:6px 14px 4px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.25);border-top:1px solid rgba(255,255,255,0.06);margin-top:4px;';
+    async function build() {
+      let html = `<div style="${itemStyle}" onmouseover="this.style.background='rgba(255,255,255,0.07)'" onmouseout="this.style.background=''" onclick="_wizVoiceSelect('','Default voice (Windows)')">Default voice (Windows)</div>`;
+      let total = 0;
+      try { const r = await fetch('/api/text-overlay/voices'); const d = await r.json(); if ((d.voices||[]).length) { total += d.voices.length; html += `<div style="${groupStyle}">Windows Voices</div>`; d.voices.forEach(v => { const lbl = v.name+(v.lang?` (${v.lang})`:''); const val = 'win:'+v.name; html += `<div style="${itemStyle}" onmouseover="this.style.background='rgba(255,255,255,0.07)'" onmouseout="this.style.background=''" onclick="_wizVoiceSelect('${val.replace(/'/g,"\\'")}','${lbl.replace(/'/g,"\\'")}')"> ${lbl}</div>`; }); } } catch(e) {}
+      try { const r2 = await fetch('/api/tts/monster-voices'); const d2 = await r2.json(); const all=[...(d2.voices||[]),...(d2.customVoices||[])]; if (all.length) { total += all.length; html += `<div style="${groupStyle}">TTS Monster Voices</div>`; all.forEach(v => { const lbl = v.name+(v.metadata?' — '+v.metadata:''); const val = 'ttsm:'+v.voice_id; html += `<div style="${itemStyle}" onmouseover="this.style.background='rgba(255,255,255,0.07)'" onmouseout="this.style.background=''" onclick="_wizVoiceSelect('${val.replace(/'/g,"\\'")}','${lbl.replace(/'/g,"\\'")}')"> ${lbl}</div>`; }); } } catch(e) {}
+      return { html, total };
+    }
+    const { html, total } = await build();
+    const ddEl = document.getElementById('wiz-voice-dropdown');
+    const lblEl = document.getElementById('wiz-voice-label');
+    if (!ddEl) return;
+    ddEl.innerHTML = html;
+    if (lblEl && !savedVal) lblEl.textContent = 'Default voice (Windows)';
+    if (total === 0) setTimeout(async () => { const { html: h2 } = await build(); const d2 = document.getElementById('wiz-voice-dropdown'); if (d2) d2.innerHTML = h2; _wizRestoreVoice(savedVal); }, 1500);
+    else _wizRestoreVoice(savedVal);
+  }
+
+  function _wizRestoreVoice(savedVal) {
+    const lbl = document.getElementById('wiz-voice-label');
+    const inp = document.getElementById('w_voice');
+    if (!lbl || !savedVal) return;
+    const dd = document.getElementById('wiz-voice-dropdown');
+    if (dd) dd.querySelectorAll('div[onclick]').forEach(item => { if (item.getAttribute('onclick').includes(savedVal.replace(/'/g,"\\'"))) lbl.textContent = item.textContent.trim(); });
+    if (inp) inp.value = savedVal;
+  }
+
+  // Wizard canvas
+  const _WIZ_SW = 1920, _WIZ_SH = 1080;
+
+  function _wizInitCanvas() {
+    const c = document.getElementById('wizCanvas');
+    if (!c) return;
+    const w = c.offsetWidth;
+    if (w > 0) c.style.height = Math.round(w * 9 / 16) + 'px';
+    const gifVal = document.getElementById('w_gif');
+    const mb = document.getElementById('wizMediaBox');
+    if (mb && gifVal && gifVal.value) mb.style.display = 'flex';
+    const modeVal = document.getElementById('wizardBox').dataset['w_textmode'] || 'user';
+    const wrap = document.getElementById('wiz-text-wrap');
+    if (wrap) wrap.style.display = modeVal === 'user' ? 'none' : '';
+    const slider = document.getElementById('wizFontSlider');
+    if (slider) slider.value = document.getElementById('wizTextSize').value || 48;
+    _wizLoadVoices();
+    _wizUpdateCanvasBoxes();
+    _wizTextLiveUpdate();
+  }
+
+  function _wizUpdateCanvasBoxes() {
+    const c = document.getElementById('wizCanvas');
+    if (!c) return;
+    const cw = c.offsetWidth || 1, ch = c.offsetHeight || 1;
+    const mb = document.getElementById('wizMediaBox');
+    if (mb) { const mx=parseFloat(document.getElementById('wizMediaX').value)||0,my=parseFloat(document.getElementById('wizMediaY').value)||0,mw=parseFloat(document.getElementById('wizMediaW').value)||960,mh=parseFloat(document.getElementById('wizMediaH').value)||540; mb.style.left=(mx/_WIZ_SW*cw)+'px';mb.style.top=(my/_WIZ_SH*ch)+'px';mb.style.width=Math.max(12,mw/_WIZ_SW*cw)+'px';mb.style.height=Math.max(8,mh/_WIZ_SH*ch)+'px'; }
+    const tb=document.getElementById('wizTextBox'),tp=document.getElementById('wizTextPreview');
+    if (tb&&tp) { const tx=parseFloat(document.getElementById('wizTextX').value)||100,ty=parseFloat(document.getElementById('wizTextY').value)||400,tmw=parseFloat(document.getElementById('wizTextMaxW').value)||800,tmh=parseFloat(document.getElementById('wizTextMaxH').value)||200,tsz=parseFloat(document.getElementById('wizTextSize').value)||48; tb.style.left=(tx/_WIZ_SW*cw)+'px';tb.style.top=(ty/_WIZ_SH*ch)+'px';tb.style.width=Math.max(20,tmw/_WIZ_SW*cw)+'px';const boxH=Math.max(12,tmh/_WIZ_SH*ch);tb.style.height=boxH+'px';let sf=Math.max(4,tsz*(ch/_WIZ_SH));tp.style.fontSize=sf+'px';while(tp.scrollHeight>boxH&&sf>4){sf-=0.5;tp.style.fontSize=sf+'px';} }
+  }
+
+  function _wizFontSliderChange(val) {
+    document.getElementById('wizTextSize').value = val;
+    const c=document.getElementById('wizCanvas'),tb=document.getElementById('wizTextBox'),tp=document.getElementById('wizTextPreview');
+    if (!c||!tb||!tp) return;
+    const ch=c.offsetHeight||1,boxH=tb.offsetHeight||20;
+    let sf=Math.max(4,parseFloat(val)*(ch/_WIZ_SH));
+    tp.style.fontSize=sf+'px';
+    while(tp.scrollHeight>boxH&&sf>4){sf-=0.5;tp.style.fontSize=sf+'px';}
+  }
+
+  function _wizTextLiveUpdate() {
+    const modeVal = document.getElementById('wizardBox').dataset['w_textmode'] || 'user';
+    const inp = document.getElementById('w_text'), prev = document.getElementById('wizTextPreview');
+    if (prev) { if (modeVal==='user'){prev.textContent='{message}';prev.style.color='rgba(255,255,255,0.4)';prev.style.fontStyle='italic';} else{prev.textContent=inp?(inp.value||'HYPE!'):'HYPE!';prev.style.color='#fff';prev.style.fontStyle='normal';} }
+    _wizUpdateCanvasBoxes();
+  }
+
+  // Wizard canvas drag
+  let _wizDMode=null,_wizDTarget=null,_wizDSX,_wizDSY,_wizDSL,_wizDST,_wizDSW,_wizDSH,_wizDSFS;
+  document.addEventListener('mousedown',(e)=>{
+    const id=e.target.id;
+    if(id==='wizMediaResize'){_wizDMode='resize';_wizDTarget='media';}
+    else if(id==='wizMediaBox'||(document.getElementById('wizMediaBox')&&document.getElementById('wizMediaBox').contains(e.target)&&id!=='wizMediaResize')){_wizDMode='move';_wizDTarget='media';}
+    else if(id==='wizTextResize'){_wizDMode='resize';_wizDTarget='text';}
+    else if(id==='wizTextBox'||(document.getElementById('wizTextBox')&&document.getElementById('wizTextBox').contains(e.target)&&id!=='wizTextResize')){_wizDMode='move';_wizDTarget='text';}
+    else return;
+    e.preventDefault();
+    _wizDSX=e.clientX;_wizDSY=e.clientY;
+    const el=document.getElementById(_wizDTarget==='media'?'wizMediaBox':'wizTextBox');
+    if(el){_wizDSL=parseFloat(el.style.left)||0;_wizDST=parseFloat(el.style.top)||0;_wizDSW=el.offsetWidth;_wizDSH=el.offsetHeight;}
+    _wizDSFS=parseFloat(document.getElementById('wizTextSize').value)||48;
+  });
+  document.addEventListener('mousemove',(e)=>{
+    if(!_wizDMode)return;
+    const c=document.getElementById('wizCanvas');if(!c)return;
+    const cw=c.offsetWidth,ch=c.offsetHeight,dx=e.clientX-_wizDSX,dy=e.clientY-_wizDSY;
+    if(_wizDTarget==='media'){const mb=document.getElementById('wizMediaBox');if(!mb)return;if(_wizDMode==='move'){const nl=Math.max(0,Math.min(cw-mb.offsetWidth,_wizDSL+dx)),nt=Math.max(0,Math.min(ch-mb.offsetHeight,_wizDST+dy));mb.style.left=nl+'px';mb.style.top=nt+'px';mb.style.cursor='grabbing';document.getElementById('wizMediaX').value=Math.round(nl/cw*_WIZ_SW);document.getElementById('wizMediaY').value=Math.round(nt/ch*_WIZ_SH);}else{const nw=Math.max(12,_wizDSW+dx),nh=Math.max(8,_wizDSH+dy);mb.style.width=nw+'px';mb.style.height=nh+'px';document.getElementById('wizMediaW').value=Math.round(nw/cw*_WIZ_SW);document.getElementById('wizMediaH').value=Math.round(nh/ch*_WIZ_SH);}}
+    else if(_wizDTarget==='text'){const tb=document.getElementById('wizTextBox'),tp=document.getElementById('wizTextPreview');if(!tb)return;if(_wizDMode==='move'){const nl=Math.max(0,Math.min(cw-tb.offsetWidth,_wizDSL+dx)),nt=Math.max(0,Math.min(ch-10,_wizDST+dy));tb.style.left=nl+'px';tb.style.top=nt+'px';tb.style.cursor='grabbing';document.getElementById('wizTextX').value=Math.round(nl/cw*_WIZ_SW);document.getElementById('wizTextY').value=Math.round(nt/ch*_WIZ_SH);}else{const nw=Math.max(40,_wizDSW+dx),nh=Math.max(16,_wizDSH+dy);tb.style.width=nw+'px';tb.style.height=nh+'px';document.getElementById('wizTextMaxW').value=Math.round(nw/cw*_WIZ_SW);document.getElementById('wizTextMaxH').value=Math.round(nh/ch*_WIZ_SH);if(tp){let sf=Math.max(4,_wizDSFS*(ch/_WIZ_SH));tp.style.fontSize=sf+'px';while(tp.scrollHeight>nh&&sf>4){sf-=0.5;tp.style.fontSize=sf+'px';}}}}
+  });
+  document.addEventListener('mouseup',()=>{if(_wizDMode==='move'){const el=document.getElementById(_wizDTarget==='media'?'wizMediaBox':'wizTextBox');if(el)el.style.cursor='grab';}
+  _wizDMode=null;_wizDTarget=null;});
+
+  document.addEventListener('wheel',(e)=>{
+    const c=document.getElementById('wizCanvas');if(!c)return;
+    const rect=c.getBoundingClientRect();if(e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom)return;
+    e.preventDefault();
+    const tb=document.getElementById('wizTextBox'),tp=document.getElementById('wizTextPreview');if(!tb||!tp)return;
+    const ch=c.offsetHeight||1,curH=tb.offsetHeight||20,newH=Math.max(16,Math.min(ch,curH+(e.deltaY<0?4:-4)));
+    tb.style.height=newH+'px';document.getElementById('wizTextMaxH').value=Math.round(newH/ch*_WIZ_SH);
+    const baseSz=parseFloat(document.getElementById('wizTextSize').value)||48;let sf=Math.max(4,baseSz*(ch/_WIZ_SH));tp.style.fontSize=sf+'px';while(tp.scrollHeight>newH&&sf>4){sf-=0.5;tp.style.fontSize=sf+'px';}
+  },{passive:false});
+
+  function _wizUpdateDots() {
+    if(!_wizSteps.length){document.getElementById('wizDots').innerHTML='';return;}
+    document.getElementById('wizDots').innerHTML = _wizSteps.map((_,i)=>{const active=i===_wizStep,done=i<_wizStep;return `<div style="height:7px;border-radius:4px;transition:all 0.3s cubic-bezier(0.4,0,0.2,1);width:${active?24:7}px;background:${active?`rgb(${_wizColorStr})`:done?`rgba(${_wizColorStr},0.4)`:'rgba(255,255,255,0.1)'};"></div>`;}).join('');
+  }
+
+  function _wizUpdateFooter() {
+    const last=_wizStep===_wizSteps.length-1;
+    const back=document.getElementById('wizBackBtn'),next=document.getElementById('wizNextBtn');
+    back.style.display='';
+    next.textContent=last?'✓  Finish':'Next  →';
+    next.style.background=`rgb(${_wizColorStr})`;next.style.boxShadow=`0 4px 20px rgba(${_wizColorStr},0.35)`;
+  }
+
+  function _wizCollect() {
+    if (!_wizSteps.length) return;
+    const step = _wizSteps[_wizStep];
+    step.fields.forEach(f => {
+      if (f.type === 'toggle') { const el=document.getElementById(f.id); if(el) _wizData[f.id]=el.checked; }
+      else if (f.type === 'radio') { _wizData[f.id]=document.getElementById('wizardBox').dataset[f.id]||f.default; }
+      else if (f.type === 'videofile') {
+        const el=document.getElementById(f.id); if(el) _wizData[f.id]=el.value;
+        const vs=document.getElementById('wiz-video-start'), ve=document.getElementById('wiz-video-end');
+        if(vs) _wizData.w_videoStart=parseFloat(vs.value)||0;
+        if(ve) _wizData.w_videoEnd=parseFloat(ve.value)||0;
+      }
+      else if (f.type === 'customize') { f.fields.forEach(cf => { const el=document.getElementById(cf.id); if(el) _wizData[cf.id]=el.value; }); }
+      else { const el=document.getElementById(f.id); if(el) _wizData[f.id]=el.value; }
+    });
+  }
+
+  function _wizSlide() {
+    const vp=document.getElementById('wizViewport'),slides=document.getElementById('wizSlides');
+    if (!slides) return;
+    slides.style.transition='transform 0.38s cubic-bezier(0.4,0,0.2,1)';
+    slides.style.transform=`translateX(-${_wizStep*100}%)`;
+    if(vp)vp.scrollTop=0;
+  }
+
+  function wizNext() {
+    _wizCollect();
+    _wizStopVideoPreview();
+    if(_wizStep===_wizSteps.length-1){_wizFinish();return;}
+    _wizStep++;_wizSlide();_wizUpdateDots();_wizUpdateFooter();
+    if(_wizSteps[_wizStep].canvas)setTimeout(()=>{_wizInitCanvas();},420);
+    setTimeout(_wizMaybeStartVideoPreview, 450);
+  }
+
+  function wizPrev() {
+    if(_wizStep===0) {
+      _wizStopVideoPreview();
+      if(_wizKey==='ttsgif') { _wizShowMediaTypePicker(); return; }
+      _wizShowPicker(); return;
+    }
+    _wizStep--;_wizSlide();_wizUpdateDots();_wizUpdateFooter();
+    setTimeout(_wizMaybeStartVideoPreview, 450);
+  }
+
+  function wizardClose() {
+    _wizStopVideoPreview();
+    document.getElementById('wizardOverlay').style.display='none';
+    _wizKey=null;_wizStep=0;_wizData={};_wizSteps=[];
+    const vp=document.getElementById('wizViewport');
+    if(vp) vp.innerHTML='<div id="wizSlides" style="display:flex;transition:transform 0.38s cubic-bezier(0.4,0,0.2,1);align-items:flex-start;height:100%;"></div>';
+    document.getElementById('wizNextBtn').style.display='';
+    document.getElementById('wizBackBtn').style.display='none';
+    document.getElementById('wizDots').innerHTML='';
+  }
+
+  async function _wizFinish() {
+    if(!_wizKey)return;
+    _wizCollect();
+    const _g = id => { const el=document.getElementById(id); return el?el.value:null; };
+    const hasCanvasStep = _wizSteps.some(s => s.canvas);
+    if (hasCanvasStep) {
+      _wizData.mediaX=parseInt(_g('wizMediaX'))||0; _wizData.mediaY=parseInt(_g('wizMediaY'))||0; _wizData.mediaW=parseInt(_g('wizMediaW'))||960; _wizData.mediaH=parseInt(_g('wizMediaH'))||540;
+      _wizData.textX=parseInt(_g('wizTextX'))||100; _wizData.textY=parseInt(_g('wizTextY'))||400; _wizData.textMaxW=parseInt(_g('wizTextMaxW'))||800; _wizData.textMaxH=parseInt(_g('wizTextMaxH'))||200; _wizData.textSize=parseInt(_g('wizTextSize'))||48;
+    }
+    const EVENT_KEYS_FINISH = ['follow','sub','giftsub','cheer','raid','redeem','hype'];
+    if (!EVENT_KEYS_FINISH.includes(_wizKey)) {
+      presetsConfig[_wizKey] = _wizData;
+    }
+    try {
+      if (!EVENT_KEYS_FINISH.includes(_wizKey)) {
+        await fetch('/api/presets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(presetsConfig)});
+      }
+      if (_wizKey==='ttsgif')           await _wizCreateTtsGif();
+      else if (_wizKey==='tts')         await _wizCreateTts();
+      else if (_wizKey==='imagealert')  await _wizCreateImageAlert();
+      else if (_wizKey==='soundalert')  await _wizCreateSoundAlert();
+      else if (_wizKey==='videoalert')  await _wizCreateVideoAlert();
+      else if (_wizKey==='greenscreen') await _wizCreateGreenScreen();
+      else if (['follow','sub','giftsub','cheer','raid','redeem','hype'].includes(_wizKey)) await _wizCreateEventAlert(_wizKey);
+      else if (_wizKey === 'mentions') await _wizCreateMentions();
+      showToast('Preset saved ✓'); _wizRenderStatuses(); wizardClose();
+    } catch(e) { showToast('Failed to save'); }
+  }
+
+
+  async function _wizCreateMentions() {
+    const d = _wizData;
+    await fetch('/api/mentions/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        enabled:  true,
+        webhook:  d.w_mention_webhook || '',
+        message:  d.w_mention_msg    || '@{mentioned} you were mentioned in chat!',
+        cooldown: parseInt(d.w_mention_cd) || 300,
+        access:   d.w_mention_access  || 'everyone'
+      })
+    });
+    const s = document.getElementById('preset-mentions-status');
+    if (s) { s.textContent = 'Active'; s.className = 'preset-status configured'; }
+  }
+  async function _wizGetSourcesFiltered(cmd) {
+    const sources = await fetch('/api/overlay/sources').then(r=>r.json()).catch(()=>[]);
+    const filtered = sources.filter(s => s.assignedCommand !== cmd);
+    const maxId = sources.length ? Math.max(...sources.map(s=>s.id)) : 0;
+    return { filtered, maxId };
+  }
+  async function _wizSaveSource(filtered, newSrc) {
+    await fetch('/api/overlay/sources',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify([...filtered,newSrc])});
+  }
+  async function _wizSaveCommand(cmd, access) {
+    await fetch('/api/commands',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({command:cmd,response:'',cooldown:10,access:access||'everyone',enabled:true})});
+  }
+
+  async function _wizCreateTtsGif() {
+    const d = _wizData, cmd = d.w_cmd || '!hype';
+    const { filtered, maxId } = await _wizGetSourcesFiltered(cmd);
+    const mediaType = d.w_mediatype || 'image';
+    const fadeIn = parseFloat(d.w_fadein_dur)||1, fadeOut = parseFloat(d.w_fadeout_dur)||1;
+    if (mediaType === 'none') {
+      const newSrc = { id:maxId+1, type:'text', path:null, videoPath:null, soundPath:null, soundStart:0, soundEnd:0, soundVolume:1, videoStart:0, videoEnd:0, videoVolume:1, gifLoops:0, displaySeconds:0, videoLoops:1, clearWithTTS:false, fadeIn:0, fadeOut:0, chromaKey:false, chromaColor:'#00ff00', chromaThreshold:40, assignedCommand:cmd, mediaX:null, mediaY:null, mediaW:null, mediaH:null, text:d.w_textmode==='user'?'{message}':(d.w_text||''), font:'Arial', fontSize:48, color:'#ffffff', bold:false, italic:false, shadow:true, animation:'fade', animDuration:fadeIn, x:100, y:400, maxW:1720, maxH:200, lockDuration:false, speak:true, speakOnly:!d.w_showtext, voice:d.w_voice||null, ttsRate:1, ttsPitch:1, ttsVolume:d.w_volume!==undefined?(parseInt(d.w_volume)/100):1 };
+      await _wizSaveSource(filtered, newSrc); await _wizSaveCommand(cmd, 'everyone'); await overlayLoadSources(); return;
+    }
+    const isVideo = mediaType === 'video';
+    const newSrc = { id:maxId+1, type:isVideo?'video':'image', path:isVideo?null:(d.w_gif||''), videoPath:isVideo?(d.w_gif||''):null, soundPath:null, soundStart:0, soundEnd:0, soundVolume:1, videoStart:isVideo?(parseFloat(d.w_videoStart)||0):0, videoEnd:isVideo?(parseFloat(d.w_videoEnd)||0):0, videoVolume:1, gifLoops:0, displaySeconds:(d.w_clearwithtts!==false)?0:(parseFloat(d.w_duration)||5), videoLoops:1, clearWithTTS:d.w_clearwithtts!==false, fadeIn, fadeOut, chromaKey:isVideo?(d.w_chromakey||false):false, chromaColor:d.w_chromacolor||'#00ff00', chromaThreshold:parseInt(d.w_chromathreshold)||40, assignedCommand:cmd, mediaX:d.mediaX||480, mediaY:d.mediaY||270, mediaW:d.mediaW||960, mediaH:d.mediaH||540, text:d.w_textmode==='user'?'{message}':(d.w_text||'HYPE!'), font:'Arial', fontSize:d.textSize||48, color:'#ffffff', bold:false, italic:false, shadow:true, animation:'fade', animDuration:fadeIn, x:d.textX||100, y:d.textY||400, maxW:d.textMaxW||800, maxH:d.textMaxH||200, lockDuration:false, speak:true, speakOnly:!d.w_showtext, voice:d.w_voice||null, ttsRate:1, ttsPitch:1, ttsVolume:d.w_volume!==undefined?(parseInt(d.w_volume)/100):1 };
+    await _wizSaveSource(filtered, newSrc); await _wizSaveCommand(cmd, 'everyone'); await overlayLoadSources();
+  }
+
+  async function _wizCreateEventAlert(key) {
+    const d = _wizData;
+    const fadeIn = parseFloat(d.w_fadein_dur)||1, fadeOut = parseFloat(d.w_fadeout_dur)||1;
+    const mediaType = d.w_mediatype || 'image';
+    const isVideo = mediaType === 'video';
+    const src = {
+      type: mediaType === 'none' ? 'text' : (isVideo ? 'video' : 'image'),
+      path: (!isVideo && mediaType !== 'none') ? (d.w_gif||'') : null,
+      videoPath: isVideo ? (d.w_gif||'') : null,
+      soundPath: null, soundStart:0, soundEnd:0, soundVolume:1,
+      videoStart: isVideo ? (parseFloat(d.w_videoStart)||0) : 0,
+      videoEnd: isVideo ? (parseFloat(d.w_videoEnd)||0) : 0,
+      videoVolume:1, gifLoops:0,
+      displaySeconds: (d.w_clearwithtts!==false) ? 0 : (parseFloat(d.w_duration)||5),
+      videoLoops:1, clearWithTTS: d.w_clearwithtts!==false,
+      fadeIn, fadeOut,
+      chromaKey: isVideo ? (d.w_chromakey||false) : false,
+      chromaColor: d.w_chromacolor||'#00ff00', chromaThreshold: parseInt(d.w_chromathreshold)||40,
+      mediaX: d.mediaX||480, mediaY: d.mediaY||270, mediaW: d.mediaW||960, mediaH: d.mediaH||540,
+      text: d.w_text || '',
+      font:'Arial', fontSize: d.textSize||48, color:'#ffffff', bold:false, italic:false, shadow:true,
+      animation:'fade', animDuration: fadeIn,
+      x: d.textX||100, y: d.textY||400, maxW: d.textMaxW||800, maxH: d.textMaxH||200,
+      lockDuration:false, speak:true, speakOnly:!d.w_showtext, voice: d.w_voice||null,
+      ttsRate:1, ttsPitch:1, ttsVolume: d.w_volume!==undefined ? (parseInt(d.w_volume)/100) : 1
+    };
+    const r = await fetch('/api/eventsub/alert', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ key, src }) });
+    const res = await r.json();
+    if (!res.ok) throw new Error(res.error || 'Failed to save event alert');
+  }
+
+  async function _wizCreateTts() {
+    const d = _wizData, cmd = d.w_cmd || '!tts';
+    const { filtered, maxId } = await _wizGetSourcesFiltered(cmd);
+    const newSrc = { id:maxId+1, type:'text', path:null, videoPath:null, soundPath:null, soundStart:0, soundEnd:0, soundVolume:1, videoStart:0, videoEnd:0, videoVolume:1, gifLoops:0, displaySeconds:0, videoLoops:1, clearWithTTS:false, fadeIn:0, fadeOut:0, chromaKey:false, chromaColor:'#00ff00', chromaThreshold:40, assignedCommand:cmd, mediaX:null, mediaY:null, mediaW:null, mediaH:null, text:d.w_textmode==='user'?'{message}':(d.w_text||''), font:'Arial', fontSize:48, color:'#ffffff', bold:false, italic:false, shadow:true, animation:'fade', animDuration:1, x:100, y:400, maxW:1720, maxH:200, lockDuration:false, speak:true, speakOnly:!d.w_showtext, voice:d.w_voice||null, ttsRate:1, ttsPitch:1, ttsVolume:d.w_volume!==undefined?(parseInt(d.w_volume)/100):1 };
+    await _wizSaveSource(filtered, newSrc); await _wizSaveCommand(cmd, d.w_access||'everyone'); await overlayLoadSources();
+  }
+
+  async function _wizCreateImageAlert() {
+    const d = _wizData, cmd = d.w_cmd || '!image';
+    const { filtered, maxId } = await _wizGetSourcesFiltered(cmd);
+    const fadeIn=parseFloat(d.w_fadein_dur)||1, fadeOut=parseFloat(d.w_fadeout_dur)||1, wantTTS=d.w_wanttts==='yes';
+    const newSrc = { id:maxId+1, type:'image', path:d.w_gif||'', videoPath:null, soundPath:null, soundStart:0, soundEnd:0, soundVolume:1, videoStart:0, videoEnd:0, videoVolume:1, gifLoops:0, displaySeconds:parseFloat(d.w_duration)||5, videoLoops:1, clearWithTTS:wantTTS, fadeIn, fadeOut, chromaKey:false, chromaColor:'#00ff00', chromaThreshold:40, assignedCommand:cmd, mediaX:480, mediaY:270, mediaW:960, mediaH:540, text:wantTTS?(d.w_textmode==='user'?'{message}':(d.w_text||'')):null, font:wantTTS?'Arial':null, fontSize:wantTTS?48:null, color:wantTTS?'#ffffff':null, bold:false, italic:false, shadow:wantTTS, animation:wantTTS?'fade':null, animDuration:wantTTS?fadeIn:null, x:wantTTS?100:null, y:wantTTS?400:null, maxW:wantTTS?1720:null, maxH:wantTTS?200:null, lockDuration:false, speak:wantTTS, voice:wantTTS?(d.w_voice||null):null, ttsRate:1, ttsPitch:1, ttsVolume:wantTTS&&d.w_volume!==undefined?(parseInt(d.w_volume)/100):1 };
+    await _wizSaveSource(filtered, newSrc); await _wizSaveCommand(cmd, d.w_access||'everyone'); await overlayLoadSources();
+  }
+
+  async function _wizCreateSoundAlert() {
+    const d = _wizData, cmd = d.w_cmd || '!sound';
+    const { filtered, maxId } = await _wizGetSourcesFiltered(cmd);
+    const newSrc = { id:maxId+1, type:'sound', path:null, videoPath:null, soundPath:d.w_sound||'', soundStart:0, soundEnd:0, soundVolume:d.w_volume!==undefined?(parseInt(d.w_volume)/100):1, videoStart:0, videoEnd:0, videoVolume:1, gifLoops:0, displaySeconds:0, videoLoops:1, clearWithTTS:false, fadeIn:0, fadeOut:0, chromaKey:false, chromaColor:'#00ff00', chromaThreshold:40, assignedCommand:cmd, mediaX:null, mediaY:null, mediaW:null, mediaH:null, text:null, font:null, fontSize:null, color:null, bold:false, italic:false, shadow:false, animation:null, animDuration:null, x:null, y:null, maxW:null, maxH:null, lockDuration:false, speak:false, voice:null, ttsRate:1, ttsPitch:1, ttsVolume:1 };
+    await _wizSaveSource(filtered, newSrc); await _wizSaveCommand(cmd, d.w_access||'everyone'); await overlayLoadSources();
+  }
+
+  async function _wizCreateVideoAlert() {
+    const d = _wizData, cmd = d.w_cmd || '!video';
+    const { filtered, maxId } = await _wizGetSourcesFiltered(cmd);
+    const fadeIn=parseFloat(d.w_fadein_dur)||1, fadeOut=parseFloat(d.w_fadeout_dur)||1, wantTTS=d.w_wanttts==='yes';
+    const newSrc = { id:maxId+1, type:'video', path:null, videoPath:d.w_gif||'', soundPath:null, soundStart:0, soundEnd:0, soundVolume:1, videoStart:parseFloat(d.w_videoStart)||0, videoEnd:parseFloat(d.w_videoEnd)||0, videoVolume:1, gifLoops:0, displaySeconds:0, videoLoops:parseInt(d.w_loops)||1, clearWithTTS:wantTTS, fadeIn, fadeOut, chromaKey:d.w_chromakey||false, chromaColor:d.w_chromacolor||'#00ff00', chromaThreshold:parseInt(d.w_chromathreshold)||40, assignedCommand:cmd, mediaX:480, mediaY:270, mediaW:960, mediaH:540, text:wantTTS?(d.w_textmode==='user'?'{message}':(d.w_text||'')):null, font:wantTTS?'Arial':null, fontSize:wantTTS?48:null, color:wantTTS?'#ffffff':null, bold:false, italic:false, shadow:wantTTS, animation:wantTTS?'fade':null, animDuration:wantTTS?fadeIn:null, x:wantTTS?100:null, y:wantTTS?400:null, maxW:wantTTS?1720:null, maxH:wantTTS?200:null, lockDuration:false, speak:wantTTS, voice:wantTTS?(d.w_voice||null):null, ttsRate:1, ttsPitch:1, ttsVolume:wantTTS&&d.w_volume!==undefined?(parseInt(d.w_volume)/100):1 };
+    await _wizSaveSource(filtered, newSrc); await _wizSaveCommand(cmd, d.w_access||'everyone'); await overlayLoadSources();
+  }
+
+  async function _wizCreateGreenScreen() {
+    const d = _wizData, cmd = d.w_cmd || '!gs';
+    const { filtered, maxId } = await _wizGetSourcesFiltered(cmd);
+    const fadeIn=parseFloat(d.w_fadein_dur)||1, fadeOut=parseFloat(d.w_fadeout_dur)||1;
+    const newSrc = { id:maxId+1, type:'video', path:null, videoPath:d.w_gif||'', soundPath:null, soundStart:0, soundEnd:0, soundVolume:1, videoStart:parseFloat(d.w_videoStart)||0, videoEnd:parseFloat(d.w_videoEnd)||0, videoVolume:1, gifLoops:0, displaySeconds:0, videoLoops:parseInt(d.w_loops)||1, clearWithTTS:false, fadeIn, fadeOut, chromaKey:true, chromaColor:d.w_chromacolor||'#00ff00', chromaThreshold:parseInt(d.w_chromathreshold)||40, assignedCommand:cmd, mediaX:0, mediaY:0, mediaW:1920, mediaH:1080, text:null, font:null, fontSize:null, color:null, bold:false, italic:false, shadow:false, animation:null, animDuration:null, x:null, y:null, maxW:null, maxH:null, lockDuration:false, speak:false, voice:null, ttsRate:1, ttsPitch:1, ttsVolume:1 };
+    await _wizSaveSource(filtered, newSrc); await _wizSaveCommand(cmd, d.w_access||'everyone'); await overlayLoadSources();
+  }
+
+</script>
+
+<!-- ============================================================ -->
+<!-- DRAGGABLE CHAT WINDOW -->
+<!-- ============================================================ -->
+
+<!-- Chat Window -->
+<div class="chat-window" id="chatWindow" style="display:none;">
+  <!-- Resize handles -->
+  <div class="chat-resize-n"  data-dir="n"></div>
+  <div class="chat-resize-s chat-resize-handle" data-dir="s"></div>
+  <div class="chat-resize-e"  data-dir="e"></div>
+  <div class="chat-resize-w"  data-dir="w"></div>
+  <div class="chat-resize-ne" data-dir="ne"></div>
+  <div class="chat-resize-nw" data-dir="nw"></div>
+  <div class="chat-resize-sw" data-dir="sw"></div>
+  <div class="chat-header" id="chatDragHandle">
+    <div class="chat-header-dot offline" id="chatDot"></div>
+    <div class="chat-header-title">Live Chat</div>
+    <div class="chat-header-channel" id="chatChannel">—</div>
+    <div class="chat-header-btns">
+      <button class="chat-hbtn" onclick="toggleChatMinimize()" title="Minimize">—</button>
+      <button class="chat-hbtn" onclick="toggleChatVisible()" title="Close">✕</button>
+    </div>
+  </div>
+  <div class="chat-body" id="chatBody">
+    <div class="chat-empty" id="chatEmpty">
+      <span>Waiting for chat...</span>
+    </div>
+  </div>
+  <div class="chat-input-row">
+    <input class="chat-input" id="chatInput" placeholder="Send a message..." maxlength="500"
+      onkeydown="if(event.key==='Enter') sendChatMessage()" />
+    <button class="chat-send-btn" onclick="sendChatMessage()">↑</button>
+  </div>
+</div>
+
+<script>
+
+  // ── Mentions wizard steps ─────────────────────────────────────────────────
+  // Patch _wizBuildSteps to add mentions steps
+  const _origWizBuildSteps = _wizBuildSteps;
+  function _wizBuildSteps(key, data) {
+    if (key === 'mentions') {
+      return [
+        {
+          id: 'intro',
+          question: 'How @ Mention Alerts work',
+          hint: 'When a viewer gets @mentioned in your chat, a notification is sent to a Discord channel you set up. Viewers who follow that channel get pinged automatically.',
+          fields: []
+        },
+        {
+          id: 'message',
+          question: 'What should the notification say?',
+          hint: 'Use {mentioned} for the username of the person who was tagged.',
+          fields: [{ id:'w_mention_msg', type:'textarea', label:'Notification message', placeholder:'@{mentioned} you were mentioned in chat!', default:'@{mentioned} you were mentioned in chat!' }]
+        },
+        {
+          id: 'settings',
+          question: 'Who can trigger a mention notification?',
+          hint: 'Only @mentions from these users will fire the Discord notification. 5 minute cooldown per user by default.',
+          fields: [
+            { id:'w_mention_access', type:'radio', label:'Access level', options:[{value:'everyone',label:'Everyone',sub:'Any viewer'},{value:'subscriber',label:'Subscribers',sub:'Must be subbed'},{value:'moderator',label:'Moderators',sub:'Mods and above'}], default:'everyone' },
+            { id:'w_mention_cd', type:'number', label:'Cooldown per user (seconds)', placeholder:'300', default:'300' }
+          ]
+        },
+        {
+          id: 'webhook',
+          question: 'Paste your Discord webhook URL',
+          hint: 'In Discord: create a #mentions channel → Edit Channel → Integrations → Webhooks → New Webhook → Copy URL → paste below.',
+          fields: [{ id:'w_mention_webhook', type:'text', label:'Discord webhook URL', placeholder:'https://discord.com/api/webhooks/...' }]
+        }
+      ];
+    }
+    return _origWizBuildSteps(key, data);
+  }
+
+  // ── Textarea field type support ───────────────────────────────────────────
+  const _origRenderField = typeof _wizRenderField === 'function' ? _wizRenderField : null;
+
+  // ── Auto-open wizard from URL param ──────────────────────────────────────
+  window.addEventListener('load', () => {
+    loadPresetsPage().then(() => {
+      if (_autoWizard) wizardOpen(_autoWizard);
+    });
+  });
+</script>
+</body>
+</html>
