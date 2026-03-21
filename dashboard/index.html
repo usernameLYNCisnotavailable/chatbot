@@ -414,54 +414,9 @@
 
 
 <!-- ECONOMY PAGE -->
-<div class="page" id="page-presets">
-  <div class="cmd-page-wrap">
-    <div class="cmd-topbar">
-      <div class="cmd-title-block">
-        <div class="cmd-title">Presets</div>
-        <div class="cmd-sub">Step-by-step setup wizards — no overlay knowledge needed</div>
-      </div>
-    </div>
-    <div style="padding:20px 24px;flex:1;overflow-y:auto;">
-      <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.2);margin-bottom:14px;">Twitch Event Alerts</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-bottom:26px;">
-        <div class="preset-card" id="preset-follow" style="--card-color:99,102,241;--card-glow:rgba(99,102,241,0.25);"><div class="preset-icon">🎉</div><div class="preset-name">New Follower</div><div class="preset-desc">Fires when someone follows your channel</div><div class="preset-status" id="preset-follow-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('follow')">Set Up</button></div>
-        <div class="preset-card" id="preset-sub" style="--card-color:147,71,255;--card-glow:rgba(147,71,255,0.25);"><div class="preset-icon">🌟</div><div class="preset-name">New Sub</div><div class="preset-desc">Fires when someone subscribes to your channel</div><div class="preset-status" id="preset-sub-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('sub')">Set Up</button></div>
-        <div class="preset-card" id="preset-giftsub" style="--card-color:236,72,153;--card-glow:rgba(236,72,153,0.25);"><div class="preset-icon">🎁</div><div class="preset-name">Gift Subs</div><div class="preset-desc">Fires when someone gifts subs to your community</div><div class="preset-status" id="preset-giftsub-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('giftsub')">Set Up</button></div>
-        <div class="preset-card" id="preset-raid" style="--card-color:249,115,22;--card-glow:rgba(249,115,22,0.25);"><div class="preset-icon">⚔️</div><div class="preset-name">Raid</div><div class="preset-desc">Fires when another streamer raids your channel</div><div class="preset-status" id="preset-raid-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('raid')">Set Up</button></div>
-        <div class="preset-card" id="preset-redeem" style="--card-color:0,200,83;--card-glow:rgba(0,200,83,0.25);"><div class="preset-icon">🏆</div><div class="preset-name">Channel Points</div><div class="preset-desc">Fires when a viewer redeems a channel point reward</div><div class="preset-status" id="preset-redeem-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('redeem')">Set Up</button></div>
-        <div class="preset-card" id="preset-ttsgif" style="--card-color:99,102,241;--card-glow:rgba(99,102,241,0.25);"><div class="preset-icon">🎬</div><div class="preset-name">TTS + GIF</div><div class="preset-desc">Chat command plays a GIF while the bot speaks a message</div><div class="preset-status" id="preset-ttsgif-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('ttsgif')">Set Up</button></div>
-      </div>
-      <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.2);margin-bottom:14px;">Chat & Stream Tools</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;">
-        <div class="preset-card" id="preset-autoso" style="--card-color:244,63,94;--card-glow:rgba(244,63,94,0.25);"><div class="preset-icon">📣</div><div class="preset-name">Auto Shoutout</div><div class="preset-desc">Automatically shouts out raiders and returning streamers in chat</div><div class="preset-status" id="preset-autoso-status">Not configured</div><button class="preset-btn" onclick="showToast('Coming soon')">Set Up</button></div>
-        <div class="preset-card" id="preset-clip" style="--card-color:239,68,68;--card-glow:rgba(239,68,68,0.25);"><div class="preset-icon">✂️</div><div class="preset-name">Clip Command</div><div class="preset-desc">!clip creates a Twitch clip and posts the link in chat automatically</div><div class="preset-status" id="preset-clip-status">Not configured</div><button class="preset-btn" onclick="toggleClipPreset(this)">Enable</button></div>
-        <div class="preset-card" id="preset-mentions" style="--card-color:88,101,242;--card-glow:rgba(88,101,242,0.25);"><div class="preset-icon">🔔</div><div class="preset-name">@ Mention Alerts</div><div class="preset-desc">Notifies viewers via Discord when they get @mentioned in chat</div><div class="preset-status" id="preset-mentions-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('mentions')">Set Up</button></div>
-      </div>
-    </div>
-  </div>
+<div class="page" id="page-presets" style="height:100%;overflow:hidden;">
+  <iframe src="/dashboard/presets.html" id="presetsFrame" style="width:100%;height:100%;border:none;background:var(--bg);"></iframe>
 </div>
-
-<!-- WIZARD MODAL -->
-<div id="wizardOverlay" style="display:none;position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,0.88);backdrop-filter:blur(16px);align-items:center;justify-content:center;">
-  <div id="wizardBox" style="width:100%;max-width:560px;height:90vh;background:#131316;border:1px solid rgba(255,255,255,0.1);border-radius:24px;box-shadow:0 40px 120px rgba(0,0,0,0.7);display:flex;flex-direction:column;animation:wiz-modal-in 0.25s cubic-bezier(0.4,0,0.2,1);">
-    <div style="padding:22px 24px 0;display:flex;align-items:center;gap:14px;flex-shrink:0;border-radius:24px 24px 0 0;background:#131316;">
-      <div id="wizHeaderIcon" style="font-size:1.8rem;width:48px;height:48px;display:flex;align-items:center;justify-content:center;border-radius:14px;flex-shrink:0;"></div>
-      <div style="flex:1;min-width:0;"><div id="wizHeaderTitle" style="font-size:17px;font-weight:700;color:#fff;"></div><div id="wizHeaderSub" style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:2px;"></div></div>
-      <button onclick="wizardClose()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:rgba(255,255,255,0.35);font-size:15px;width:30px;height:30px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;" onmouseover="this.style.background='rgba(235,4,0,0.15)';this.style.color='rgba(255,100,100,0.8)'" onmouseout="this.style.background='rgba(255,255,255,0.06)';this.style.color='rgba(255,255,255,0.35)'">✕</button>
-    </div>
-    <div id="wizDots" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:14px 24px 0;flex-shrink:0;"></div>
-    <div id="wizViewport" style="flex:1;overflow:hidden;min-height:0;position:relative;">
-      <div id="wizSlides" style="display:flex;transition:transform 0.4s cubic-bezier(0.4,0,0.2,1);align-items:flex-start;height:100%;"></div>
-    </div>
-    <div style="padding:16px 24px 22px;display:flex;align-items:center;gap:10px;flex-shrink:0;border-top:1px solid rgba(255,255,255,0.06);border-radius:0 0 24px 24px;background:#131316;">
-      <button id="wizBackBtn" onclick="wizPrev()" style="display:none;padding:10px 20px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:rgba(255,255,255,0.5);font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.09)';this.style.color='#fff'" onmouseout="this.style.background='rgba(255,255,255,0.05)';this.style.color='rgba(255,255,255,0.5)'">← Back</button>
-      <div style="flex:1;"></div>
-      <button id="wizNextBtn" onclick="wizNext()" style="padding:10px 28px;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;color:#fff;transition:all 0.2s;"></button>
-    </div>
-  </div>
-</div>
-<input type="hidden" id="wizMediaX" value="0"><input type="hidden" id="wizMediaY" value="0"><input type="hidden" id="wizMediaW" value="960"><input type="hidden" id="wizMediaH" value="540"><input type="hidden" id="wizTextX" value="100"><input type="hidden" id="wizTextY" value="400"><input type="hidden" id="wizTextMaxW" value="800"><input type="hidden" id="wizTextMaxH" value="200"><input type="hidden" id="wizTextSize" value="48">
 
 <!-- SONG REQUESTS PAGE -->
 <div class="page" id="page-songs">

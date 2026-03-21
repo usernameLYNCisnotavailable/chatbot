@@ -295,6 +295,7 @@
     if (key === 'soundalert') return [CMD, { id:'media', question:'Pick your sound file.', hint:'This plays when the command is used.', fields:[{ id:'w_sound', type:'file', label:'Sound file', placeholder:'C:\\path\\to\\file.mp3', accept:'sound' },{ id:'w_volume', type:'volume', label:'Volume', default:80 }] }, ACCS];
     if (key === 'videoalert') return [CMD, { id:'media', question:'Pick your video file.', hint:'This plays on stream when the command is used.', fields:[{ id:'w_gif', type:'videofile', label:'Video file', placeholder:'C:\\path\\to\\file.mp4', accept:'video' }] }, { id:'chroma', question:'Is it a green screen video?', hint:'Enable chroma key to remove the background colour.', fields: CHROMA_FIELDS }, TTS_WANT_STEP, OPTIONS_STEP_NOTTS, ACCS];
     if (key === 'greenscreen') return [CMD, { id:'media', question:'Pick your green screen video.', hint:'The background will be removed automatically.', fields:[{ id:'w_gif', type:'videofile', label:'Video file', placeholder:'C:\\path\\to\\file.mp4', accept:'video' }] }, { id:'chroma', question:'Chroma key settings.', hint:'Dial in the colour removal so the background disappears cleanly.', fields:[{ id:'w_chromacolor', type:'color', label:'Background colour to remove', default:'#00ff00' },{ id:'w_chromathreshold', type:'slider', label:'Threshold — higher = removes more', min:0, max:100, default:40 }] }, OPTIONS_STEP_NOTTS, ACCS];
+    if (key === 'mentions') { return [{ id:'intro', question:'How @ Mention Alerts work', hint:'When a viewer gets @mentioned in your chat, a notification is sent to a Discord channel you set up.', fields:[] },{ id:'message', question:'What should the notification say?', hint:'Use {mentioned} for the username of the person who was tagged.', fields:[{ id:'w_mention_msg', type:'textarea', label:'Notification message', placeholder:'@{mentioned} you were mentioned in chat!', default:'@{mentioned} you were mentioned in chat!' }] },{ id:'settings', question:'Who can trigger a mention notification?', hint:'Only @mentions from these users will fire the Discord notification.', fields:[{ id:'w_mention_access', type:'radio', label:'Access level', options:[{value:'everyone',label:'Everyone',sub:'Any viewer'},{value:'subscriber',label:'Subscribers',sub:'Must be subbed'},{value:'moderator',label:'Moderators',sub:'Mods and above'}], default:'everyone' },{ id:'w_mention_cd', type:'number', label:'Cooldown per user (seconds)', placeholder:'300', default:'300' }] },{ id:'webhook', question:'Paste your Discord webhook URL', hint:'In Discord: create a mentions channel then Integrations Webhooks New Webhook Copy URL.', fields:[{ id:'w_mention_webhook', type:'text', label:'Discord webhook URL', placeholder:'https://discord.com/api/webhooks/...' }] }]; }
     return [CMD];
   }
 
@@ -445,8 +446,6 @@
       } else if (f.type === 'fixedtext') {
         const modeVal = document.getElementById('wizardBox') ? (document.getElementById('wizardBox').dataset['w_textmode'] || 'user') : 'user';
         h += `<div id="wiz-text-wrap" style="display:${modeVal==='fixed'?'block':'none'}"><span class="wiz-label">${f.label}</span><input type="text" id="${f.id}" class="wiz-input" placeholder="${f.placeholder||''}" value="${val}" oninput="_wizTextLiveUpdate()"></div>`;
-      } else if (f.type === 'textarea') {
-        h += `<div><span class="wiz-label">${f.label}</span><textarea id="${f.id}" class="wiz-input" rows="4" style="resize:vertical;min-height:90px;" placeholder="${f.placeholder||''}">${(val||'').replace(/</g,'&lt;')}</textarea></div>`;
       } else if (f.type === 'textarea') {
         h += `<div><span class="wiz-label">${f.label}</span><textarea id="${f.id}" class="wiz-input" rows="4" style="resize:vertical;min-height:90px;" placeholder="${f.placeholder||''}">${(val||'').replace(/</g,'&lt;')}</textarea></div>`;
       } else {
@@ -998,46 +997,7 @@
 
 <script>
 
-  // ── Mentions wizard steps ─────────────────────────────────────────────────
-  // Patch _wizBuildSteps to add mentions steps
-  const _origWizBuildSteps = _wizBuildSteps;
-  function _wizBuildSteps(key, data) {
-    if (key === 'mentions') {
-      return [
-        {
-          id: 'intro',
-          question: 'How @ Mention Alerts work',
-          hint: 'When a viewer gets @mentioned in your chat, a notification is sent to a Discord channel you set up. Viewers who follow that channel get pinged automatically.',
-          fields: []
-        },
-        {
-          id: 'message',
-          question: 'What should the notification say?',
-          hint: 'Use {mentioned} for the username of the person who was tagged.',
-          fields: [{ id:'w_mention_msg', type:'textarea', label:'Notification message', placeholder:'@{mentioned} you were mentioned in chat!', default:'@{mentioned} you were mentioned in chat!' }]
-        },
-        {
-          id: 'settings',
-          question: 'Who can trigger a mention notification?',
-          hint: 'Only @mentions from these users will fire the Discord notification. 5 minute cooldown per user by default.',
-          fields: [
-            { id:'w_mention_access', type:'radio', label:'Access level', options:[{value:'everyone',label:'Everyone',sub:'Any viewer'},{value:'subscriber',label:'Subscribers',sub:'Must be subbed'},{value:'moderator',label:'Moderators',sub:'Mods and above'}], default:'everyone' },
-            { id:'w_mention_cd', type:'number', label:'Cooldown per user (seconds)', placeholder:'300', default:'300' }
-          ]
-        },
-        {
-          id: 'webhook',
-          question: 'Paste your Discord webhook URL',
-          hint: 'In Discord: create a #mentions channel → Edit Channel → Integrations → Webhooks → New Webhook → Copy URL → paste below.',
-          fields: [{ id:'w_mention_webhook', type:'text', label:'Discord webhook URL', placeholder:'https://discord.com/api/webhooks/...' }]
-        }
-      ];
-    }
-    return _origWizBuildSteps(key, data);
-  }
-
-  // ── Textarea field type support ───────────────────────────────────────────
-  const _origRenderField = typeof _wizRenderField === 'function' ? _wizRenderField : null;
+  // ── Textarea field type support loaded inline above ─────────────────────
 
   // ── Auto-open wizard from URL param ──────────────────────────────────────
   window.addEventListener('load', () => {
