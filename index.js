@@ -171,6 +171,13 @@ function getDefaults() {
 }
 
 const config = JSON.parse(fs.readFileSync(path.join(dataDir, 'config.json'), 'utf8'));
+// Use decrypted tokens passed via env from main.js
+if (process.env.CC_BOT_TOKEN) config.token = process.env.CC_BOT_TOKEN;
+if (process.env.CC_STREAMER_TOKEN) config.streamerToken = process.env.CC_STREAMER_TOKEN;
+// Use decrypted tokens passed via env from main.js (preferred)
+// Fall back to config values for backwards compatibility
+if (process.env.CC_BOT_TOKEN) config.token = process.env.CC_BOT_TOKEN;
+if (process.env.CC_STREAMER_TOKEN) config.streamerToken = process.env.CC_STREAMER_TOKEN;
 let lastCommandChannel = '#' + config.channel.replace('#', '');
 
 // Track guest channels the bot has joined
@@ -469,42 +476,6 @@ client.on('message', (channel, tags, message, self) => {
         });
         req3.on('error', () => {}); req3.write(body3); req3.end();
         return;
-    }
-
-
-    // ── @mention detection ────────────────────────────────────────────────────
-    const mentionMatches = msg.match(/@([a-zA-Z0-9_]+)/g);
-    if (mentionMatches) {
-        const cfg = (() => {
-            try {
-                const d = JSON.parse(fs.readFileSync(path.join(dataDir, 'mention-config.json'), 'utf8'));
-                return d;
-            } catch(e) { return null; }
-        })();
-        if (cfg && cfg.enabled && cfg.webhook) {
-            const access = cfg.access || 'everyone';
-            const isMod  = tags.mod || false;
-            const isSub  = tags.subscriber || false;
-            const isBroadcaster = username === homeChannel;
-            const allowed = access === 'everyone'
-                || (access === 'subscriber'  && (isSub || isMod || isBroadcaster))
-                || (access === 'moderator'   && (isMod || isBroadcaster))
-                || (access === 'broadcaster' && isBroadcaster);
-            if (allowed) {
-                mentionMatches.forEach(m => {
-                    const mentionedUser = m.slice(1);
-                    const http = require('http');
-                    const body = JSON.stringify({ mentionedUser, channel: config.channel });
-                    const req2 = http.request({
-                        hostname: '127.0.0.1', port: 3000,
-                        path: '/api/mentions/fire', method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
-                    }, () => {});
-                    req2.on('error', () => {});
-                    req2.write(body); req2.end();
-                });
-            }
-        }
     }
 
     // Text commands (custom)

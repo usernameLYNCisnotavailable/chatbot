@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
 const { autoUpdater } = require('electron-updater');
+const { encryptToken, decryptToken, generateSessionToken, apiAuthMiddleware, registerSecurityRoutes } = require('./security');
 const { registerSystemRoutes } = require('./system-commands');
 const { registerPresetRoutes } = require('./presets');
 let mainWindow;
@@ -102,11 +103,15 @@ function startBot() {
         return;
     }
 
+        const decryptedToken = decryptToken(config.token || '', userDataPath);
+    const decryptedStreamerToken = decryptToken(config.streamerToken || '', userDataPath);
     botProcess = spawn(process.execPath, [botPath], {
         env: {
             ...process.env,
             ELECTRON_RUN_AS_NODE: '1',
-            CHATCOMMANDER_DATA_PATH: userDataPath
+            CHATCOMMANDER_DATA_PATH: userDataPath,
+            CC_BOT_TOKEN: decryptedToken,
+            CC_STREAMER_TOKEN: decryptedStreamerToken
         },
         stdio: 'pipe'
     });
@@ -164,6 +169,11 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
 
     const server = express();
     server.use(express.json({ limit: '10mb' }));
+
+    // ── SECURITY ──────────────────────────────────────────────────────────────
+    generateSessionToken();
+    registerSecurityRoutes(server);
+    server.use(apiAuthMiddleware);
 
     server.get('/test', (req, res) => res.send('working'));
 
@@ -254,7 +264,7 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
                 config.streamerUsername = username;
                 config.streamerDisplayName = displayName;
                 config.streamerAvatar = avatar;
-                config.streamerToken = `oauth:${accessToken}`;
+                config.streamerToken = encryptToken(`oauth:${accessToken}`, app.getPath('userData'));
                 config.loggedIn = true;
 
                 fs.writeFileSync(getDataPath('config.json'), JSON.stringify(config, null, 4));
@@ -298,7 +308,7 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
                 if (!config.mods) config.mods = [];
                 const existing = config.mods.find(m => m.username === username);
                 if (existing) {
-                    existing.token = `oauth:${accessToken}`;
+                    existing.token = encryptToken(`oauth:${accessToken}`, app.getPath('userData'));
                     existing.displayName = displayName;
                     existing.avatar = avatar;
                 } else {
@@ -306,7 +316,7 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
                         username,
                         displayName,
                         avatar,
-                        token: `oauth:${accessToken}`,
+                        token: encryptToken(`oauth:${accessToken}`, app.getPath('userData')),
                         approved: false,
                         commands: []
                     });
