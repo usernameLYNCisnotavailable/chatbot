@@ -37,8 +37,25 @@ if (!gotTheLock) {
     });
 }
 
+function getUserDataPath() {
+    const base = app.getPath('userData');
+    const flatConfig = path.join(base, 'config.json');
+    try {
+        if (fs.existsSync(flatConfig)) {
+            const cfg = JSON.parse(fs.readFileSync(flatConfig, 'utf8'));
+            const username = (cfg.streamerUsername || cfg.channel || '').replace('#', '').toLowerCase();
+            if (username) {
+                const userDir = path.join(base, username);
+                if (!fs.existsSync(userDir)) fs.mkdirSync(userDir, { recursive: true });
+                return userDir;
+            }
+        }
+    } catch(e) {}
+    return base;
+}
+
 function getDataPath(file) {
-    const userDataPath = app.getPath('userData');
+    const userDataPath = getUserDataPath();
     const filePath = path.join(userDataPath, file);
     if (!fs.existsSync(filePath)) {
         const defaultPath = path.join(__dirname, file);
@@ -48,6 +65,7 @@ function getDataPath(file) {
     }
     return filePath;
 }
+
 
 function startReactor() {
     const reactorPath = app.isPackaged
@@ -63,7 +81,7 @@ function startReactor() {
     cwd: path.dirname(reactorPath),
     env: {
         ...process.env,
-        CHATCOMMANDER_DATA_PATH: app.getPath('userData'),
+        CHATCOMMANDER_DATA_PATH: getUserDataPath(),
         ELECTRON_RUN_AS_NODE: '1',
     },
     stdio: 'pipe'
@@ -264,7 +282,7 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
                 config.streamerUsername = username;
                 config.streamerDisplayName = displayName;
                 config.streamerAvatar = avatar;
-                config.streamerToken = encryptToken(`oauth:${accessToken}`, app.getPath('userData'));
+                config.streamerToken = encryptToken(`oauth:${accessToken}`, getUserDataPath());
                 config.loggedIn = true;
 
                 fs.writeFileSync(getDataPath('config.json'), JSON.stringify(config, null, 4));
@@ -308,7 +326,7 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
                 if (!config.mods) config.mods = [];
                 const existing = config.mods.find(m => m.username === username);
                 if (existing) {
-                    existing.token = encryptToken(`oauth:${accessToken}`, app.getPath('userData'));
+                    existing.token = encryptToken(`oauth:${accessToken}`, getUserDataPath());
                     existing.displayName = displayName;
                     existing.avatar = avatar;
                 } else {
@@ -316,7 +334,7 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
                         username,
                         displayName,
                         avatar,
-                        token: encryptToken(`oauth:${accessToken}`, app.getPath('userData')),
+                        token: encryptToken(`oauth:${accessToken}`, getUserDataPath()),
                         approved: false,
                         commands: []
                     });
