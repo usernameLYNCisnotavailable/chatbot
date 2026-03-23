@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spin the Wheel</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0e0e10;
+  --surface: #18181b;
+  --surface-raised: #1f1f23;
+  --surface-hover: #26262c;
+  --border: #2a2a35;
+  --text: #efeff1;
+  --muted: #adadb8;
+  --muted-2: #6b6b7a;
+  --accent: #9147ff;
+  --accent-hover: #a970ff;
+  --accent-soft: rgba(145,71,255,0.15);
+  --green: #00c853;
+  --red: #eb0400;
+  --red-soft: rgba(235,4,0,0.12);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; overflow: hidden; }
+.page-wrap { display: flex; flex-direction: column; height: 100%; }
+.topbar { display: flex; align-items: center; padding: 18px 28px 14px; gap: 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.title { font-size: 20px; font-weight: 700; font-family: 'Syne', sans-serif; color: var(--text); }
+.subtitle { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.topbar-actions { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.entry-count { font-size: 13px; color: var(--muted); font-weight: 500; }
+.btn { padding: 7px 18px; font-size: 13px; font-weight: 500; border-radius: 6px; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text); transition: all 0.15s; }
+.btn:hover { background: var(--surface-hover); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.btn-close-entries { background: var(--red-soft); border-color: rgba(235,4,0,0.3); color: #ff6b6b; }
+.btn-close-entries:hover { background: rgba(235,4,0,0.2); }
+.form-input { padding: 6px 10px; font-size: 13px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); outline: none; font-family: inherit; }
+.form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(145,71,255,0.15); }
+.form-label { font-size: 12px; font-weight: 500; color: var(--muted); }
+.body { display: flex; gap: 0; flex: 1; overflow: hidden; min-height: 0; }
+.wheel-area { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; background: radial-gradient(ellipse at center, #1a1a22 0%, #0e0e10 70%); }
+.wheel-container { position: relative; cursor: pointer; }
+.pointer { position: absolute; right: -16px; top: 50%; transform: translateY(-50%); z-index: 2; width: 0; height: 0; border-top: 16px solid transparent; border-bottom: 16px solid transparent; border-right: 30px solid #e74c3c; filter: drop-shadow(-2px 0 6px rgba(0,0,0,0.5)); }
+#gwCanvas { display: block; border-radius: 50%; box-shadow: 0 0 60px rgba(0,0,0,0.5), 0 0 0 5px rgba(255,255,255,0.05); }
+.sidebar { width: 300px; flex-shrink: 0; display: flex; flex-direction: column; border-left: 1px solid var(--border); background: var(--surface); }
+.sidebar-header { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.sidebar-title { font-size: 14px; font-weight: 600; color: var(--text); font-family: 'Syne', sans-serif; }
+.sidebar-count { font-size: 12px; color: var(--muted); background: var(--surface-hover); border-radius: 10px; padding: 2px 8px; }
+.settings-section { padding: 12px 18px; border-bottom: 1px solid var(--border); }
+.settings-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+.settings-row:last-child { margin-bottom: 0; }
+.toggle-row { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; color: var(--muted); user-select: none; }
+.toggle-row input[type="checkbox"] { accent-color: var(--accent); width: 14px; height: 14px; cursor: pointer; }
+.hint { font-size: 11px; color: var(--muted-2); }
+.add-btn { font-size: 12px; color: var(--accent); background: none; border: 1px solid rgba(145,71,255,0.3); border-radius: 6px; padding: 3px 10px; cursor: pointer; font-weight: 500; }
+.add-btn:hover { background: var(--accent-soft); }
+.entries-list { flex: 1; overflow-y: auto; padding: 6px 0; }
+.entries-empty { text-align: center; color: var(--muted-2); font-size: 12px; padding: 30px 18px; }
+.entry-item { display: flex; align-items: center; gap: 10px; padding: 7px 18px; font-size: 13px; color: var(--text); }
+.entry-item:hover { background: var(--surface-hover); }
+.entry-color { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.entry-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.entry-remove { background: none; border: none; color: var(--muted-2); font-size: 16px; cursor: pointer; padding: 0 4px; line-height: 1; opacity: 0; transition: opacity 0.15s; }
+.entry-item:hover .entry-remove { opacity: 1; }
+.entry-remove:hover { color: var(--red); }
+.winner-card { background: var(--accent-soft); border-top: 1px solid rgba(145,71,255,0.35); padding: 16px 18px; text-align: center; }
+.winner-label { font-size: 11px; color: var(--accent); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+.winner-name { font-size: 20px; font-weight: 700; color: var(--text); font-family: 'Syne', sans-serif; margin-bottom: 10px; }
+.winner-actions { display: flex; gap: 8px; justify-content: center; }
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--surface-raised); border: 1px solid var(--border); color: var(--text); padding: 10px 22px; border-radius: 8px; font-size: 13px; opacity: 0; transition: all 0.25s; pointer-events: none; z-index: 100; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted-2); }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+  <div class="topbar">
+    <div>
+      <div class="title">Spin the Wheel</div>
+      <div class="subtitle">Viewers type the keyword to enter the giveaway</div>
+    </div>
+    <div class="topbar-actions">
+      <span class="entry-count" id="gwEntryCount">0 entries</span>
+      <button class="btn btn-primary" id="gwOpenBtn" onclick="gwToggleEntries()">Open Entries</button>
+      <button class="btn" onclick="gwReset()">Reset</button>
+    </div>
+  </div>
+  <div class="body">
+    <div class="wheel-area">
+      <div class="wheel-container" onclick="gwSpin()">
+        <canvas id="gwCanvas" width="520" height="520"></canvas>
+        <div class="pointer"></div>
+      </div>
+    </div>
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-title">Entries</span>
+        <span class="sidebar-count" id="gwSidebarCount">0</span>
+      </div>
+      <div class="settings-section">
+        <div class="settings-row">
+          <label class="form-label" style="min-width:70px;">Keyword</label>
+          <input class="form-input" id="gwKeyword" value="!enter" spellcheck="false" style="width:100px;font-size:12px;">
+        </div>
+        <div class="settings-row">
+          <label class="form-label" style="min-width:70px;">Max</label>
+          <input class="form-input" id="gwMaxEntries" type="number" value="0" min="0" style="width:60px;font-size:12px;">
+          <span class="hint">0 = no limit</span>
+        </div>
+        <div class="settings-row">
+          <label class="toggle-row"><input type="checkbox" id="gwSubOnly"><span>Subs only</span></label>
+        </div>
+        <div class="settings-row">
+          <label class="toggle-row"><input type="checkbox" id="gwAnnounce" checked><span>Announce winner</span></label>
+        </div>
+        <div class="settings-row" style="margin-top:4px;">
+          <label class="form-label" style="min-width:70px;">Chat msg</label>
+          <input class="form-input" id="gwMessage" value="Wheel open! Type {keyword} to enter!" spellcheck="false" style="flex:1;font-size:11px;" title="Use {keyword} to insert the command">
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 18px 6px;">
+        <span style="font-size:12px;color:var(--muted);font-weight:500;">Names</span>
+        <button class="add-btn" onclick="gwManualAdd()">+ Add</button>
+      </div>
+      <div class="entries-list" id="gwEntriesList">
+        <div class="entries-empty" id="gwEntriesEmpty">No entries yet</div>
+      </div>
+      <div class="winner-card" id="gwWinnerCard" style="display:none;">
+        <div class="winner-label">Winner</div>
+        <div class="winner-name" id="gwWinnerName"></div>
+        <div class="winner-actions">
+          <button class="btn btn-primary" onclick="gwSpin()">Re-spin</button>
+          <button class="btn" onclick="gwRemoveWinner()">Remove &amp; Re-spin</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+let gwEntries = [];
+let gwOpen = false;
+let gwSpinning = false;
+let gwAngle = 0;
+let gwWinner = null;
+let gwPollTimer = null;
+
+const GW_COLORS = ['#ffffff','#9e9e9e','#795548','#c0c0c0','#ffd700'];
+
+function gwTextColor(bg) {
+  return (bg === '#ffffff' || bg === '#c0c0c0' || bg === '#ffd700') ? '#1a1a1a' : '#ffffff';
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function gwDraw() {
+  const canvas = document.getElementById('gwCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const cx = canvas.width / 2, cy = canvas.height / 2, r = 250;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (gwEntries.length === 0) {
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = '#1f1f23'; ctx.fill();
+    ctx.strokeStyle = '#2a2a35'; ctx.lineWidth = 4; ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, 38, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff'; ctx.fill();
+    ctx.fillStyle = '#6b6b7a'; ctx.font = 'bold 15px "Syne", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('No entries', cx, cy - 55);
+    return;
+  }
+
+  const n = gwEntries.length;
+  const sliceAngle = (Math.PI * 2) / n;
+
+  for (let i = 0; i < n; i++) {
+    const startA = gwAngle + i * sliceAngle;
+    const endA = startA + sliceAngle;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, r, startA, endA); ctx.closePath();
+    ctx.fillStyle = GW_COLORS[i % GW_COLORS.length]; ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.15)'; ctx.lineWidth = 1.5; ctx.stroke();
+  }
+
+  for (let i = 0; i < n; i++) {
+    const midA = gwAngle + i * sliceAngle + sliceAngle / 2;
+    ctx.save();
+    ctx.translate(cx, cy);
+    const normA = ((midA % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    const flipped = normA > Math.PI / 2 && normA < Math.PI * 3 / 2;
+    ctx.rotate(flipped ? midA + Math.PI : midA);
+    const maxChars = n > 20 ? 6 : (n > 10 ? 10 : 16);
+    let name = gwEntries[i];
+    if (name.length > maxChars) name = name.slice(0, maxChars - 1) + '\u2026';
+    const fontSize = n > 20 ? 11 : (n > 10 ? 14 : (n > 5 ? 18 : 24));
+    const color = GW_COLORS[i % GW_COLORS.length];
+    ctx.fillStyle = gwTextColor(color);
+    ctx.font = 'bold ' + fontSize + 'px "Syne", sans-serif';
+    ctx.textAlign = flipped ? 'right' : 'left';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 3;
+    ctx.fillText(name, flipped ? -52 : 52, 0);
+    ctx.restore();
+  }
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.3)'; ctx.shadowBlur = 10;
+  ctx.beginPath(); ctx.arc(cx, cy, 38, 0, Math.PI * 2);
+  ctx.fillStyle = '#fff'; ctx.fill();
+  ctx.restore();
+}
+
+function gwUpdateUI() {
+  const countEl = document.getElementById('gwEntryCount');
+  const openBtn = document.getElementById('gwOpenBtn');
+  const listEl = document.getElementById('gwEntriesList');
+  const emptyEl = document.getElementById('gwEntriesEmpty');
+  const sidebarCount = document.getElementById('gwSidebarCount');
+  if (countEl) countEl.textContent = gwEntries.length + ' entr' + (gwEntries.length === 1 ? 'y' : 'ies');
+  if (sidebarCount) sidebarCount.textContent = gwEntries.length;
+  if (openBtn) {
+    openBtn.textContent = gwOpen ? 'Close Entries' : 'Open Entries';
+    openBtn.className = gwOpen ? 'btn btn-close-entries' : 'btn btn-primary';
+  }
+  if (emptyEl) emptyEl.style.display = gwEntries.length === 0 ? '' : 'none';
+  if (listEl) {
+    const items = listEl.querySelectorAll('.entry-item');
+    items.forEach(el => el.remove());
+    gwEntries.forEach((name, i) => {
+      const div = document.createElement('div');
+      div.className = 'entry-item';
+      div.innerHTML = '<span class="entry-color" style="background:' + GW_COLORS[i % GW_COLORS.length] + ';border:1px solid rgba(255,255,255,0.15);"></span><span class="entry-name">' + name + '</span><button class="entry-remove" onclick="gwRemoveEntry(' + i + ')" title="Remove">\u00d7</button>';
+      listEl.appendChild(div);
+    });
+  }
+  gwDraw();
+}
+
+async function gwToggleEntries() {
+  gwOpen = !gwOpen;
+  try {
+    await fetch('/api/giveaway/toggle', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ open:gwOpen, keyword:document.getElementById('gwKeyword').value, subOnly:document.getElementById('gwSubOnly').checked, message:document.getElementById('gwMessage').value }) });
+  } catch(e) {}
+  gwUpdateUI();
+  if (gwOpen) { gwStartPoll(); } else { gwStopPoll(); }
+  if (gwOpen) showToast('Entries opened \u2014 viewers can type ' + document.getElementById('gwKeyword').value);
+  else showToast('Entries closed');
+}
+
+function gwSpin() {
+  if (gwEntries.length < 2 || gwSpinning) return;
+  gwSpinning = true;
+  document.getElementById('gwWinnerCard').style.display = 'none';
+  const n = gwEntries.length;
+  const sliceAngle = (Math.PI * 2) / n;
+  const winnerIdx = Math.floor(Math.random() * n);
+  gwAngle = gwAngle % (Math.PI * 2);
+  const targetBase = -winnerIdx * sliceAngle - sliceAngle / 2;
+  const jitter = (Math.random() - 0.5) * sliceAngle * 0.6;
+  const fullSpins = 8 + Math.floor(Math.random() * 4);
+  const targetAngle = targetBase + jitter - fullSpins * Math.PI * 2;
+  const startAngle = gwAngle;
+  const totalDelta = targetAngle - startAngle;
+  const duration = 6000 + Math.random() * 2000;
+  const startTime = performance.now();
+  function easeOutQuart(t) { return 1 - Math.pow(1 - t, 4); }
+  function animate(now) {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    gwAngle = startAngle + totalDelta * easeOutQuart(progress);
+    gwDraw();
+    if (progress < 1) { requestAnimationFrame(animate); }
+    else {
+      gwSpinning = false;
+      gwWinner = gwEntries[winnerIdx];
+      document.getElementById('gwWinnerCard').style.display = '';
+      document.getElementById('gwWinnerName').textContent = gwWinner;
+      gwUpdateUI();
+      if (document.getElementById('gwAnnounce').checked) {
+        fetch('/api/giveaway/announce', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ winner:gwWinner }) }).catch(() => {});
+      }
+    }
+  }
+  requestAnimationFrame(animate);
+}
+
+function gwRemoveEntry(idx) { gwEntries.splice(idx, 1); gwUpdateUI(); }
+function gwRemoveWinner() {
+  if (!gwWinner) return;
+  const idx = gwEntries.indexOf(gwWinner);
+  if (idx !== -1) gwEntries.splice(idx, 1);
+  gwWinner = null;
+  document.getElementById('gwWinnerCard').style.display = 'none';
+  gwUpdateUI();
+  if (gwEntries.length >= 2) setTimeout(gwSpin, 400);
+  else showToast('Not enough entries to re-spin');
+}
+function gwReset() {
+  gwEntries = []; gwOpen = false; gwSpinning = false; gwAngle = 0; gwWinner = null;
+  gwStopPoll();
+  document.getElementById('gwWinnerCard').style.display = 'none';
+  fetch('/api/giveaway/reset', { method:'POST' }).catch(() => {});
+  gwUpdateUI();
+  showToast('Giveaway reset');
+}
+function gwManualAdd() {
+  const name = prompt('Enter a username:');
+  if (!name || !name.trim()) return;
+  const clean = name.trim().toLowerCase();
+  if (gwEntries.includes(clean)) { showToast('Already entered'); return; }
+  const max = parseInt(document.getElementById('gwMaxEntries').value) || 0;
+  if (max > 0 && gwEntries.length >= max) { showToast('Max entries reached'); return; }
+  gwEntries.push(clean);
+  gwUpdateUI();
+}
+function gwStartPoll() {
+  gwStopPoll();
+  gwPollTimer = setInterval(async () => {
+    try {
+      const res = await fetch('/api/giveaway/status');
+      const data = await res.json();
+      if (data.entries) {
+        let changed = false;
+        data.entries.forEach(name => {
+          if (!gwEntries.includes(name)) {
+            const max = parseInt(document.getElementById('gwMaxEntries').value) || 0;
+            if (max > 0 && gwEntries.length >= max) return;
+            gwEntries.push(name);
+            changed = true;
+          }
+        });
+        if (changed) gwUpdateUI();
+      }
+    } catch(ex) {}
+  }, 1000);
+}
+function gwStopPoll() { if (gwPollTimer) { clearInterval(gwPollTimer); gwPollTimer = null; } }
+
+async function gwInit() {
+  try {
+    const res = await fetch('/api/giveaway/status');
+    const data = await res.json();
+    if (data.entries && data.entries.length > 0) gwEntries = data.entries;
+    if (data.keyword) document.getElementById('gwKeyword').value = data.keyword;
+    if (data.subOnly) document.getElementById('gwSubOnly').checked = true;
+    if (data.message) document.getElementById('gwMessage').value = data.message;
+    gwOpen = !!data.open;
+    if (gwOpen) gwStartPoll();
+  } catch(e) {}
+  gwUpdateUI();
+}
+gwInit();
+</script>
+</body>
+</html>

@@ -48,7 +48,7 @@
       <span class="nav-icon">🎵</span> Song Requests
     </div>
     <div class="nav-item" id="nav-giveaway" onclick="showPage('giveaway')">
-      Giveaways
+      <span class="nav-icon">🎡</span> Spin the Wheel
     </div>
 
     <!-- Moderation group -->
@@ -113,10 +113,6 @@
       </div>
       <div class="nav-group-children" id="navgc-account">
         <div class="nav-item" id="nav-accounts" onclick="showPage('accounts')">Connected Accounts</div>
-        <div class="nav-item" id="nav-guest" onclick="showPage('guest')">
-          Guest Channels
-          <span id="guestCountBadge" style="display:none;margin-left:auto;font-size:0.58rem;background:var(--accent-soft);color:var(--accent);border:1px solid rgba(10,132,255,0.25);border-radius:10px;padding:1px 7px;flex-shrink:0;"></span>
-        </div>
       </div>
     </div>
 
@@ -3489,22 +3485,8 @@ async function overlayConfirmEdit(id) {
 </div>
 
 <!-- GIVEAWAYS PAGE -->
-<div class="page" id="page-giveaway">
-  <div class="cmd-page-wrap">
-    <div class="cmd-topbar">
-      <div class="cmd-title-block">
-        <div class="cmd-title">Giveaways</div>
-        <div class="cmd-sub">Run chat giveaways and pick random winners</div>
-      </div>
-    </div>
-    <div style="padding:0 28px;flex:1;display:flex;align-items:center;justify-content:center;">
-      <div style="text-align:center;opacity:0.3;">
-        <div style="font-size:1.4rem;margin-bottom:12px;font-family:'Syne',sans-serif;font-weight:700;opacity:0.4;">GIVEAWAY</div>
-        <div style="font-size:0.75rem;color:var(--muted);">Giveaways coming soon</div>
-        <div style="font-size:0.65rem;color:var(--muted-2);margin-top:6px;">!enter to join · bot picks a random winner · sub-only option</div>
-      </div>
-    </div>
-  </div>
+<div class="page" id="page-giveaway" style="height:100%;overflow:hidden;">
+  <iframe src="/dashboard/giveaway.html" id="giveawayFrame" style="width:100%;height:100%;border:none;background:var(--bg);"></iframe>
 </div>
 
 <!-- AUTOMOD PAGE -->

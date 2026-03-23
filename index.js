@@ -478,6 +478,36 @@ client.on('message', (channel, tags, message, self) => {
         return;
     }
 
+    // Giveaway entry - check with Express API if giveaway is open
+    {
+        const http4 = require('http');
+        const statusReq = http4.request({ hostname:'127.0.0.1', port:3000, path:'/api/giveaway/status', method:'GET' }, (resp) => {
+            let d = ''; resp.on('data', c => d += c); resp.on('end', () => {
+                try {
+                    const gw = JSON.parse(d);
+                    if (gw.open && command === gw.keyword) {
+                        const isSub = !!(tags.subscriber || tags.badges?.subscriber);
+                        const body4 = JSON.stringify({ username, isSub });
+                        const opts4 = { hostname:'127.0.0.1', port:3000, path:'/api/giveaway/enter', method:'POST', headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(body4)} };
+                        const entryReq = http4.request(opts4, (res4) => {
+                            let r = ''; res4.on('data', c => r += c); res4.on('end', () => {
+                                try {
+                                    const j = JSON.parse(r);
+                                    if (j.ok) client.say(channel, '@' + username + ' You are in!');
+                                    else if (j.error === 'duplicate') client.say(channel, '@' + username + ' You have already entered!');
+                                    else if (j.error === 'subs only') client.say(channel, '@' + username + ' This giveaway is subs only!');
+                                } catch(e2) {}
+                            });
+                        });
+                        entryReq.on('error', () => {}); entryReq.write(body4); entryReq.end();
+                    }
+                } catch(e3) {}
+            });
+        });
+        statusReq.on('error', () => {});
+        statusReq.end();
+    }
+
     // Text commands (custom)
     if (commands[command]) {
         const c = commands[command];

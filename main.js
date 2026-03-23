@@ -203,6 +203,10 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
         res.sendFile(path.join(appDir, 'dashboard', 'presets.html'));
     });
 
+    server.get('/dashboard/giveaway.html', (req, res) => {
+        res.sendFile(path.join(appDir, 'dashboard', 'giveaway.html'));
+    });
+
     server.get('/dashboard/home.html', (req, res) => {
         res.sendFile(path.join(appDir, 'dashboard', 'home.html'));
     });
@@ -2486,6 +2490,112 @@ Write-Output $sb.ToString().Trim()
             res.status(500).json({ ok: false, error: e.message });
         }
     });
+
+    // ---- GIVEAWAY ----
+    let giveawayOpen = false;
+    let giveawayEntries = [];
+    let giveawayKeyword = '!enter';
+    let giveawaySubOnly = false;
+    let giveawayMessage = 'Wheel open! Type {keyword} to enter!';
+    const giveawayClients = [];
+
+    function gwLoad() {
+        try {
+            const p = getDataPath('giveaway.json');
+            if (fs.existsSync(p)) {
+                const d = JSON.parse(fs.readFileSync(p, 'utf8'));
+                giveawayEntries = d.entries || [];
+                giveawayKeyword = d.keyword || '!enter';
+                giveawaySubOnly = !!d.subOnly;
+                giveawayMessage = d.message || 'Wheel open! Type {keyword} to enter!';
+                giveawayOpen = !!d.open;
+            }
+        } catch(e) {}
+    }
+    function gwSave() {
+        try {
+            const p = getDataPath('giveaway.json');
+            fs.writeFileSync(p, JSON.stringify({ entries: giveawayEntries, keyword: giveawayKeyword, subOnly: giveawaySubOnly, message: giveawayMessage, open: giveawayOpen }, null, 2));
+        } catch(e) {}
+    }
+    gwLoad();
+
+    server.get('/api/giveaway/stream', (req, res) => {
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.flushHeaders();
+        giveawayClients.push(res);
+        req.on('close', () => {
+            const i = giveawayClients.indexOf(res);
+            if (i !== -1) giveawayClients.splice(i, 1);
+        });
+    });
+
+    function broadcastGiveaway(data) {
+        const payload = 'data: ' + JSON.stringify(data) + '\n\n';
+        giveawayClients.forEach(c => c.write(payload));
+    }
+
+    server.post('/api/giveaway/toggle', (req, res) => {
+        const { open, keyword, subOnly, message } = req.body;
+        giveawayOpen = !!open;
+        if (keyword) giveawayKeyword = keyword.trim();
+        giveawaySubOnly = !!subOnly;
+        if (message !== undefined) giveawayMessage = message;
+        if (!giveawayOpen) {
+            sendChatMessage('Entries are now closed!');
+        } else {
+            giveawayEntries = [];
+            const chatMsg = giveawayMessage.replace(/\{keyword\}/g, giveawayKeyword);
+            sendChatMessage(chatMsg);
+        }
+        gwSave();
+        res.json({ ok: true });
+    });
+
+    server.post('/api/giveaway/enter', (req, res) => {
+        const { username, isSub } = req.body;
+        if (!giveawayOpen) return res.json({ ok: false, error: 'closed' });
+        if (giveawaySubOnly && !isSub) return res.json({ ok: false, error: 'subs only' });
+        const name = (username || '').toLowerCase().trim();
+        if (!name) return res.json({ ok: false });
+        if (giveawayEntries.includes(name)) return res.json({ ok: false, error: 'duplicate' });
+        giveawayEntries.push(name);
+        broadcastGiveaway({ type: 'entry', username: name });
+        gwSave();
+        res.json({ ok: true });
+    });
+
+    server.post('/api/giveaway/announce', (req, res) => {
+        const { winner } = req.body;
+        if (winner) sendChatMessage('The winner is @' + winner + '! Congratulations!');
+        res.json({ ok: true });
+    });
+
+    server.post('/api/giveaway/reset', (req, res) => {
+        giveawayOpen = false;
+        giveawayEntries = [];
+        giveawayKeyword = '!enter';
+        giveawaySubOnly = false;
+        giveawayMessage = 'Wheel open! Type {keyword} to enter!';
+        gwSave();
+        res.json({ ok: true });
+    });
+
+    function sendChatMessage(msg) {
+        try {
+            const net2 = require('net');
+            const sock = new net2.Socket();
+            sock.connect(9002, '127.0.0.1', () => { sock.write(msg); sock.destroy(); });
+            sock.on('error', () => {});
+        } catch(e) {}
+    }
+
+    server.get('/api/giveaway/status', (req, res) => {
+        res.json({ open: giveawayOpen, keyword: giveawayKeyword, subOnly: giveawaySubOnly, entries: giveawayEntries, message: giveawayMessage });
+    });
+
 
     // ---- STATIC (must be last) ----
     server.use(express.static(path.join(appDir, 'dashboard'), { index: false }));
