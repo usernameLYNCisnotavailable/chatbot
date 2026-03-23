@@ -17,11 +17,41 @@
     -webkit-font-smoothing: antialiased;
     overflow: hidden;
   }
-  body { display: flex; flex-direction: column; }
+  body { display: flex; flex-direction: column; position: relative; }
   .page { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+
+  /* Presets background — dark left, teal glow right with character image */
+  .presets-bg {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background: #0a0a0c;
+  }
+  .presets-bg::after {
+    content: ''; position: absolute; inset: 0; z-index: 1;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    opacity: 0.03; mix-blend-mode: overlay;
+  }
+  .presets-bg-img {
+    position: absolute; right: -40px; top: 50%; transform: translateY(-50%);
+    height: 105%; width: auto; opacity: 0.35;
+    mask-image: linear-gradient(to left, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.5) 30%, rgba(0,0,0,0.2) 55%, transparent 75%);
+    -webkit-mask-image: linear-gradient(to left, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.5) 30%, rgba(0,0,0,0.2) 55%, transparent 75%);
+    filter: saturate(1.2) contrast(1.02);
+  }
+  .presets-bg-glow {
+    position: absolute; right: 0; top: 0; bottom: 0; width: 60%;
+    background: radial-gradient(ellipse at 80% 50%, rgba(0,210,200,0.08) 0%, transparent 70%);
+  }
+  #page-presets { position: relative; z-index: 1; }
+  .cmd-page-wrap { background: transparent !important; }
+
 </style>
 </head>
 <body>
+
+<div class="presets-bg">
+  <img class="presets-bg-img" src="/presets-bg.webp" alt="">
+  <div class="presets-bg-glow"></div>
+</div>
 
 <div class="page" id="page-presets" style="display:flex;">
   <div class="cmd-page-wrap">
