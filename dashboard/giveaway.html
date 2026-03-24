@@ -41,6 +41,8 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .form-label { font-size: 12px; font-weight: 500; color: var(--muted); }
 .body { display: flex; gap: 0; flex: 1; overflow: hidden; min-height: 0; }
 .wheel-area { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; background: radial-gradient(ellipse at center, #1a1a22 0%, #0e0e10 70%); }
+.gw-anim { position: absolute; right: 20px; bottom: 0; width: 240px; height: auto; opacity: 0.8; pointer-events: none; transition: width 0.6s ease, opacity 0.4s ease; }
+.gw-anim.spin-active { width: 720px; opacity: 1; }
 .wheel-container { position: relative; cursor: pointer; }
 .pointer { position: absolute; right: -16px; top: 50%; transform: translateY(-50%); z-index: 2; width: 0; height: 0; border-top: 16px solid transparent; border-bottom: 16px solid transparent; border-right: 30px solid #e74c3c; filter: drop-shadow(-2px 0 6px rgba(0,0,0,0.5)); }
 #gwCanvas { display: block; border-radius: 50%; box-shadow: 0 0 60px rgba(0,0,0,0.5), 0 0 0 5px rgba(255,255,255,0.05); }
@@ -92,6 +94,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   </div>
   <div class="body">
     <div class="wheel-area">
+      <video class="gw-anim" id="gwAnim" src="/dashboard/spin-anim.webm" autoplay loop muted playsinline></video>
       <div class="wheel-container" onclick="gwSpin()">
         <canvas id="gwCanvas" width="520" height="520"></canvas>
         <div class="pointer"></div>
@@ -259,6 +262,8 @@ async function gwToggleEntries() {
 function gwSpin() {
   if (gwEntries.length < 2 || gwSpinning) return;
   gwSpinning = true;
+  const animEl = document.getElementById('gwAnim');
+  if (animEl) animEl.classList.add('spin-active');
   document.getElementById('gwWinnerCard').style.display = 'none';
   const n = gwEntries.length;
   const sliceAngle = (Math.PI * 2) / n;
@@ -281,6 +286,8 @@ function gwSpin() {
     if (progress < 1) { requestAnimationFrame(animate); }
     else {
       gwSpinning = false;
+      const animDone = document.getElementById('gwAnim');
+      if (animDone) animDone.classList.remove('spin-active');
       gwWinner = gwEntries[winnerIdx];
       document.getElementById('gwWinnerCard').style.display = '';
       document.getElementById('gwWinnerName').textContent = gwWinner;

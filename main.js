@@ -199,7 +199,9 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
         res.sendFile(path.join(appDir, 'dashboard', 'home.html'));
     });
 
-    server.get('/dashboard/presets.html', (req, res) => {
+    server.get('/dashboard/spin-anim.webm', (req,res) => res.sendFile(path.join(__dirname,'dashboard','spin-anim.webm')));
+server.get('/dashboard/580b57fcd9996e24bc43c289.png', (req,res) => res.sendFile(path.join(__dirname,'dashboard','580b57fcd9996e24bc43c289.png')));
+server.get('/dashboard/presets.html', (req, res) => {
         res.sendFile(path.join(appDir, 'dashboard', 'presets.html'));
     });
 

@@ -103,6 +103,8 @@
   }
   .nav-item:hover { background: var(--surface-hover); color: var(--text); }
   .nav-item.active { color: var(--text); background: var(--surface-hover); border-left-color: var(--accent); font-weight: 500; }
+  .nav-cutout { height: 50px; width: auto; margin-left: auto; opacity: 1; filter: brightness(1.5); flex-shrink: 0; pointer-events: none; }
+  #nav-presets { overflow: hidden; height: 29px; box-sizing: border-box; }
   .nav-icon { width: 16px; text-align: center; flex-shrink: 0; font-size: 14px; }
 
   .nav-group { display: flex; flex-direction: column; }
