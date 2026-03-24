@@ -306,10 +306,18 @@ server.get('/dashboard/presets.html', (req, res) => {
             if (state === 'streamer') {
                 // This is the streamer logging in with their main account
                 config.streamerUsername = username;
+                const userSubDir = path.join(app.getPath('userData'), username);
+                if (!fs.existsSync(userSubDir)) fs.mkdirSync(userSubDir, { recursive: true });
                 config.streamerDisplayName = displayName;
                 config.streamerAvatar = avatar;
-                config.streamerToken = encryptToken(`oauth:${accessToken}`, getUserDataPath());
+                config.streamerToken = encryptToken(`oauth:${accessToken}`, userSubDir);
                 config.loggedIn = true;
+
+                // Ensure subfolder exists and has the config
+                const userDir = path.join(app.getPath('userData'), username);
+                if (!fs.existsSync(userDir)) fs.mkdirSync(userDir, { recursive: true });
+                fs.writeFileSync(path.join(userDir, 'config.json'), JSON.stringify(config, null, 4));
+                syncConfigToRoot();
 
                 if (config.usingMainAccount) {
                     config.botUsername = username;
