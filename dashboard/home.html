@@ -8,7 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #0e0e10;
+  --bg: #000000;
   --surface: #18181b;
   --surface-raised: #1f1f23;
   --surface-hover: #26262c;
@@ -394,6 +394,29 @@ body {
 }
 
 /* ── QUICK ACTIONS ── */
+.home-video-wrap {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  width: 100%;
+  max-width: 520px;
+}
+.home-video {
+  width: 100%;
+  display: block;
+  border-radius: 8px;
+}
+.home-video-wrap::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to right, transparent 60%, var(--bg) 100%),
+    linear-gradient(to bottom, transparent 50%, var(--bg) 100%),
+    linear-gradient(to left, transparent 90%, var(--bg) 100%),
+    linear-gradient(to top, transparent 90%, var(--bg) 100%);
+  pointer-events: none;
+}
 .quick-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -548,6 +571,13 @@ body {
         <div class="clip-list" id="clipList">
           <div class="clip-empty">No clips yet<br><span style="font-size:11px;opacity:0.6">Type !clip in chat or click above</span></div>
         </div>
+      </div>
+
+      <!-- AMBIENT VIDEO -->
+      <div class="home-video-wrap">
+        <video class="home-video" autoplay muted loop playsinline>
+          <source src="/dashboard/42670-432087053_medium.mp4" type="video/mp4">
+        </video>
       </div>
 
     </div>

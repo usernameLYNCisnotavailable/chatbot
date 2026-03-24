@@ -199,7 +199,11 @@ function startServer(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URI
         res.sendFile(path.join(appDir, 'dashboard', 'home.html'));
     });
 
-    server.get('/dashboard/spin-anim.webm', (req,res) => res.sendFile(path.join(__dirname,'dashboard','spin-anim.webm')));
+    server.get('/dashboard/42670-432087053_medium.mp4', (req,res) => res.sendFile(path.join(__dirname,'dashboard','42670-432087053_medium.mp4')));
+server.get('/dashboard/giphy.gif', (req,res) => res.sendFile(path.join(__dirname,'dashboard','giphy.gif')));
+server.get('/dashboard/redone_it.mp4', (req,res) => res.sendFile(path.join(__dirname,'dashboard','redone_it.mp4')));
+server.get('/dashboard/pikachu-bg.mp4', (req,res) => res.sendFile(path.join(__dirname,'dashboard','pikachu-bg.mp4')));
+server.get('/dashboard/spin-anim.webm', (req,res) => res.sendFile(path.join(__dirname,'dashboard','spin-anim.webm')));
 server.get('/dashboard/580b57fcd9996e24bc43c289.png', (req,res) => res.sendFile(path.join(__dirname,'dashboard','580b57fcd9996e24bc43c289.png')));
 server.get('/dashboard/presets.html', (req, res) => {
         res.sendFile(path.join(appDir, 'dashboard', 'presets.html'));

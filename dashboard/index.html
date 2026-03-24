@@ -137,7 +137,10 @@
     <!-- COMMANDS PAGE -->
     <div class="page active" id="page-home" style="height:100%;overflow:hidden;"><iframe src="/dashboard/home.html" id="homeFrame" style="width:100%;height:100%;border:none;background:var(--bg);"></iframe></div>
     <div class="page" id="page-commands">
-      <div class="cmd-page-wrap">
+      <video class="page-bg-video" id="cmdsBgVideo" muted loop playsinline autoplay preload="auto">
+        <source src="/dashboard/pikachu-bg.mp4" type="video/mp4">
+      </video>
+      <div class="cmd-page-wrap" style="position:relative;z-index:1;">
         <div class="cmd-topbar">
           <div class="cmd-title-block">
             <div class="cmd-title">Commands</div>
@@ -417,7 +420,10 @@
 
 <!-- SONG REQUESTS PAGE -->
 <div class="page" id="page-songs">
-  <div class="cmd-page-wrap">
+  <video class="songs-bg-video" id="songsBgVideo" muted loop playsinline preload="auto">
+    <source src="/dashboard/redone_it.mp4" type="video/mp4">
+  </video>
+  <div class="cmd-page-wrap" style="position:relative;z-index:1;">
     <div class="cmd-topbar">
       <div class="cmd-title-block">
         <div class="cmd-title">Song Requests</div>
@@ -5608,6 +5614,8 @@ checkBotStatus();
           if (cur) { npTitle.textContent = cur.title || cur.videoId; npTitle.style.color = 'rgba(255,255,255,0.85)'; if (npReq) npReq.textContent = 'requested by @' + cur.requester; }
           else { npTitle.textContent = 'Nothing playing'; npTitle.style.color = 'rgba(255,255,255,0.25)'; if (npReq) npReq.textContent = ''; }
         }
+        const sbv = document.getElementById('songsBgVideo');
+        if (sbv) { if (cur) { sbv.play().catch(() => {}); } else { sbv.pause(); } }
         const countEl = document.getElementById('dash-queue-count');
         if (countEl) countEl.textContent = queue.length ? queue.length + ' song' + (queue.length !== 1 ? 's' : '') : '';
         const listEl = document.getElementById('dash-queue-list');
