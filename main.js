@@ -67,6 +67,22 @@ function getDataPath(file) {
 }
 
 
+
+// Sync subfolder config to root so startBot always reads the right data
+function syncConfigToRoot() {
+    try {
+        const base = app.getPath('userData');
+        const sub = getUserDataPath();
+        if (sub !== base) {
+            const subConfig = path.join(sub, 'config.json');
+            const rootConfig = path.join(base, 'config.json');
+            if (fs.existsSync(subConfig)) {
+                fs.copyFileSync(subConfig, rootConfig);
+            }
+        }
+    } catch(e) { console.error('[sync] config sync failed:', e.message); }
+}
+
 function startReactor() {
     const reactorPath = app.isPackaged
         ? path.join(process.resourcesPath, 'app.asar', 'reactor.js')
@@ -109,7 +125,7 @@ function startBot() {
         ? path.join(process.resourcesPath, 'app.asar', 'index.js')
         : path.join(__dirname, 'index.js');
 
-    const userDataPath = app.getPath('userData');
+    const userDataPath = getUserDataPath();
 
     getDataPath('config.json');
     getDataPath('commands.json');
@@ -295,7 +311,13 @@ server.get('/dashboard/presets.html', (req, res) => {
                 config.streamerToken = encryptToken(`oauth:${accessToken}`, getUserDataPath());
                 config.loggedIn = true;
 
+                if (config.usingMainAccount) {
+                    config.botUsername = username;
+                    config.token = config.streamerToken;
+                }
+
                 fs.writeFileSync(getDataPath('config.json'), JSON.stringify(config, null, 4));
+                syncConfigToRoot();
 
                 if (botProcess) { botProcess.kill(); botProcess = null; }
                 if (config.setupComplete) {
@@ -354,9 +376,10 @@ server.get('/dashboard/presets.html', (req, res) => {
             } else {
                 // This is the bot account being authorized
                 config.botUsername = username;
-                config.token = `oauth:${accessToken}`;
+                config.token = encryptToken('oauth:' + accessToken, getUserDataPath());
                 config.usingMainAccount = false;
                 fs.writeFileSync(getDataPath('config.json'), JSON.stringify(config, null, 4));
+                syncConfigToRoot();
                 if (botProcess) { botProcess.kill(); botProcess = null; }
                 if (config.setupComplete) setTimeout(startBot, 1000);
                 if (mainWindow) mainWindow.loadURL('http://localhost:3000/setup?bot_authed=true');
@@ -379,6 +402,7 @@ server.get('/dashboard/presets.html', (req, res) => {
         config.token = config.streamerToken;
         config.usingMainAccount = true;
         fs.writeFileSync(getDataPath('config.json'), JSON.stringify(config, null, 4));
+        syncConfigToRoot();
         res.json({ success: true });
     });
 
@@ -390,6 +414,7 @@ server.get('/dashboard/presets.html', (req, res) => {
         config.setupComplete = true;
         config.loggedIn = true;
         fs.writeFileSync(getDataPath('config.json'), JSON.stringify(config, null, 4));
+        syncConfigToRoot();
         if (!botProcess) setTimeout(startBot, 1000);
         if (!config.onboardingComplete) {
             if (mainWindow) mainWindow.loadURL('http://localhost:3000/onboarding');
