@@ -36,6 +36,124 @@
   #page-presets { position: relative; z-index: 1; }
   .cmd-page-wrap { background: transparent !important; }
 
+  /* ── Conic shimmer Set Up buttons ─────────────────────────────────── */
+  @property --angle-1 { syntax: "<angle>"; inherits: false; initial-value: -75deg; }
+  @property --angle-2 { syntax: "<angle>"; inherits: false; initial-value: -45deg; }
+  :root { --anim--hover-time: 400ms; --anim--hover-ease: cubic-bezier(0.25, 1, 0.5, 1); }
+
+  .preset-btn {
+    --border-width: clamp(1px, 0.0625em, 3px);
+    all: unset;
+    cursor: pointer;
+    display: block;
+    width: 100%;
+    text-align: center;
+    position: relative;
+    -webkit-tap-highlight-color: rgba(0,0,0,0);
+    margin-top: 10px;
+    border-radius: 999vw;
+    background: linear-gradient(-75deg,
+      rgba(255,255,255,0.03),
+      rgba(255,255,255,0.10),
+      rgba(255,255,255,0.03)
+    );
+    box-shadow:
+      inset 0 0.125em 0.125em rgba(0,0,0,0.12),
+      inset 0 -0.125em 0.125em rgba(255,255,255,0.08),
+      0 0.25em 0.15em -0.125em rgba(0,0,0,0.5),
+      0 0 0.1em 0.15em inset rgba(255,255,255,0.06);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    transition: all var(--anim--hover-time) var(--anim--hover-ease);
+    box-sizing: border-box;
+  }
+  .preset-btn:hover {
+    transform: scale(0.975);
+    box-shadow:
+      inset 0 0.125em 0.125em rgba(0,0,0,0.12),
+      inset 0 -0.125em 0.125em rgba(255,255,255,0.08),
+      0 0.1em 0.05em -0.075em rgba(0,0,0,0.55),
+      0 0 0.05em 0.08em inset rgba(255,255,255,0.12);
+  }
+  .preset-btn:active { transform: scale(0.97) rotate3d(1, 0, 0, 18deg); }
+
+  /* Border ring — conic gradient sweeps on hover */
+  .preset-btn::after {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    border-radius: 999vw;
+    width: calc(100% + var(--border-width));
+    height: calc(100% + var(--border-width));
+    top: calc(0% - var(--border-width) / 2);
+    left: calc(0% - var(--border-width) / 2);
+    padding: var(--border-width);
+    box-sizing: border-box;
+    background:
+      conic-gradient(
+        from var(--angle-1) at 50% 50%,
+        rgba(255,255,255,0.55),
+        rgba(255,255,255,0)   5% 40%,
+        rgba(255,255,255,0.55) 50%,
+        rgba(255,255,255,0)   60% 95%,
+        rgba(255,255,255,0.55)
+      ),
+      linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.08));
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    -webkit-mask-composite: destination-out;
+    transition: all var(--anim--hover-time) var(--anim--hover-ease), --angle-1 500ms ease;
+  }
+  .preset-btn:hover::after  { --angle-1: -125deg; }
+  .preset-btn:active::after { --angle-1: -75deg; }
+
+  /* Inner text span */
+  .preset-btn span {
+    position: relative;
+    display: block;
+    z-index: 4;
+    user-select: none;
+    font-family: 'Inter', sans-serif;
+    letter-spacing: 0.2px;
+    font-weight: 600;
+    font-size: 12px;
+    color: rgba(255,255,255,0.65);
+    text-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    padding: 5px 12px;
+    transition: all var(--anim--hover-time) var(--anim--hover-ease);
+    overflow: clip;
+    border-radius: 999vw;
+  }
+  .preset-btn:hover span { color: rgba(255,255,255,0.9); }
+
+  /* Shimmer sweep across face */
+  .preset-btn span::after {
+    content: "";
+    display: block;
+    position: absolute;
+    z-index: 3;
+    inset: 0;
+    border-radius: 999vw;
+    overflow: clip;
+    background: linear-gradient(
+      var(--angle-2),
+      rgba(255,255,255,0)    0%,
+      rgba(255,255,255,0.30) 40% 50%,
+      rgba(255,255,255,0)    55%
+    );
+    mix-blend-mode: screen;
+    pointer-events: none;
+    background-size: 200% 200%;
+    background-position: 0% 50%;
+    background-repeat: no-repeat;
+    transition:
+      background-position calc(var(--anim--hover-time) * 1.25) var(--anim--hover-ease),
+      --angle-2 calc(var(--anim--hover-time) * 1.25) var(--anim--hover-ease);
+  }
+  .preset-btn:hover  span::after { background-position: 25% 50%; }
+  .preset-btn:active span::after { background-position: 50% 15%; --angle-2: -15deg; }
+
 </style>
 </head>
 <body>
@@ -108,7 +226,7 @@
       const isEnabled = d['!clip'] !== false;
       fetch('/api/defaults', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ '!clip': !isEnabled }) })
         .then(() => {
-          btn.textContent = !isEnabled ? 'Disable' : 'Enable';
+          btn.innerHTML = !isEnabled ? '<span>Disable</span>' : '<span>Enable</span>';
           const s = document.getElementById('preset-clip-status');
           if (s) { s.textContent = !isEnabled ? 'Active' : 'Disabled'; s.className = !isEnabled ? 'preset-status configured' : 'preset-status'; }
           showToast('!clip ' + (!isEnabled ? 'enabled' : 'disabled'));
@@ -222,8 +340,8 @@
       if (!el) return;
       const isEvent = ['follow','sub','giftsub','cheer','raid','redeem','hype'].includes(k);
       const configured = isEvent ? !!(eventsubConfig[k]) : !!(presetsConfig[k]);
-      if (configured) { el.textContent = 'Configured'; el.className = 'preset-status configured'; if (btn) btn.textContent = 'Edit'; }
-      else { el.textContent = 'Not configured'; el.className = 'preset-status'; if (btn) btn.textContent = 'Set Up'; }
+      if (configured) { el.textContent = 'Configured'; el.className = 'preset-status configured'; if (btn) btn.innerHTML = '<span>Edit</span>'; }
+      else { el.textContent = 'Not configured'; el.className = 'preset-status'; if (btn) btn.innerHTML = '<span>Set Up</span>'; }
     });
   }
 
@@ -1022,8 +1140,17 @@
   // ── Textarea field type support loaded inline above ─────────────────────
 
   // ── Auto-open wizard from URL param ──────────────────────────────────────
+  function wrapPresetBtns() {
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      if (!btn.querySelector('span')) {
+        btn.innerHTML = '<span>' + btn.innerHTML + '</span>';
+      }
+    });
+  }
+
   window.addEventListener('load', () => {
     loadPresetsPage().then(() => {
+      wrapPresetBtns();
       if (_autoWizard) wizardOpen(_autoWizard);
     });
   });

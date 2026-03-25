@@ -95,17 +95,6 @@
     <!-- SETTINGS -->
     <div class="nav-section">Settings</div>
 
-    <!-- Permissions group -->
-    <div class="nav-group">
-      <div class="nav-group-header" id="navg-permissions" onclick="toggleNavGroup('permissions')">
-        <span class="nav-icon" style="font-size:0.7rem;opacity:0.5;">▸</span> Permissions
-        <span class="nav-group-chevron">▶</span>
-      </div>
-      <div class="nav-group-children" id="navgc-permissions">
-        <div class="nav-item" id="nav-admins" onclick="showPage('admins')">Admins</div>
-      </div>
-    </div>
-
     <!-- Account group -->
     <div class="nav-group">
       <div class="nav-group-header" id="navg-account" onclick="toggleNavGroup('account')">
@@ -155,7 +144,6 @@
           <div class="cmd-tab active" id="tab-custom" onclick="switchTab('custom')">Custom</div>
           <div class="cmd-tab" id="tab-default" onclick="switchTab('default')">Default</div>
           <div class="cmd-tab" id="tab-alerts" onclick="switchTab('alerts')">Alerts</div>
-          <div class="cmd-tab" id="tab-system" onclick="switchTab('system')">System</div>
         </div>
 
         <div class="cmd-toolbar">
@@ -304,6 +292,24 @@
         </div>
       </div>
 
+      <!-- Admins Section -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--border);">
+        <div style="font-size:0.6rem;color:var(--muted-2);letter-spacing:2px;text-transform:uppercase;">Admins</div>
+        <button class="btn" style="padding:5px 14px;font-size:0.6rem;" onclick="document.getElementById('roleSwitchModal').style.display='flex';document.getElementById('roleSwitchInput').value='';document.getElementById('roleSwitchError').style.display='none';">Switch User</button>
+      </div>
+
+      <!-- Add Admin Row -->
+      <div id="addAdminCard" style="display:flex;align-items:flex-end;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--border);">
+        <div style="flex:1;max-width:360px;">
+          <div style="font-size:0.6rem;color:var(--muted-2);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">Add Admin</div>
+          <input class="form-input" type="text" id="adminUsernameInput" placeholder="Twitch username" style="margin-bottom:0;" onkeydown="if(event.key==='Enter')addAdmin()" />
+        </div>
+        <button class="btn btn-green btn-sm" style="margin-left:16px;" onclick="addAdmin()">Add Admin</button>
+      </div>
+
+      <!-- Admin List -->
+      <div id="adminList" style="display:flex;flex-direction:column;gap:0;"><div class="empty" style="padding:20px 0;">No admins yet</div></div>
+
     </div>
   </div>
 </div>
@@ -346,33 +352,7 @@
   </div>
 </div>
 
-<!-- ADMINS PAGE -->
-<div class="page" id="page-admins">
-  <div class="cmd-page-wrap">
-    <div class="cmd-topbar">
-      <div class="cmd-title-block">
-        <div class="cmd-title">Admins</div>
-        <div class="cmd-sub">Manage bot admin permissions</div>
-      </div>
-      <button class="btn" style="padding:5px 14px;font-size:0.6rem;" onclick="document.getElementById('roleSwitchModal').style.display='flex';document.getElementById('roleSwitchInput').value='';document.getElementById('roleSwitchError').style.display='none';">Switch User</button>
-    </div>
-    <div style="padding:0 28px;display:flex;flex-direction:column;flex:1;overflow-y:auto;">
 
-      <!-- Add Admin Row -->
-      <div id="addAdminCard" style="display:flex;align-items:flex-end;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--border);">
-        <div style="flex:1;max-width:360px;">
-          <div style="font-size:0.6rem;color:var(--muted-2);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">Add Admin</div>
-          <input class="form-input" type="text" id="adminUsernameInput" placeholder="Twitch username" style="margin-bottom:0;" onkeydown="if(event.key==='Enter')addAdmin()" />
-        </div>
-        <button class="btn btn-green btn-sm" style="margin-left:16px;" onclick="addAdmin()">Add Admin</button>
-      </div>
-
-      <!-- Admin List -->
-      <div id="adminList" style="display:flex;flex-direction:column;gap:0;"><div class="empty" style="padding:20px 0;">No admins yet</div></div>
-
-    </div>
-  </div>
-</div>
 
 <!-- MODS PAGE -->
 <div class="page" id="page-mods">
@@ -3649,7 +3629,7 @@ async function overlayConfirmEdit(id) {
     </div>
     <div class="form-group">
       <label class="form-label">Response</label>
-      <input class="form-input" type="text" id="responseInput" placeholder="What the bot says..." />
+      <textarea class="form-input" id="responseInput" placeholder="What the bot says..." style="resize:vertical;min-height:80px;"></textarea>
     </div>
     <div class="form-group">
       <label class="form-label">Cooldown (seconds)</label>
@@ -3673,6 +3653,47 @@ async function overlayConfirmEdit(id) {
   </div>
 </div>
 
+
+<!-- ADVANCED COMMAND EDITOR MODAL -->
+<div id="advCmdModal" style="display:none;position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,0.78);backdrop-filter:blur(8px);align-items:center;justify-content:center;">
+  <div class="card" style="width:540px;max-width:94vw;padding:28px;display:flex;flex-direction:column;gap:18px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-size:0.55rem;letter-spacing:3px;color:rgba(255,255,255,0.2);text-transform:uppercase;margin-bottom:4px;">Advanced</div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;color:rgba(255,255,255,0.85);" id="advCmdModalTitle">!command</div>
+      </div>
+      <button onclick="closeAdvancedCmd()" style="background:none;border:none;color:rgba(255,255,255,0.25);font-size:1.2rem;cursor:pointer;padding:4px 8px;line-height:1;">✕</button>
+    </div>
+    <div>
+      <div class="expand-label" style="margin-bottom:7px;">Response</div>
+      <textarea id="advCmdResponse" style="width:100%;min-height:110px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;padding:9px 11px;outline:none;box-sizing:border-box;line-height:1.6;transition:border-color 0.15s;"
+        onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+    </div>
+    <div style="display:flex;gap:12px;">
+      <div style="flex:1;">
+        <div class="expand-label" style="margin-bottom:7px;">Cooldown (seconds)</div>
+        <input class="form-input" type="number" id="advCmdCooldown" min="0" style="width:100%;margin-bottom:0;" />
+      </div>
+      <div style="flex:1;">
+        <div class="expand-label" style="margin-bottom:7px;">Access</div>
+        <select class="form-input" id="advCmdAccess" style="width:100%;margin-bottom:0;">
+          <option value="everyone">Everyone</option>
+          <option value="subscriber">Subscriber</option>
+          <option value="moderator">Moderator</option>
+          <option value="lead mod">Lead Mod</option>
+          <option value="broadcaster">Broadcaster</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding-top:4px;border-top:1px solid var(--border);">
+      <button class="expand-delete-btn" id="advCmdDeleteBtn" style="margin:0;">Delete command</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-sm" onclick="closeAdvancedCmd()">Cancel</button>
+        <button class="btn btn-sm btn-green" onclick="saveAdvancedCmd()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ADD ALERT MODAL -->
 <div id="addAlertModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);align-items:center;justify-content:center;">
@@ -3959,10 +3980,8 @@ async function overlayConfirmEdit(id) {
     document.getElementById('tab-custom').classList.toggle('active', tab === 'custom');
     document.getElementById('tab-default').classList.toggle('active', tab === 'default');
     document.getElementById('tab-alerts').classList.toggle('active', tab === 'alerts');
-    document.getElementById('tab-system').classList.toggle('active', tab === 'system');
     document.getElementById('cmdSearch').value = '';
     document.getElementById('addCmdBtnWrap').style.display = tab === 'custom' ? '' : 'none';
-    if (tab === 'system') { renderSystemTab(); return; }
     if (tab === 'alerts') {
       // Show a New Alert button in the topbar area
       document.getElementById('addCmdBtnWrap').innerHTML = '<button class="cmd-add-btn" onclick="openAddAlert()">+ New Alert</button>';
@@ -3980,7 +3999,6 @@ async function overlayConfirmEdit(id) {
 
   function renderCommandTable() {
     if (currentTab === 'alerts') { renderAlertsTab(); return; }
-    if (currentTab === 'system') { renderSystemTab(); return; }
     const search = document.getElementById('cmdSearch').value.toLowerCase();
     const tbody = document.getElementById('cmdTableBody');
     let rows = [];
@@ -4069,9 +4087,9 @@ async function overlayConfirmEdit(id) {
                   style="width:100%;text-align:left;"
                   onchange="saveCommandResponse('${encodeURIComponent(cmd)}', this.value)" />
               </div>
-              <div class="expand-field" style="display:flex;align-items:flex-end;gap:8px;">
-                <button class="expand-delete-btn" style="background:rgba(100,60,200,0.15);color:rgba(180,140,255,0.8);border-color:rgba(140,80,255,0.2);" onclick="openEditCmd('${cmd.replace(/'/g, "\\'")}')">Edit command</button>
-                <button class="expand-delete-btn" onclick="deleteCommand('${encodeURIComponent(cmd)}')">Delete command</button>
+              <div class="expand-field" style="display:flex;align-items:flex-end;justify-content:space-between;">
+                <button class="expand-delete-btn" style="background:rgba(100,60,200,0.15);color:rgba(180,140,255,0.8);border-color:rgba(140,80,255,0.2);" onclick="openEditCmd('${cmd.replace(/'/g, "\\'")}')">Edit</button>
+                <button class="expand-delete-btn" onclick="deleteCommand('${encodeURIComponent(cmd)}')">Delete</button>
               </div>` : ''}
             </div>
             ${subCooldownsSection}
@@ -4300,6 +4318,46 @@ async function overlayConfirmEdit(id) {
     await fetch(`/api/commands/${cmd}`, { method: 'DELETE' });
     showToast('Command deleted');
     loadCommands();
+  }
+
+  // ---- ADVANCED COMMAND EDITOR ----
+  let _advCmdKey = '';
+
+  function openAdvancedCmd(cmdEncoded) {
+    const cmd = decodeURIComponent(cmdEncoded);
+    _advCmdKey = cmd;
+    const c = commandsCache[cmd] || {};
+    document.getElementById('advCmdModalTitle').textContent = cmd;
+    document.getElementById('advCmdResponse').value = c.response || '';
+    document.getElementById('advCmdCooldown').value = c.cooldown ?? 5;
+    document.getElementById('advCmdAccess').value = c.access || 'everyone';
+    document.getElementById('advCmdDeleteBtn').onclick = () => {
+      closeAdvancedCmd();
+      deleteCommand(encodeURIComponent(cmd));
+    };
+    document.getElementById('advCmdModal').style.display = 'flex';
+    setTimeout(() => document.getElementById('advCmdResponse').focus(), 50);
+  }
+
+  function closeAdvancedCmd() {
+    document.getElementById('advCmdModal').style.display = 'none';
+  }
+
+  async function saveAdvancedCmd() {
+    const cmd = _advCmdKey;
+    const c = commandsCache[cmd];
+    if (!c) { closeAdvancedCmd(); return; }
+    c.response = document.getElementById('advCmdResponse').value;
+    c.cooldown  = parseInt(document.getElementById('advCmdCooldown').value) || 5;
+    c.access    = document.getElementById('advCmdAccess').value;
+    await fetch('/api/commands', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command: cmd, response: c.response, cooldown: c.cooldown, access: c.access, enabled: c.enabled })
+    });
+    showToast('Command saved');
+    closeAdvancedCmd();
+    renderCommandTable();
   }
 
   // ---- ACTIONS ----
@@ -5386,7 +5444,8 @@ checkBotStatus();
     }).join('');
   }
 
-  function renderAlertsTab() {
+  async function renderAlertsTab() {
+    await loadMentionConfig();
     const tbody = document.getElementById('cmdTableBody');
 
     // OBS alerts rows
@@ -5493,8 +5552,68 @@ checkBotStatus();
       </tr>${expandRow}`;
     });
 
-    const allRows = [...obsRows, ...appRows];
-    document.getElementById('cmdCount').textContent = allRows.length + ' alert' + (allRows.length !== 1 ? 's' : '');
+    // @mention row
+    const mentionEnabled  = mentionCfg.enabled;
+    const mentionAccess   = mentionCfg.access || 'everyone';
+    const mentionCooldown = mentionCfg.cooldown ?? 300;
+    const mentionWebhook  = (mentionCfg.webhook || '').replace(/"/g, '&quot;');
+    const mentionMessage  = (mentionCfg.message || '').replace(/"/g, '&quot;');
+    const mentionExpandRow = `
+      <tr class="cmd-expand-row" id="sys-mentions-expand">
+        <td colspan="5">
+          <div class="cmd-expand-panel">
+            <div class="expand-grid">
+              <div class="expand-field">
+                <div class="expand-label">Cooldown (per user)</div>
+                <div style="display:flex;align-items:center;gap:6px">
+                  <input class="cmd-cd-input" type="number" value="${mentionCooldown}" min="0"
+                    onblur="saveMentionConfig({ cooldown: parseInt(this.value) || 300 })" />
+                  <span style="font-size:0.65rem;color:rgba(255,255,255,0.35);font-weight:500">sec</span>
+                </div>
+              </div>
+              <div class="expand-field">
+                <div class="expand-label">Access</div>
+                <select class="cmd-access" onchange="saveMentionConfig({ access: this.value })">
+                  ${['everyone','subscriber','moderator','broadcaster'].map(a => `<option value="${a}" ${mentionAccess===a?'selected':''}>${a.charAt(0).toUpperCase()+a.slice(1)}</option>`).join('')}
+                </select>
+              </div>
+            </div>
+            <div class="expand-field" style="margin-top:10px;">
+              <div class="expand-label">Discord Webhook URL</div>
+              <input class="form-input" type="text" value="${mentionWebhook}" placeholder="https://discord.com/api/webhooks/..."
+                style="width:100%;margin-top:4px;"
+                onblur="saveMentionConfig({ webhook: this.value })" />
+            </div>
+            <div class="expand-field" style="margin-top:10px;">
+              <div class="expand-label" style="margin-bottom:6px;">Message <span style="color:var(--muted-2);font-weight:400;text-transform:none;letter-spacing:0">— use {mentioned} for the username</span></div>
+              <textarea style="width:100%;min-height:80px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;padding:8px 10px;outline:none;resize:vertical;transition:border-color 0.15s;"
+                onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)';saveMentionConfig({ message: this.value })"
+              >${mentionMessage}</textarea>
+            </div>
+          </div>
+        </td>
+      </tr>`;
+    const mentionRow = `
+      <tr class="cmd-row" onclick="toggleExpand('sys-mentions')">
+        <td><div class="cmd-name">@user mentions</div></td>
+        <td><span class="cmd-response-text">Discord webhook notification</span></td>
+        <td><span class="cmd-type-badge custom">System</span></td>
+        <td></td>
+        <td>
+          <div class="cmd-actions-cell">
+            <span class="cmd-chevron">›</span>
+            <label class="toggle" onclick="event.stopPropagation()">
+              <input type="checkbox" ${mentionEnabled ? 'checked' : ''} onchange="saveMentionConfig({ enabled: this.checked })" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </td>
+      </tr>
+      ${mentionExpandRow}`;
+
+    const allRows = [...obsRows, ...appRows, mentionRow];
+    const alertCount = allRows.length - 1; // exclude mention from alert count label
+    document.getElementById('cmdCount').textContent = (alertCount) + ' alert' + (alertCount !== 1 ? 's' : '') + ' + 1 system';
     tbody.innerHTML = allRows.length
       ? allRows.join('')
       : `<tr><td colspan="5"><div class="empty-table">No alerts yet</div></td></tr>`;
@@ -6960,5 +7079,6 @@ checkBotStatus();
     if (dot && count > 0) dot.style.display = 'inline-block';
   }).catch(()=>{});
 </script>
+
 </body>
 </html>

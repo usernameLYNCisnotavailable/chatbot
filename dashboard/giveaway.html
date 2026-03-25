@@ -77,6 +77,139 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--muted-2); }
+
+  /* ── Glass Open/Close button ──────────────────────────────────────────── */
+  .gw-glass-btn {
+    -webkit-appearance: none;
+       -moz-appearance: none;
+            appearance: none;
+    outline: none;
+    border: none;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    text-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
+    position: relative;
+    line-height: 20px;
+    cursor: pointer;
+    color: #fff;
+    padding: 0;
+    margin: 0;
+    display: table;
+    border-radius: 20px;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.15), inset 0 0 0 1px rgba(0,0,0,0.1), 0 2px 12px -4px rgba(0,0,0,0.25);
+    background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%) transparent;
+    transition: box-shadow 0.2s ease;
+  }
+  .gw-glass-btn:hover {
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.25), inset 0 0 0 1px rgba(0,0,0,0.1), 0 4px 16px -4px rgba(0,0,0,0.35);
+  }
+  .gw-glass-btn span:first-child {
+    border-radius: inherit;
+    overflow: hidden;
+    display: block;
+    position: relative;
+    z-index: 3;
+    padding: 7px 18px;
+    background-image: linear-gradient(90deg, #e0d0ff 0%, #ffffff 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    white-space: nowrap;
+  }
+  .gw-glass-btn span:nth-child(2) {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    overflow: hidden;
+    mix-blend-mode: plus-lighter;
+    -webkit-clip-path: inset(1px);
+            clip-path: inset(1px);
+    pointer-events: none;
+  }
+  .gw-glass-btn span:nth-child(2):before,
+  .gw-glass-btn span:nth-child(2):after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%) translateZ(0);
+    border-radius: 50%;
+    background-color: #ffffff;
+  }
+  .gw-glass-btn span:nth-child(2):before {
+    width: 70%;
+    height: 6px;
+    bottom: -4px;
+    opacity: 0.6;
+    filter: blur(8px);
+    animation: gwGlassBlur 4s linear infinite;
+  }
+  .gw-glass-btn span:nth-child(2):after {
+    width: 70%;
+    height: 2px;
+    top: 0;
+    opacity: 0.1;
+    filter: blur(1.5px);
+    animation: gwGlassBlurTop 4s linear infinite;
+  }
+  .gw-glass-btn .gw-lines {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+    mix-blend-mode: plus-lighter;
+    border-radius: inherit;
+    overflow: hidden;
+  }
+  .gw-glass-btn .gw-lines > div {
+    position: absolute;
+    inset: -2px;
+  }
+  .gw-glass-btn .gw-lines > div:first-child {
+    -webkit-mask-image: radial-gradient(farthest-corner at right, black, transparent 75%);
+            mask-image: radial-gradient(farthest-corner at right, black, transparent 75%);
+  }
+  .gw-glass-btn .gw-lines > div:last-child {
+    -webkit-mask-image: radial-gradient(farthest-corner at right, black, transparent 75%);
+            mask-image: radial-gradient(farthest-corner at right, black, transparent 75%);
+    transform: rotate(180deg);
+  }
+  .gw-glass-btn .gw-lines > div svg {
+    display: block;
+    position: absolute;
+    inset: 2px;
+    overflow: visible;
+    mix-blend-mode: overlay;
+    fill: none;
+    stroke-width: 0.75;
+    stroke: #ffffff;
+    width: calc(100% - 4px);
+    height: calc(100% - 4px);
+    stroke-dasharray: 2 10;
+    stroke-dashoffset: 14;
+    opacity: 0;
+    animation: gwGlassStroke 4s linear infinite;
+  }
+  /* Close state — red tint */
+  .gw-glass-btn.gw-close span:first-child {
+    background-image: linear-gradient(90deg, #ffb0b0 0%, #ffdddd 100%);
+  }
+  .gw-glass-btn.gw-close {
+    box-shadow: 0 0 0 1px rgba(255,100,100,0.25), inset 0 0 0 1px rgba(0,0,0,0.1), 0 2px 12px -4px rgba(180,0,0,0.3);
+  }
+  @keyframes gwGlassStroke {
+    30%, 70% { opacity: 0.6; }
+    100% { stroke-dashoffset: 4; opacity: 0; }
+  }
+  @keyframes gwGlassBlur {
+    30%, 70% { opacity: 1; filter: blur(10px); }
+    100% { opacity: 0.6; filter: blur(8px); }
+  }
+  @keyframes gwGlassBlurTop {
+    30%, 70% { opacity: 0.35; }
+    100% { opacity: 0.1; }
+  }
+
 </style>
 </head>
 <body>
@@ -88,7 +221,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
     </div>
     <div class="topbar-actions">
       <span class="entry-count" id="gwEntryCount">0 entries</span>
-      <button class="btn btn-primary" id="gwOpenBtn" onclick="gwToggleEntries()">Open Entries</button>
+      <button class="gw-glass-btn" id="gwOpenBtn" onclick="gwToggleEntries()"><span>Open Entries</span><span></span></button>
       <button class="btn" onclick="gwReset()">Reset</button>
     </div>
   </div>
@@ -123,7 +256,8 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
         </div>
         <div class="settings-row" style="margin-top:4px;">
           <label class="form-label" style="min-width:70px;">Chat msg</label>
-          <input class="form-input" id="gwMessage" value="Wheel open! Type {keyword} to enter!" spellcheck="false" style="flex:1;font-size:11px;" title="Use {keyword} to insert the command">
+          <input class="form-input" id="gwMessage" value="Wheel open! Type {keyword} to enter!" spellcheck="false" style="flex:1;font-size:11px;min-width:0;" title="Use {keyword} to insert the command">
+          <button onclick="openGwMessageModal()" title="Edit in larger view" style="flex-shrink:0;margin-left:6px;padding:0 8px;height:28px;background:rgba(145,71,255,0.12);border:1px solid rgba(145,71,255,0.3);color:rgba(190,150,255,0.85);border-radius:5px;cursor:pointer;font-size:13px;line-height:1;">⤢</button>
         </div>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 18px 6px;">
@@ -231,8 +365,9 @@ function gwUpdateUI() {
   if (countEl) countEl.textContent = gwEntries.length + ' entr' + (gwEntries.length === 1 ? 'y' : 'ies');
   if (sidebarCount) sidebarCount.textContent = gwEntries.length;
   if (openBtn) {
-    openBtn.textContent = gwOpen ? 'Close Entries' : 'Open Entries';
-    openBtn.className = gwOpen ? 'btn btn-close-entries' : 'btn btn-primary';
+    const s = openBtn.querySelector('span');
+    if (s) s.textContent = gwOpen ? 'Close Entries' : 'Open Entries';
+    openBtn.className = gwOpen ? 'gw-glass-btn gw-close' : 'gw-glass-btn';
   }
   if (emptyEl) emptyEl.style.display = gwEntries.length === 0 ? '' : 'none';
   if (listEl) {
@@ -352,6 +487,46 @@ function gwStartPoll() {
 }
 function gwStopPoll() { if (gwPollTimer) { clearInterval(gwPollTimer); gwPollTimer = null; } }
 
+function openGwMessageModal() {
+  const current = document.getElementById('gwMessage').value;
+  document.getElementById('gwMsgModalTextarea').value = current;
+  document.getElementById('gwMessageModal').style.display = 'flex';
+  setTimeout(() => document.getElementById('gwMsgModalTextarea').focus(), 50);
+}
+
+function closeGwMessageModal() {
+  const val = document.getElementById('gwMsgModalTextarea').value;
+  document.getElementById('gwMessage').value = val;
+  document.getElementById('gwMessageModal').style.display = 'none';
+}
+
+
+function gwInitGlassBtn() {
+  const btn = document.getElementById('gwOpenBtn');
+  if (!btn) return;
+  const style = getComputedStyle(btn);
+  const lines = document.createElement('div');
+  lines.classList.add('gw-lines');
+  const groupTop = document.createElement('div');
+  const groupBottom = document.createElement('div');
+  const createSVG = (w, h, r) => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    svg.setAttributeNS('http://www.w3.org/2000/svg', 'viewBox', `0 0 ${w} ${h}`);
+    rect.setAttribute('x','0'); rect.setAttribute('y','0');
+    rect.setAttribute('width','100%'); rect.setAttribute('height','100%');
+    rect.setAttribute('rx', `${r}`); rect.setAttribute('ry', `${r}`);
+    rect.setAttribute('pathLength','10');
+    svg.appendChild(rect);
+    return svg;
+  };
+  const svg = createSVG(btn.offsetWidth, btn.offsetHeight, parseInt(style.borderRadius, 10));
+  groupTop.appendChild(svg);
+  groupBottom.appendChild(svg.cloneNode(true));
+  lines.appendChild(groupTop);
+  lines.appendChild(groupBottom);
+  btn.appendChild(lines);
+}
 async function gwInit() {
   try {
     const res = await fetch('/api/giveaway/status');
@@ -365,7 +540,27 @@ async function gwInit() {
   } catch(e) {}
   gwUpdateUI();
 }
-gwInit();
+gwInit().then(() => gwInitGlassBtn());
 </script>
+<!-- GW MESSAGE MODAL -->
+<div id="gwMessageModal" style="display:none;position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,0.78);backdrop-filter:blur(8px);align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;width:480px;max-width:94vw;padding:24px;display:flex;flex-direction:column;gap:16px;box-shadow:0 24px 60px rgba(0,0,0,0.5);">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-size:0.55rem;letter-spacing:3px;color:rgba(255,255,255,0.2);text-transform:uppercase;margin-bottom:4px;">Giveaway</div>
+        <div style="font-weight:700;font-size:0.95rem;color:rgba(255,255,255,0.85);">Chat Message</div>
+      </div>
+      <button onclick="document.getElementById('gwMessageModal').style.display='none'" style="background:none;border:none;color:rgba(255,255,255,0.25);font-size:1.2rem;cursor:pointer;padding:4px 8px;line-height:1;">✕</button>
+    </div>
+    <div style="font-size:0.65rem;color:rgba(255,255,255,0.3);letter-spacing:0.5px;margin-top:-8px;">Use <code style="background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:3px;">{keyword}</code> to insert the entry command.</div>
+    <textarea id="gwMsgModalTextarea" spellcheck="false"
+      style="width:100%;min-height:100px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:13px;padding:9px 11px;outline:none;box-sizing:border-box;line-height:1.6;resize:vertical;transition:border-color 0.15s;"
+      onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="document.getElementById('gwMessageModal').style.display='none'" style="padding:6px 16px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:0.72rem;cursor:pointer;">Cancel</button>
+      <button onclick="closeGwMessageModal()" style="padding:6px 18px;background:rgba(50,200,100,0.15);border:1px solid rgba(50,200,100,0.3);border-radius:6px;color:rgba(100,230,140,0.9);font-size:0.72rem;cursor:pointer;font-weight:600;">Done</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
