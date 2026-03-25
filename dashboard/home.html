@@ -446,6 +446,64 @@ body {
 }
 .quick-btn-icon { font-size: 14px; }
 
+/* === QUICK ACTIONS RADIAL HUB === */
+.qa-hub {
+  background: linear-gradient(138deg, #9147ff 15%, #bf94ff 65%);
+  position: relative;
+  cursor: pointer;
+  font-size: 17px;
+  padding: 0.7em;
+  border-radius: 50px;
+  box-shadow: 0 0.5rem 1.5rem rgba(145,71,255,0.35);
+  transition: background 0.6s, box-shadow 0.6s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.qa-hub:hover {
+  background: var(--surface-raised);
+  box-shadow: 0 0.5rem 1.5rem rgba(145,71,255,0.12);
+}
+.qa-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  transition: color 0.2s;
+}
+.qa-hub:hover .qa-text { color: #9147ff; transition: color 0.6s; }
+.qa-tip {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  visibility: hidden;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  padding: 10px;
+  border-radius: 50px;
+  font-size: 16px;
+  line-height: 1;
+  transition: opacity 0.3s, visibility 0.3s, top 0.3s;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+  cursor: pointer;
+  user-select: none;
+}
+.qa-tip:hover { background: var(--accent-soft); border-color: rgba(145,71,255,0.4); }
+.qa-tip-3 { left: 60%;   transform: translateX(80%); }
+.qa-tip-4 { left: -190%; transform: translateX(70%); }
+.qa-tip-5 { left: -145%; transform: translateX(70%); }
+.qa-tip-6 { left: 35%;   transform: translateX(70%); }
+.qa-hub:hover .qa-tip   { opacity: 1; visibility: visible; display: flex; align-items: center; justify-content: center; }
+.qa-hub:hover .qa-tip-1 { top: 150%;  transform: translate(-50%, -5px); }
+.qa-hub:hover .qa-tip-2 { top: -120%; transform: translate(-50%, -5px); }
+.qa-hub:hover .qa-tip-3 { top: 10%;   transform: translate(85%, -5px); }
+.qa-hub:hover .qa-tip-4 { top: 10%;   transform: translate(70%, -5px); }
+.qa-hub:hover .qa-tip-5 { top: -78%;  transform: translate(70%, -5px); }
+.qa-hub:hover .qa-tip-6 { top: -79%;  transform: translate(70%, -5px); }
+
 /* ── CLIP PANEL ── */
 .clip-entry {
   display: flex;
@@ -616,21 +674,18 @@ body {
         </div>
       </div>
 
-      <!-- QUICK ACTIONS -->
-      <div class="section-card">
-        <div class="section-head">
-          <div class="section-title">
-            <div class="section-title-dot" style="background:var(--accent)"></div>
-            Quick Actions
-          </div>
-        </div>
-        <div class="quick-actions">
-          <button class="quick-btn" onclick="parentNav('commands')"><span class="quick-btn-icon">⌨️</span> Commands</button>
-          <button class="quick-btn" onclick="parentNav('overlay')"><span class="quick-btn-icon">🖼️</span> Overlay</button>
-          <button class="quick-btn" onclick="parentNav('songs')"><span class="quick-btn-icon">🎵</span> Song Queue</button>
-          <button class="quick-btn" onclick="parentNav('giflibrary')"><span class="quick-btn-icon">🎞️</span> GIF Library</button>
-          <button class="quick-btn" onclick="parentNav('obs')"><span class="quick-btn-icon">📡</span> OBS</button>
-          <button class="quick-btn" onclick="parentNav('giveaway')"><span class="quick-btn-icon">🎁</span> Giveaway</button>
+      <!-- QUICK ACTIONS RADIAL HUB -->
+      <div style="display:flex;align-items:center;justify-content:center;padding:32px 0 20px;position:relative;">
+        <div class="qa-hub">
+          <span class="qa-text">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 16 16" fill="currentColor"><path d="M6.5 14.5v-3.505c0-.245.25-.495.5-.495h2c.25 0 .5.25.5.5v3.5a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5Z"/></svg>
+          </span>
+          <span class="qa-tip qa-tip-1" onclick="parentNav('commands')">⌨️</span>
+          <span class="qa-tip qa-tip-2" onclick="parentNav('giveaway')">🎁</span>
+          <span class="qa-tip qa-tip-3" onclick="parentNav('songs')">🎵</span>
+          <span class="qa-tip qa-tip-4" onclick="parentNav('overlay')">🖼️</span>
+          <span class="qa-tip qa-tip-5" onclick="parentNav('giflibrary')">🎞️</span>
+          <span class="qa-tip qa-tip-6" onclick="parentNav('obs')">📡</span>
         </div>
       </div>
 
