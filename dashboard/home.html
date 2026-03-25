@@ -447,62 +447,209 @@ body {
 .quick-btn-icon { font-size: 14px; }
 
 /* === QUICK ACTIONS RADIAL HUB === */
-.qa-hub {
-  background: linear-gradient(138deg, #9147ff 15%, #bf94ff 65%);
+.tooltip-container {
+  background: linear-gradient(138deg, rgba(145,71,255,1) 15%, rgba(191,148,255,1) 65%);
   position: relative;
   cursor: pointer;
   font-size: 17px;
-  padding: 0.7em;
+  padding: 0.7em 0.7em;
   border-radius: 50px;
-  box-shadow: 0 0.5rem 1.5rem rgba(145,71,255,0.35);
-  transition: background 0.6s, box-shadow 0.6s;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1);
 }
-.qa-hub:hover {
-  background: var(--surface-raised);
-  box-shadow: 0 0.5rem 1.5rem rgba(145,71,255,0.12);
+.tooltip-container:hover, .tooltip-container.open {
+  background: #1e1832;
+  transition: all 0.6s;
 }
-.qa-text {
+.tooltip-container .text {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
-  transition: color 0.2s;
+  fill: #fff;
+  transition: all 0.2s;
 }
-.qa-hub:hover .qa-text { color: #9147ff; transition: color 0.6s; }
-.qa-tip {
+.tooltip-container:hover .text, .tooltip-container.open .text {
+  fill: #9147ff;
+  transition: all 0.6s;
+}
+.tooltip1 {
   position: absolute;
   top: 100%;
   left: 50%;
   transform: translateX(-50%);
   opacity: 0;
   visibility: hidden;
-  background: var(--surface-raised);
-  border: 1px solid var(--border);
+  background: #1e1832;
   padding: 10px;
   border-radius: 50px;
-  font-size: 16px;
+  transition: opacity 0.3s, visibility 0.3s, top 0.3s, background 0.3s;
+  z-index: 1;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  font-size: 18px;
   line-height: 1;
-  transition: opacity 0.3s, visibility 0.3s, top 0.3s;
-  z-index: 100;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.35);
-  cursor: pointer;
-  user-select: none;
 }
-.qa-tip:hover { background: var(--accent-soft); border-color: rgba(145,71,255,0.4); }
-.qa-tip-3 { left: 60%;   transform: translateX(80%); }
-.qa-tip-4 { left: -190%; transform: translateX(70%); }
-.qa-tip-5 { left: -145%; transform: translateX(70%); }
-.qa-tip-6 { left: 35%;   transform: translateX(70%); }
-.qa-hub:hover .qa-tip   { opacity: 1; visibility: visible; display: flex; align-items: center; justify-content: center; }
-.qa-hub:hover .qa-tip-1 { top: 150%;  transform: translate(-50%, -5px); }
-.qa-hub:hover .qa-tip-2 { top: -120%; transform: translate(-50%, -5px); }
-.qa-hub:hover .qa-tip-3 { top: 10%;   transform: translate(85%, -5px); }
-.qa-hub:hover .qa-tip-4 { top: 10%;   transform: translate(70%, -5px); }
-.qa-hub:hover .qa-tip-5 { top: -78%;  transform: translate(70%, -5px); }
-.qa-hub:hover .qa-tip-6 { top: -79%;  transform: translate(70%, -5px); }
+.tooltip-container.open .tooltip1 {
+  top: 150%;
+  opacity: 1;
+  visibility: visible;
+  border-radius: 50px;
+  transform: translate(-50%, -5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tooltip-container.open .tooltip1:hover { background: #9147ff; }
+.tooltip2 {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  visibility: hidden;
+  background: #1e1832;
+  padding: 10px;
+  border-radius: 50px;
+  transition: opacity 0.3s, visibility 0.3s, top 0.3s, background 0.3s;
+  z-index: 1;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  font-size: 18px;
+  line-height: 1;
+}
+.tooltip-container.open .tooltip2 {
+  top: -120%;
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, -5px);
+  border-radius: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tooltip-container.open .tooltip2:hover { background: #9147ff; }
+.tooltip3 {
+  position: absolute;
+  top: 100%;
+  left: 60%;
+  transform: translateX(80%);
+  opacity: 0;
+  visibility: hidden;
+  background: #1e1832;
+  padding: 10px;
+  border-radius: 50px;
+  transition: opacity 0.3s, visibility 0.3s, top 0.3s, background 0.3s;
+  z-index: 1;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  font-size: 18px;
+  line-height: 1;
+}
+.tooltip-container.open .tooltip3 {
+  top: 10%;
+  opacity: 1;
+  visibility: visible;
+  transform: translate(85%, -5px);
+  border-radius: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tooltip-container.open .tooltip3:hover { background: #9147ff; }
+.tooltip4 {
+  position: absolute;
+  top: 100%;
+  left: -190%;
+  transform: translateX(70%);
+  opacity: 0;
+  visibility: hidden;
+  background: #1e1832;
+  padding: 10px;
+  border-radius: 50px;
+  transition: opacity 0.3s, visibility 0.3s, top 0.3s, background 0.3s;
+  z-index: 1;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  font-size: 18px;
+  line-height: 1;
+}
+.tooltip-container.open .tooltip4 {
+  top: 10%;
+  opacity: 1;
+  visibility: visible;
+  transform: translate(70%, -5px);
+  border-radius: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tooltip-container.open .tooltip4:hover { background: #9147ff; }
+.tooltip5 {
+  position: absolute;
+  top: 100%;
+  left: -145%;
+  transform: translateX(70%);
+  opacity: 0;
+  visibility: hidden;
+  background: #1e1832;
+  padding: 10px;
+  border-radius: 50px;
+  transition: opacity 0.3s, visibility 0.3s, top 0.3s, background 0.3s;
+  z-index: 1;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  font-size: 18px;
+  line-height: 1;
+}
+.tooltip-container.open .tooltip5 {
+  top: -78%;
+  opacity: 1;
+  visibility: visible;
+  transform: translate(70%, -5px);
+  border-radius: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tooltip-container.open .tooltip5:hover { background: #9147ff; }
+.tooltip6 {
+  position: absolute;
+  top: 100%;
+  left: 35%;
+  transform: translateX(70%);
+  opacity: 0;
+  visibility: hidden;
+  background: #1e1832;
+  padding: 10px;
+  border-radius: 50px;
+  transition: opacity 0.3s, visibility 0.3s, top 0.3s, background 0.3s;
+  z-index: 1;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  font-size: 18px;
+  line-height: 1;
+}
+.tooltip-container.open .tooltip6 {
+  top: -79%;
+  opacity: 1;
+  visibility: visible;
+  transform: translate(70%, -5px);
+  border-radius: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tooltip-container.open .tooltip6:hover { background: #9147ff; }
+.tooltip9 {
+  position: absolute;
+  top: 0;
+  left: -115%;
+  opacity: 0;
+  visibility: hidden;
+  width: 150px;
+  height: 150px;
+  z-index: -1;
+}
+.tooltip-container.open .tooltip9 {
+  top: -110%;
+  opacity: 1;
+  visibility: visible;
+  border-radius: 50%;
+  z-index: -1;
+}
 
 /* ── CLIP PANEL ── */
 .clip-entry {
@@ -675,17 +822,18 @@ body {
       </div>
 
       <!-- QUICK ACTIONS RADIAL HUB -->
-      <div style="display:flex;align-items:center;justify-content:center;padding:32px 0 20px;position:relative;">
-        <div class="qa-hub">
-          <span class="qa-text">
+      <div style="display:flex;align-items:center;justify-content:center;padding:32px 0 20px;">
+        <div class="tooltip-container">
+          <span class="text">
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 16 16" fill="currentColor"><path d="M6.5 14.5v-3.505c0-.245.25-.495.5-.495h2c.25 0 .5.25.5.5v3.5a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5Z"/></svg>
           </span>
-          <span class="qa-tip qa-tip-1" onclick="parentNav('commands')">⌨️</span>
-          <span class="qa-tip qa-tip-2" onclick="parentNav('giveaway')">🎁</span>
-          <span class="qa-tip qa-tip-3" onclick="parentNav('songs')">🎵</span>
-          <span class="qa-tip qa-tip-4" onclick="parentNav('overlay')">🖼️</span>
-          <span class="qa-tip qa-tip-5" onclick="parentNav('giflibrary')">🎞️</span>
-          <span class="qa-tip qa-tip-6" onclick="parentNav('obs')">📡</span>
+          <span class="tooltip1" onclick="parentNav('commands')">⌨️</span>
+          <span class="tooltip2" onclick="parentNav('giveaway')">🎁</span>
+          <span class="tooltip3" onclick="parentNav('songs')">🎵</span>
+          <span class="tooltip4" onclick="parentNav('overlay')">🖼️</span>
+          <span class="tooltip5" onclick="parentNav('giflibrary')">🎞️</span>
+          <span class="tooltip6" onclick="parentNav('obs')">📡</span>
+          <span class="tooltip9"> </span>
         </div>
       </div>
 
@@ -1047,6 +1195,29 @@ fetchStreamStatus();
 setInterval(fetchStreamStatus, 30000);
 loadClips();
 setInterval(loadClips, 15000);
+
+// Quick action hub — keep open while mouse is anywhere near it
+(function() {
+  function initQuickHub() {
+    var hub = document.querySelector('.tooltip-container');
+    if (!hub) return;
+    var closeTimer;
+    hub.addEventListener('mouseover', function() {
+      clearTimeout(closeTimer);
+      hub.classList.add('open');
+    });
+    hub.addEventListener('mouseout', function(e) {
+      if (!hub.contains(e.relatedTarget)) {
+        closeTimer = setTimeout(function() { hub.classList.remove('open'); }, 400);
+      }
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initQuickHub);
+  } else {
+    initQuickHub();
+  }
+})();
 </script>
 </body>
 </html>
