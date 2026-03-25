@@ -3011,11 +3011,12 @@ function overlayRenderSources() {
 
     const card = document.createElement('div');
     card.className = 'overlay-src-card';
-    card.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px;transition:border-color 0.15s;';
-    card.onmouseenter = () => card.style.borderColor = 'var(--border-strong)';
-    card.onmouseleave = () => card.style.borderColor = 'var(--border)';
     card.innerHTML =
-      '<div style="display:flex;align-items:flex-start;gap:8px;">'
+      '<div class="osc-circles"></div>'
+      + '<div class="osc-holo-bg"></div>'
+      + '<div class="osc-holo-lines"></div>'
+      + '<div class="osc-content">'
+      + '<div style="display:flex;align-items:flex-start;gap:8px;">'
       + '<div style="width:30px;height:30px;border-radius:6px;background:' + iconBg + ';display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">' + icon + '</div>'
       + '<div style="flex:1;min-width:0;">'
       + '<div style="font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + name + '</div>'
@@ -3031,7 +3032,18 @@ function overlayRenderSources() {
       + '<button class="btn btn-secondary" style="font-size:11px;padding:5px 0;text-align:center;" onclick="overlayStopSource(' + src.id + ')">Stop</button>'
       + '<button class="btn btn-secondary" style="font-size:11px;padding:5px 0;text-align:center;" onclick="overlayEditSource(' + src.id + ')">Edit</button>'
       + '<button class="btn btn-danger" style="font-size:11px;padding:5px 8px;" onclick="overlayRemoveSource(' + src.id + ')">\u2715</button>'
+      + '</div>'
       + '</div>';
+    card.addEventListener('pointermove', (e) => {
+      const rect = card.getBoundingClientRect();
+      const hw = rect.width / 2, hh = rect.height / 2;
+      card.style.setProperty('--osc-rx', ((e.clientX - (rect.x + hw)) / hw).toFixed(3));
+      card.style.setProperty('--osc-ry', ((e.clientY - (rect.y + hh)) / hh).toFixed(3));
+    });
+    card.addEventListener('pointerleave', () => {
+      card.style.setProperty('--osc-rx', 0);
+      card.style.setProperty('--osc-ry', 0);
+    });
     list.appendChild(card);
   });
 
@@ -4081,15 +4093,15 @@ async function overlayConfirmEdit(id) {
                 </select>
               </div>
               ${!isAction ? `
-              <div class="expand-field">
+              <div class="expand-field" style="width:100%;">
                 <div class="expand-label">Response</div>
-                <input class="cmd-cd-input" type="text" value="${response.replace(/"/g, '&quot;')}"
-                  style="width:100%;text-align:left;"
-                  onchange="saveCommandResponse('${encodeURIComponent(cmd)}', this.value)" />
-              </div>
-              <div class="expand-field" style="display:flex;align-items:flex-end;justify-content:space-between;">
-                <button class="expand-delete-btn" style="background:rgba(100,60,200,0.15);color:rgba(180,140,255,0.8);border-color:rgba(140,80,255,0.2);" onclick="openEditCmd('${cmd.replace(/'/g, "\\'")}')">Edit</button>
-                <button class="expand-delete-btn" onclick="deleteCommand('${encodeURIComponent(cmd)}')">Delete</button>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <input class="cmd-cd-input" type="text" value="${response.replace(/"/g, '&quot;')}"
+                    style="flex:1;text-align:left;"
+                    onchange="saveCommandResponse('${encodeURIComponent(cmd)}', this.value)" />
+                  <button class="cmd-setting-btn" title="Edit command" onclick="openEditCmd('${cmd.replace(/'/g, "\\'")}')"><span class="bar bar1"></span><span class="bar bar2"></span><span class="bar bar1"></span></button>
+                  <button class="expand-delete-btn" style="margin-left:auto;" onclick="deleteCommand('${encodeURIComponent(cmd)}')">Delete</button>
+                </div>
               </div>` : ''}
             </div>
             ${subCooldownsSection}

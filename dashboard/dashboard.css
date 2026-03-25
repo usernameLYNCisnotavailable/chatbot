@@ -293,6 +293,13 @@
   .expand-label { font-size: 11px; font-weight: 600; color: var(--muted-2); text-transform: uppercase; letter-spacing: 0.5px; }
   .expand-delete-btn { padding: 5px 12px; background: transparent; border: 1px solid var(--border); border-radius: 5px; color: var(--muted); font-family: 'Inter', sans-serif; font-size: 12px; cursor: pointer; transition: all 0.15s; }
   .expand-delete-btn:hover { background: var(--red-soft); border-color: rgba(235,4,0,0.3); color: var(--red); }
+  .cmd-setting-btn { width: 32px; height: 32px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; background-color: #9147ff; border-radius: 10px; cursor: pointer; border: none; box-shadow: 0px 0px 0px 2px rgba(200,170,255,0.6); }
+  .cmd-setting-btn .bar { width: 50%; height: 2px; background-color: rgb(229, 229, 229); display: flex; align-items: center; justify-content: center; position: relative; border-radius: 2px; }
+  .cmd-setting-btn .bar::before { content: ""; width: 2px; height: 2px; background-color: rgb(126, 117, 255); position: absolute; border-radius: 50%; border: 2px solid white; transition: all 0.3s; box-shadow: 0px 0px 5px white; }
+  .cmd-setting-btn .bar1::before { transform: translateX(-4px); }
+  .cmd-setting-btn .bar2::before { transform: translateX(4px); }
+  .cmd-setting-btn:hover .bar1::before { transform: translateX(4px); }
+  .cmd-setting-btn:hover .bar2::before { transform: translateX(-4px); }
   .subcmd-section { border-top: 1px solid var(--border); padding-top: 12px; margin-top: 2px; }
   .subcmd-title { font-size: 11px; font-weight: 600; color: var(--muted-2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
   .subcmd-grid { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -484,3 +491,131 @@
   @keyframes modal-in { from{opacity:0;transform:scale(0.97) translateY(6px)} to{opacity:1;transform:scale(1) translateY(0)} }
 
   @keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+/* =====================================================
+   OVERLAY SOURCE CARDS — Holographic 3D Effect
+   ===================================================== */
+@property --osc-rx {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+@property --osc-ry {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+@property --osc-corr {
+  syntax: "<percent>";
+  inherits: false;
+  initial-value: 100%;
+}
+
+.overlay-src-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #13131f;
+  border: 1px solid var(--border);
+  --osc-rx: 0;
+  --osc-ry: 0;
+  --osc-corr: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.2s linear, border-color 0.15s;
+  transform: perspective(600px) rotateY(calc(-20deg * var(--osc-rx))) rotateX(calc(20deg * var(--osc-ry)));
+  will-change: transform;
+}
+.overlay-src-card:hover {
+  --osc-corr: 0%;
+  border-color: var(--border-strong);
+}
+.overlay-src-card:hover .osc-holo-bg {
+  opacity: 0.8;
+}
+.overlay-src-card:hover .osc-circles {
+  opacity: 1;
+}
+
+.osc-holo-bg {
+  position: absolute;
+  border-radius: inherit;
+  inset: 0;
+  background:
+    radial-gradient(
+      ellipse at calc(90% - var(--osc-rx) * 20%) calc(0% - var(--osc-ry) * 20%),
+      rgba(255,255,255,0.7),
+      #c8a0ff 1%,
+      rgba(145,71,255,0.76) 20%,
+      transparent
+    ),
+    linear-gradient(
+      110deg,
+      #6441a5 calc(10% - var(--osc-rx) * 20%),
+      #bf94ff calc(20% - var(--osc-rx) * 20%),
+      #6441a5 calc(30% - var(--osc-rx) * 20%),
+      rgba(145,71,255,0.76) calc(60% - var(--osc-rx) * 20%),
+      transparent calc(100% - var(--osc-rx) * 20%),
+      transparent
+    );
+  transition: all 0.2s linear, opacity 0.8s ease;
+  mix-blend-mode: hard-light;
+  opacity: 0.3;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.osc-holo-lines {
+  mask-image: url(https://assets.codepen.io/907471/holo-card-lines.png?v5);
+  mask-size: cover;
+  mask-repeat: no-repeat;
+  position: absolute;
+  border-radius: inherit;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    110deg,
+    #6441a5           calc(10% - var(--osc-rx) * 20% - var(--osc-corr)),
+    #bf94ff           calc(20% - var(--osc-rx) * 20% - var(--osc-corr)),
+    #6441a5           calc(30% - var(--osc-rx) * 20% - var(--osc-corr)),
+    hsla(270,100%,80%,1) calc(40% - var(--osc-rx) * 20% - var(--osc-corr)),
+    transparent       calc(60% - var(--osc-rx) * 20% - var(--osc-corr)),
+    #9147ff           calc(70% - var(--osc-rx) * 20% - var(--osc-corr)),
+    black             calc(80% - var(--osc-rx) * 20% - var(--osc-corr))
+  );
+  transition: all 0.2s linear;
+  z-index: 2;
+}
+
+.osc-circles {
+  position: absolute;
+  border-radius: inherit;
+  inset: 0;
+  overflow: hidden;
+  opacity: 0.1;
+  transition: opacity 0.8s ease;
+  pointer-events: none;
+  z-index: 3;
+}
+.osc-circles::before,
+.osc-circles::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+      ellipse at 50% 50%,
+      hsl(270deg 98% 65% / 41%) 0.25rem,
+      transparent 0.25rem,
+      transparent
+    ) repeat;
+  background-size: 1rem 1rem;
+}
+.osc-circles::before { transform: translate(-50%, -50%) rotate(45deg); }
+.osc-circles::after  { transform: translate(50%, 100%) rotate(45deg); }
+
+.osc-content {
+  position: relative;
+  z-index: 10;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
