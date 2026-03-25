@@ -1194,10 +1194,16 @@ async function overlayLoadDisplays() {
     }
     sel.style.display = '';
     const cfg = await fetch('/api/config').then(r=>r.json()).catch(()=>({}));
-    const current = cfg.overlayDisplay ?? 0;
+    // Default to primary display if not yet saved in config
+    const primaryIndex = (displays.find(d => d.primary) || displays[0]).index;
+    const current = cfg.overlayDisplay ?? primaryIndex;
     sel.innerHTML = displays.map(d =>
       `<option value="${d.index}"${d.index === current ? ' selected' : ''}>${d.label}</option>`
     ).join('');
+    // Persist primary as default if nothing was saved yet
+    if (cfg.overlayDisplay == null) {
+      fetch('/api/overlay/display', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ index: primaryIndex }) }).catch(()=>{});
+    }
   } catch(e) {}
 }
 
@@ -3977,6 +3983,11 @@ async function overlayConfirmEdit(id) {
     { cmd: '!car', desc: 'Car economy — dealership, buy, garage, sell, race', type: 'default', actionKey: 'car' },
     { cmd: '!so', desc: 'Shoutout a user — !so @username', type: 'default', actionKey: null },
     { cmd: '!commands', desc: 'List all active commands', type: 'default', actionKey: null },
+    { cmd: '!sr', desc: 'Song request — request a song by name or YouTube URL', type: 'default', actionKey: null },
+    { cmd: '!skip', desc: 'Skip the current song (mods/broadcaster only by default)', type: 'default', actionKey: null },
+    { cmd: '!currentsong', desc: 'Show the currently playing song', type: 'default', actionKey: null },
+    { cmd: '!queue', desc: 'Show the song request queue', type: 'default', actionKey: null },
+    { cmd: '!removesong', desc: 'Remove your song from the queue', type: 'default', actionKey: null },
   ];
 
   async function loadCommands() {

@@ -313,6 +313,11 @@ function buildCommandsList() {
         ...Object.entries(actions).filter(([,v]) => v.enabled !== false).map(([k]) => '!' + k),
         ...(defaults['!so'] !== false ? ['!so'] : []),
         ...(defaults['!commands'] !== false ? ['!commands'] : []),
+        ...(defaults['!sr'] !== false ? ['!sr'] : []),
+        ...(defaults['!skip'] !== false ? ['!skip'] : []),
+        ...(defaults['!currentsong'] !== false ? ['!currentsong'] : []),
+        ...(defaults['!queue'] !== false ? ['!queue'] : []),
+        ...(defaults['!removesong'] !== false ? ['!removesong'] : []),
     ];
     return [...new Set(all)].join(' | ');
 }
@@ -601,6 +606,12 @@ client.on('message', (channel, tags, message, self) => {
     // !sr — search by name or queue by URL
     if (command === '!sr') {
         if (defaults['!sr'] === false) return;
+        const srAccess = defaults['!sr_access'] || 'everyone';
+        if (srAccess === 'moderator' && !tags.mod && username !== homeChannel) return;
+        if (srAccess === 'subscriber' && !tags.subscriber && !tags.mod && username !== homeChannel) return;
+        const srCd = defaults['!sr_cd'] ?? 5;
+        if (isOnCooldown(username, '!sr', srCd)) return;
+        setCooldown(username, '!sr');
         const query = args.trim();
         if (!query) { client.say(channel, `@${username} Usage: !sr <song name or youtube url>`); return; }
         const urlMatch = query.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]{11})/);
@@ -637,7 +648,13 @@ client.on('message', (channel, tags, message, self) => {
 
     // !skip
     if (command === '!skip') {
-        if (!tags.mod && username !== homeChannel && !isAdmin(username)) return;
+        if (defaults['!skip'] === false) return;
+        const skipAccess = defaults['!skip_access'] || 'moderator';
+        if (skipAccess === 'moderator' && !tags.mod && username !== homeChannel && !isAdmin(username)) return;
+        if (skipAccess === 'subscriber' && !tags.subscriber && !tags.mod && username !== homeChannel) return;
+        const skipCd = defaults['!skip_cd'] ?? 0;
+        if (isOnCooldown(username, '!skip', skipCd)) return;
+        setCooldown(username, '!skip');
         const http = require('http');
         const req2 = http.request({ hostname: '127.0.0.1', port: 3000, path: '/api/songs/skip', method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Content-Length': 2 } }, () => {});
@@ -648,6 +665,13 @@ client.on('message', (channel, tags, message, self) => {
 
     // !currentsong / !song
     if (command === '!currentsong' || command === '!song') {
+        if (defaults['!currentsong'] === false) return;
+        const csAccess = defaults['!currentsong_access'] || 'everyone';
+        if (csAccess === 'moderator' && !tags.mod && username !== homeChannel) return;
+        if (csAccess === 'subscriber' && !tags.subscriber && !tags.mod && username !== homeChannel) return;
+        const csCd = defaults['!currentsong_cd'] ?? 5;
+        if (isOnCooldown(username, '!currentsong', csCd)) return;
+        setCooldown(username, '!currentsong');
         const http = require('http');
         const req2 = http.request({ hostname: '127.0.0.1', port: 3000, path: '/api/songs/queue', method: 'GET' }, (resp) => {
             let data = '';
@@ -666,6 +690,13 @@ client.on('message', (channel, tags, message, self) => {
 
     // !queue
     if (command === '!queue') {
+        if (defaults['!queue'] === false) return;
+        const qAccess = defaults['!queue_access'] || 'everyone';
+        if (qAccess === 'moderator' && !tags.mod && username !== homeChannel) return;
+        if (qAccess === 'subscriber' && !tags.subscriber && !tags.mod && username !== homeChannel) return;
+        const qCd = defaults['!queue_cd'] ?? 10;
+        if (isOnCooldown(username, '!queue', qCd)) return;
+        setCooldown(username, '!queue');
         const http = require('http');
         const req2 = http.request({ hostname: '127.0.0.1', port: 3000, path: '/api/songs/queue', method: 'GET' }, (resp) => {
             let data = '';
@@ -687,6 +718,13 @@ client.on('message', (channel, tags, message, self) => {
 
     // !removesong
     if (command === '!removesong') {
+        if (defaults['!removesong'] === false) return;
+        const rsAccess = defaults['!removesong_access'] || 'everyone';
+        if (rsAccess === 'moderator' && !tags.mod && username !== homeChannel) return;
+        if (rsAccess === 'subscriber' && !tags.subscriber && !tags.mod && username !== homeChannel) return;
+        const rsCd = defaults['!removesong_cd'] ?? 5;
+        if (isOnCooldown(username, '!removesong', rsCd)) return;
+        setCooldown(username, '!removesong');
         const isMod = tags.mod || false;
         const isBroadcaster = username === homeChannel;
         const http = require('http');
