@@ -36,6 +36,126 @@
   #page-presets { position: relative; z-index: 1; }
   .cmd-page-wrap { background: transparent !important; }
 
+  /* ── Cyber card ────────────────────────────────────────────────────── */
+  .noselect { -webkit-user-select:none; user-select:none; }
+
+  .preset-container {
+    position: relative;
+    width: 100%;
+    height: 220px;
+    transition: 200ms;
+    cursor: pointer;
+  }
+  .preset-container:active { transform: scale(0.97); }
+
+  .preset-container .canvas {
+    width: 100%; height: 100%;
+    position: relative;
+  }
+
+  .preset-container .tracker {
+    position: absolute;
+    z-index: 2;
+    width: 33.34%; height: 33.34%;
+  }
+  .tracker.tr-1 { top:0;      left:0;      }
+  .tracker.tr-2 { top:0;      left:33.33%; }
+  .tracker.tr-3 { top:0;      left:66.66%; }
+  .tracker.tr-4 { top:33.33%; left:0;      }
+  .tracker.tr-5 { top:33.33%; left:33.33%; }
+  .tracker.tr-6 { top:33.33%; left:66.66%; }
+  .tracker.tr-7 { top:66.66%; left:0;      }
+  .tracker.tr-8 { top:66.66%; left:33.33%; }
+  .tracker.tr-9 { top:66.66%; left:66.66%; }
+
+  .cyber-card {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    display: flex;
+    flex-direction: column;
+    border-radius: 20px;
+    transition: 700ms;
+    background: linear-gradient(135deg, #141414, #1e1e1e);
+    border: 1.5px solid rgba(255,255,255,0.07);
+    overflow: hidden;
+    box-shadow: 0 0 24px rgba(0,0,0,0.5), inset 0 0 20px rgba(0,0,0,0.2);
+  }
+
+  .card-content {
+    position: relative;
+    padding: 16px 15px 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    z-index: 2;
+  }
+
+  .card-glare {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 60% 0%, rgba(255,255,255,0.07), transparent 55%);
+    pointer-events: none;
+    z-index: 1;
+    border-radius: inherit;
+  }
+
+  /* Scan line */
+  .scan-line {
+    position: absolute;
+    width: 100%; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--card-accent, rgba(6,182,212,0.6)), transparent);
+    top: 0; left: 0;
+    animation: cyber-scan 5s linear infinite;
+    z-index: 5;
+    pointer-events: none;
+  }
+  @keyframes cyber-scan {
+    0%   { top:0%;   opacity:0; }
+    5%   { opacity:1; }
+    95%  { opacity:0.6; }
+    100% { top:100%; opacity:0; }
+  }
+
+  /* Decorative horizontal lines */
+  .cyber-lines { position:absolute; inset:0; pointer-events:none; z-index:0; }
+  .cyber-lines span {
+    position:absolute; left:0; width:100%; height:1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
+  }
+  .cyber-lines span:nth-child(1) { top:30%; }
+  .cyber-lines span:nth-child(2) { top:55%; }
+  .cyber-lines span:nth-child(3) { top:75%; }
+  .cyber-lines span:nth-child(4) { top:90%; }
+
+  /* Accent glows */
+  .glowing-elements { position:absolute; inset:0; pointer-events:none; z-index:0; }
+  .glow-1, .glow-2, .glow-3 {
+    position:absolute; border-radius:50%; filter:blur(22px); transition:opacity 600ms;
+  }
+  .glow-1 { width:70px; height:70px; background:var(--card-accent,#06b6d4); top:-20px; right:-15px; opacity:0.12; }
+  .glow-2 { width:50px; height:50px; background:var(--card-accent,#06b6d4); bottom:10px; left:-10px; opacity:0.08; }
+  .glow-3 { width:35px; height:35px; background:#fff; top:45%; left:45%; transform:translate(-50%,-50%); opacity:0.02; }
+  .preset-container:hover .glow-1 { opacity:0.28; }
+  .preset-container:hover .glow-2 { opacity:0.18; }
+
+  /* Corner brackets */
+  .corner-elements { position:absolute; inset:0; pointer-events:none; z-index:4; }
+  .corner-elements span {
+    position:absolute; width:9px; height:9px;
+    border-color:var(--card-accent, rgba(6,182,212,0.5)); border-style:solid; opacity:0.4;
+    transition: opacity 300ms;
+  }
+  .preset-container:hover .corner-elements span { opacity:0.8; }
+  .corner-elements span:nth-child(1) { top:7px;    left:7px;   border-width:1.5px 0 0 1.5px; }
+  .corner-elements span:nth-child(2) { top:7px;    right:7px;  border-width:1.5px 1.5px 0 0; }
+  .corner-elements span:nth-child(3) { bottom:7px; left:7px;   border-width:0 0 1.5px 1.5px; }
+  .corner-elements span:nth-child(4) { bottom:7px; right:7px;  border-width:0 1.5px 1.5px 0; }
+
+  /* Hide set-up button — card itself is clickable */
+  .preset-btn { display: none !important; }
+
   /* ── Conic shimmer Set Up buttons ─────────────────────────────────── */
   @property --angle-1 { syntax: "<angle>"; inherits: false; initial-value: -75deg; }
   @property --angle-2 { syntax: "<angle>"; inherits: false; initial-value: -45deg; }
@@ -173,19 +293,30 @@
     </div>
     <div style="padding:20px 24px;flex:1;overflow-y:auto;">
       <div class="section-label">Twitch Event Alerts</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-bottom:26px;">
-        <div class="preset-card" id="preset-follow" style="--card-accent:#6366f1;"><div class="preset-icon-wrap"><span class="preset-icon-char">F</span></div><div class="preset-tag">FOLLOW</div><div class="preset-name">New Follower</div><div class="preset-desc">Fires when someone follows your channel</div><div class="preset-status" id="preset-follow-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('follow')">Set Up</button></div>
-        <div class="preset-card" id="preset-sub" style="--card-accent:#9147ff;"><div class="preset-icon-wrap"><span class="preset-icon-char">S</span></div><div class="preset-tag">SUB</div><div class="preset-name">New Sub</div><div class="preset-desc">Fires when someone subscribes to your channel</div><div class="preset-status" id="preset-sub-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('sub')">Set Up</button></div>
-        <div class="preset-card" id="preset-giftsub" style="--card-accent:#ec4899;"><div class="preset-icon-wrap"><span class="preset-icon-char">G</span></div><div class="preset-tag">GIFT</div><div class="preset-name">Gift Subs</div><div class="preset-desc">Fires when someone gifts subs to your community</div><div class="preset-status" id="preset-giftsub-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('giftsub')">Set Up</button></div>
-        <div class="preset-card" id="preset-raid" style="--card-accent:#f97316;"><div class="preset-icon-wrap"><span class="preset-icon-char">R</span></div><div class="preset-tag">RAID</div><div class="preset-name">Raid</div><div class="preset-desc">Fires when another streamer raids your channel</div><div class="preset-status" id="preset-raid-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('raid')">Set Up</button></div>
-        <div class="preset-card" id="preset-ttsgif" style="--card-accent:#06b6d4;"><div class="preset-icon-wrap"><span class="preset-icon-char">T</span></div><div class="preset-tag">TTS</div><div class="preset-name">TTS + GIF</div><div class="preset-desc">Chat command plays a GIF while the bot speaks a message</div><div class="preset-status" id="preset-ttsgif-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('ttsgif')">Set Up</button></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;margin-bottom:26px;">
+
+        <div class="preset-container noselect" id="preset-follow" style="--card-accent:#06b6d4;" onclick="wizardOpen('follow')"><div class="canvas"><div class="tracker tr-1"></div><div class="tracker tr-2"></div><div class="tracker tr-3"></div><div class="tracker tr-4"></div><div class="tracker tr-5"></div><div class="tracker tr-6"></div><div class="tracker tr-7"></div><div class="tracker tr-8"></div><div class="tracker tr-9"></div><div class="cyber-card"><div class="card-content"><div class="card-glare"></div><div class="cyber-lines"><span></span><span></span><span></span><span></span></div><div class="glowing-elements"><div class="glow-1"></div><div class="glow-2"></div><div class="glow-3"></div></div><div class="preset-tag">FOLLOW</div><div class="preset-name">New Follower</div><div class="preset-desc">Fires when someone follows your channel</div><div class="preset-status" id="preset-follow-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('follow')"><span>Set Up</span></button><div class="corner-elements"><span></span><span></span><span></span><span></span></div><div class="scan-line"></div></div></div></div></div>
+
+        <div class="preset-container noselect" id="preset-sub" style="--card-accent:#06b6d4;" onclick="wizardOpen('sub')"><div class="canvas"><div class="tracker tr-1"></div><div class="tracker tr-2"></div><div class="tracker tr-3"></div><div class="tracker tr-4"></div><div class="tracker tr-5"></div><div class="tracker tr-6"></div><div class="tracker tr-7"></div><div class="tracker tr-8"></div><div class="tracker tr-9"></div><div class="cyber-card"><div class="card-content"><div class="card-glare"></div><div class="cyber-lines"><span></span><span></span><span></span><span></span></div><div class="glowing-elements"><div class="glow-1"></div><div class="glow-2"></div><div class="glow-3"></div></div><div class="preset-tag">SUB</div><div class="preset-name">New Sub</div><div class="preset-desc">Fires when someone subscribes to your channel</div><div class="preset-status" id="preset-sub-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('sub')"><span>Set Up</span></button><div class="corner-elements"><span></span><span></span><span></span><span></span></div><div class="scan-line"></div></div></div></div></div>
+
+        <div class="preset-container noselect" id="preset-giftsub" style="--card-accent:#06b6d4;" onclick="wizardOpen('giftsub')"><div class="canvas"><div class="tracker tr-1"></div><div class="tracker tr-2"></div><div class="tracker tr-3"></div><div class="tracker tr-4"></div><div class="tracker tr-5"></div><div class="tracker tr-6"></div><div class="tracker tr-7"></div><div class="tracker tr-8"></div><div class="tracker tr-9"></div><div class="cyber-card"><div class="card-content"><div class="card-glare"></div><div class="cyber-lines"><span></span><span></span><span></span><span></span></div><div class="glowing-elements"><div class="glow-1"></div><div class="glow-2"></div><div class="glow-3"></div></div><div class="preset-tag">GIFT</div><div class="preset-name">Gift Subs</div><div class="preset-desc">Fires when someone gifts subs to your community</div><div class="preset-status" id="preset-giftsub-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('giftsub')"><span>Set Up</span></button><div class="corner-elements"><span></span><span></span><span></span><span></span></div><div class="scan-line"></div></div></div></div></div>
+
+        <div class="preset-container noselect" id="preset-raid" style="--card-accent:#06b6d4;" onclick="wizardOpen('raid')"><div class="canvas"><div class="tracker tr-1"></div><div class="tracker tr-2"></div><div class="tracker tr-3"></div><div class="tracker tr-4"></div><div class="tracker tr-5"></div><div class="tracker tr-6"></div><div class="tracker tr-7"></div><div class="tracker tr-8"></div><div class="tracker tr-9"></div><div class="cyber-card"><div class="card-content"><div class="card-glare"></div><div class="cyber-lines"><span></span><span></span><span></span><span></span></div><div class="glowing-elements"><div class="glow-1"></div><div class="glow-2"></div><div class="glow-3"></div></div><div class="preset-tag">RAID</div><div class="preset-name">Raid</div><div class="preset-desc">Fires when another streamer raids your channel</div><div class="preset-status" id="preset-raid-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('raid')"><span>Set Up</span></button><div class="corner-elements"><span></span><span></span><span></span><span></span></div><div class="scan-line"></div></div></div></div></div>
+
+        <div class="preset-container noselect" id="preset-ttsgif" style="--card-accent:#06b6d4;" onclick="wizardOpen('ttsgif')"><div class="canvas"><div class="tracker tr-1"></div><div class="tracker tr-2"></div><div class="tracker tr-3"></div><div class="tracker tr-4"></div><div class="tracker tr-5"></div><div class="tracker tr-6"></div><div class="tracker tr-7"></div><div class="tracker tr-8"></div><div class="tracker tr-9"></div><div class="cyber-card"><div class="card-content"><div class="card-glare"></div><div class="cyber-lines"><span></span><span></span><span></span><span></span></div><div class="glowing-elements"><div class="glow-1"></div><div class="glow-2"></div><div class="glow-3"></div></div><div class="preset-tag">TTS</div><div class="preset-name">TTS + GIF</div><div class="preset-desc">Chat command plays a GIF while the bot speaks a message</div><div class="preset-status" id="preset-ttsgif-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('ttsgif')"><span>Set Up</span></button><div class="corner-elements"><span></span><span></span><span></span><span></span></div><div class="scan-line"></div></div></div></div></div>
+
       </div>
-      <div class="section-label">Chat & Stream Tools</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;">
-        <div class="preset-card" id="preset-autoso" style="--card-accent:#f43f5e;"><div class="preset-icon-wrap"><span class="preset-icon-char">A</span></div><div class="preset-tag">SHOUT</div><div class="preset-name">Auto Shoutout</div><div class="preset-desc">Automatically shouts out raiders and returning streamers in chat</div><div class="preset-status" id="preset-autoso-status">Not configured</div><button class="preset-btn" onclick="showToast('Coming soon')">Set Up</button></div>
-        <div class="preset-card" id="preset-clip" style="--card-accent:#ef4444;"><div class="preset-icon-wrap"><span class="preset-icon-char">C</span></div><div class="preset-tag">CLIP</div><div class="preset-name">Clip Command</div><div class="preset-desc">!clip creates a Twitch clip and posts the link in chat automatically</div><div class="preset-status" id="preset-clip-status">Not configured</div><button class="preset-btn" onclick="toggleClipPreset(this)">Enable</button></div>
-        <div class="preset-card" id="preset-mentions" style="--card-accent:#5865f2;"><div class="preset-icon-wrap"><span class="preset-icon-char">@</span></div><div class="preset-tag">PING</div><div class="preset-name">@ Mention Alerts</div><div class="preset-desc">Notifies viewers via Discord when they get @mentioned in chat</div><div class="preset-status" id="preset-mentions-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('mentions')">Set Up</button></div>
+      <div class="section-label">Chat &amp; Stream Tools</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;">
+
+        <div class="preset-container noselect" id="preset-autoso" style="--card-accent:#06b6d4;" onclick="showToast('Coming soon')"><div class="canvas"><div class="tracker tr-1"></div><div class="tracker tr-2"></div><div class="tracker tr-3"></div><div class="tracker tr-4"></div><div class="tracker tr-5"></div><div class="tracker tr-6"></div><div class="tracker tr-7"></div><div class="tracker tr-8"></div><div class="tracker tr-9"></div><div class="cyber-card"><div class="card-content"><div class="card-glare"></div><div class="cyber-lines"><span></span><span></span><span></span><span></span></div><div class="glowing-elements"><div class="glow-1"></div><div class="glow-2"></div><div class="glow-3"></div></div><div class="preset-tag">SHOUT</div><div class="preset-name">Auto Shoutout</div><div class="preset-desc">Automatically shouts out raiders and returning streamers in chat</div><div class="preset-status" id="preset-autoso-status">Not configured</div><button class="preset-btn" onclick="showToast('Coming soon')"><span>Set Up</span></button><div class="corner-elements"><span></span><span></span><span></span><span></span></div><div class="scan-line"></div></div></div></div></div>
+
+        <div class="preset-container noselect" id="preset-clip" style="--card-accent:#06b6d4;" onclick="toggleClipPreset(this.querySelector('.preset-btn'))"><div class="canvas"><div class="tracker tr-1"></div><div class="tracker tr-2"></div><div class="tracker tr-3"></div><div class="tracker tr-4"></div><div class="tracker tr-5"></div><div class="tracker tr-6"></div><div class="tracker tr-7"></div><div class="tracker tr-8"></div><div class="tracker tr-9"></div><div class="cyber-card"><div class="card-content"><div class="card-glare"></div><div class="cyber-lines"><span></span><span></span><span></span><span></span></div><div class="glowing-elements"><div class="glow-1"></div><div class="glow-2"></div><div class="glow-3"></div></div><div class="preset-tag">CLIP</div><div class="preset-name">Clip Command</div><div class="preset-desc">!clip creates a Twitch clip and posts the link in chat automatically</div><div class="preset-status" id="preset-clip-status">Not configured</div><button class="preset-btn" onclick="toggleClipPreset(this)"><span>Enable</span></button><div class="corner-elements"><span></span><span></span><span></span><span></span></div><div class="scan-line"></div></div></div></div></div>
+
+        <div class="preset-container noselect" id="preset-mentions" style="--card-accent:#06b6d4;" onclick="wizardOpen('mentions')"><div class="canvas"><div class="tracker tr-1"></div><div class="tracker tr-2"></div><div class="tracker tr-3"></div><div class="tracker tr-4"></div><div class="tracker tr-5"></div><div class="tracker tr-6"></div><div class="tracker tr-7"></div><div class="tracker tr-8"></div><div class="tracker tr-9"></div><div class="cyber-card"><div class="card-content"><div class="card-glare"></div><div class="cyber-lines"><span></span><span></span><span></span><span></span></div><div class="glowing-elements"><div class="glow-1"></div><div class="glow-2"></div><div class="glow-3"></div></div><div class="preset-tag">PING</div><div class="preset-name">@ Mention Alerts</div><div class="preset-desc">Notifies viewers via Discord when they get @mentioned in chat</div><div class="preset-status" id="preset-mentions-status">Not configured</div><button class="preset-btn" onclick="wizardOpen('mentions')"><span>Set Up</span></button><div class="corner-elements"><span></span><span></span><span></span><span></span></div><div class="scan-line"></div></div></div></div></div>
+
       </div>
+
     </div>
   </div>
 </div>
@@ -1154,6 +1285,28 @@
       if (_autoWizard) wizardOpen(_autoWizard);
     });
   });
+
+  /* ── Cyber card 3D tilt ─────────────────────────────────────────── */
+  (function() {
+    const rots = {
+      'tr-1':[-12,-12], 'tr-2':[-12,0], 'tr-3':[-12,12],
+      'tr-4':[0,-12],   'tr-5':[0,0],   'tr-6':[0,12],
+      'tr-7':[12,-12],  'tr-8':[12,0],  'tr-9':[12,12]
+    };
+    document.querySelectorAll('.preset-container .tracker').forEach(tracker => {
+      const card = tracker.closest('.canvas').querySelector('.cyber-card');
+      const cls  = Array.from(tracker.classList).find(c => c.startsWith('tr-'));
+      const [rx, ry] = rots[cls] || [0,0];
+      tracker.addEventListener('mouseenter', () => {
+        card.style.transition = '100ms';
+        card.style.transform  = `perspective(800px) rotateX(${rx}deg) rotateY(${ry}deg)`;
+      });
+      tracker.addEventListener('mouseleave', () => {
+        card.style.transition = '700ms';
+        card.style.transform  = 'perspective(800px) rotateX(0deg) rotateY(0deg)';
+      });
+    });
+  })();
 </script>
 </body>
 </html>
