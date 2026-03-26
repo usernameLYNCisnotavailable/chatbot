@@ -6,6 +6,100 @@
 <title>ChatCommander</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="dashboard.css">
+<style>
+/* ---- Admin uiverse input ---- */
+.admin-input__container {
+  position: relative;
+  background: #f0f0f0;
+  padding: 16px;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 12px;
+  border: 3px solid #000;
+  max-width: 360px;
+  transition: all 400ms cubic-bezier(0.23, 1, 0.32, 1);
+  transform-style: preserve-3d;
+  transform: rotateX(8deg) rotateY(-8deg);
+  perspective: 1000px;
+  box-shadow: 8px 8px 0 #000;
+  margin-top: 18px;
+}
+.admin-input__container:hover {
+  transform: rotateX(4deg) rotateY(1deg) scale(1.04);
+  box-shadow: 22px 22px 0 -4px #9147ff, 22px 22px 0 0 #000;
+}
+.admin-shadow__input {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  left: 0;
+  bottom: 0;
+  z-index: -1;
+  transform: translateZ(-50px);
+  background: linear-gradient(45deg, rgba(145,71,255,0.35) 0%, rgba(145,71,255,0.08) 100%);
+  filter: blur(20px);
+}
+.admin-input__btn {
+  cursor: pointer;
+  border: 3px solid #000;
+  background: #9147ff;
+  transition: all 400ms cubic-bezier(0.23, 1, 0.32, 1);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px;
+  transform: translateZ(20px);
+  position: relative;
+  z-index: 3;
+  flex-shrink: 0;
+}
+.admin-input__btn:hover {
+  transform: translateZ(10px) translateX(-4px) translateY(-4px);
+  box-shadow: 5px 5px 0 0 #000;
+  background: #bf94ff;
+}
+.admin-input__btn svg { fill: #fff; width: 22px; height: 22px; }
+.admin-input__field {
+  width: 100%;
+  outline: none;
+  border: 3px solid #000;
+  padding: 12px 14px;
+  font-size: 15px;
+  background: #fff;
+  color: #000;
+  transform: translateZ(10px);
+  transition: all 400ms cubic-bezier(0.23, 1, 0.32, 1);
+  position: relative;
+  z-index: 3;
+  font-family: 'Inter', Arial, sans-serif;
+  letter-spacing: -0.5px;
+}
+.admin-input__field::placeholder { color: #666; font-weight: 600; text-transform: uppercase; font-size: 12px; }
+.admin-input__field:hover,
+.admin-input__field:focus {
+  background: #f0f0f0;
+  transform: translateZ(20px) translateX(-4px) translateY(-4px);
+  box-shadow: 5px 5px 0 0 #000;
+}
+.admin-input__container::before {
+  content: "ADD ADMIN";
+  position: absolute;
+  top: -14px;
+  left: 16px;
+  background: #9147ff;
+  color: #fff;
+  font-weight: 700;
+  padding: 4px 10px;
+  font-size: 11px;
+  transform: translateZ(50px);
+  z-index: 4;
+  border: 2px solid #000;
+  letter-spacing: 1px;
+  font-family: 'Inter', Arial, sans-serif;
+}
+</style>
 </head>
 <body>
 
@@ -299,12 +393,14 @@
       </div>
 
       <!-- Add Admin Row -->
-      <div id="addAdminCard" style="display:flex;align-items:flex-end;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--border);">
-        <div style="flex:1;max-width:360px;">
-          <div style="font-size:0.6rem;color:var(--muted-2);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">Add Admin</div>
-          <input class="form-input" type="text" id="adminUsernameInput" placeholder="Twitch username" style="margin-bottom:0;" onkeydown="if(event.key==='Enter')addAdmin()" />
+      <div id="addAdminCard" style="padding:20px 0 24px;border-bottom:1px solid var(--border);">
+        <div class="admin-input__container">
+          <div class="admin-shadow__input"></div>
+          <button class="admin-input__btn" onclick="addAdmin()" title="Add Admin">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M0 0h24v24H0z" fill="none"/><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+          </button>
+          <input class="admin-input__field" type="text" id="adminUsernameInput" placeholder="Twitch username" onkeydown="if(event.key==='Enter')addAdmin()" />
         </div>
-        <button class="btn btn-green btn-sm" style="margin-left:16px;" onclick="addAdmin()">Add Admin</button>
       </div>
 
       <!-- Admin List -->
@@ -422,6 +518,18 @@
           <div style="margin-left:auto;"><button onclick="fetch('/api/songs/open').catch(()=>{})" style="display:flex;align-items:center;gap:6px;padding:7px 18px;background:rgba(145,71,255,0.2);border:1px solid rgba(145,71,255,0.35);border-radius:20px;color:rgba(180,130,255,0.95);font-size:13px;font-weight:600;cursor:pointer;" onmouseover="this.style.background='rgba(145,71,255,0.3)'" onmouseout="this.style.background='rgba(145,71,255,0.2)'">🎵 Open Playlist</button></div>
         </div>
       </div>
+      <!-- SONG OVERLAY IN-APP TOGGLE -->
+      <div style="background:rgba(145,71,255,0.08);border:1px solid rgba(145,71,255,0.2);border-radius:12px;padding:14px 20px;position:relative;">
+        <button onclick="navigator.clipboard.writeText('http://localhost:3000/song-overlay.html').then(()=>showToast('OBS URL copied'))" title="Copy URL for OBS Browser Source" style="position:absolute;top:9px;right:12px;background:none;border:none;padding:0;font-size:10px;color:rgba(255,255,255,0.18);cursor:pointer;letter-spacing:0.3px;" onmouseover="this.style.color='rgba(191,148,255,0.55)'" onmouseout="this.style.color='rgba(255,255,255,0.18)'">🔗 OBS link</button>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+          <div>
+            <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(191,148,255,0.6);margin-bottom:4px;">Song Overlay</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.4);line-height:1.5;">Shows current song on-screen — auto-hides when nothing is playing.</div>
+          </div>
+          <button id="songOverlayBtn" onclick="_toggleSongOverlay()" style="flex-shrink:0;padding:7px 18px;background:rgba(145,71,255,0.2);border:1px solid rgba(145,71,255,0.35);border-radius:20px;color:rgba(180,130,255,0.95);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background 0.15s;" onmouseover="this.style.background='rgba(145,71,255,0.3)'" onmouseout="this.style.background=_songOverlayOn?'rgba(255,80,80,0.18)':'rgba(145,71,255,0.2)'">Show Overlay</button>
+        </div>
+      </div>
+
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
         <span style="font-size:11px;color:rgba(255,255,255,0.25);margin-right:2px;">Commands:</span>
         <code style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);padding:2px 8px;border-radius:6px;font-size:11px;color:rgba(255,255,255,0.5);">!sr &lt;song or url&gt;</code>
@@ -5743,6 +5851,7 @@ checkBotStatus();
     if (_songsPollInterval) { clearInterval(_songsPollInterval); _songsPollInterval = null; }
     _pollSongs();
     _songsPollInterval = setInterval(_pollSongs, 2000);
+    _checkSongOverlayStatus();
   }
 
   function _pollSongs() {
@@ -5779,6 +5888,40 @@ checkBotStatus();
 
   function _songRemove(idx) { fetch('/api/songs/queue/'+idx,{method:'DELETE'}).then(()=>_pollSongs()).catch(()=>{}); }
   function _songEsc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  let _songOverlayOn = false;
+  function _updateSongOverlayBtn() {
+    const btn = document.getElementById('songOverlayBtn');
+    if (!btn) return;
+    if (_songOverlayOn) {
+      btn.textContent = 'Hide Overlay';
+      btn.style.background = 'rgba(255,80,80,0.18)';
+      btn.style.borderColor = 'rgba(255,80,80,0.35)';
+      btn.style.color = 'rgba(255,140,140,0.95)';
+      btn.onmouseover = () => { btn.style.background = 'rgba(255,80,80,0.28)'; };
+      btn.onmouseout  = () => { btn.style.background = 'rgba(255,80,80,0.18)'; };
+    } else {
+      btn.textContent = 'Show Overlay';
+      btn.style.background = 'rgba(145,71,255,0.2)';
+      btn.style.borderColor = 'rgba(145,71,255,0.35)';
+      btn.style.color = 'rgba(180,130,255,0.95)';
+      btn.onmouseover = () => { btn.style.background = 'rgba(145,71,255,0.3)'; };
+      btn.onmouseout  = () => { btn.style.background = 'rgba(145,71,255,0.2)'; };
+    }
+  }
+  function _toggleSongOverlay() {
+    const endpoint = _songOverlayOn ? '/api/song-overlay/stop' : '/api/song-overlay/launch';
+    fetch(endpoint, { method: 'POST' }).then(() => {
+      _songOverlayOn = !_songOverlayOn;
+      _updateSongOverlayBtn();
+    }).catch(() => {});
+  }
+  function _checkSongOverlayStatus() {
+    fetch('/api/song-overlay/status').then(r => r.json()).then(d => {
+      _songOverlayOn = !!d.running;
+      _updateSongOverlayBtn();
+    }).catch(() => {});
+  }
 
   // ============================================================
   // PRESETS + WIZARD

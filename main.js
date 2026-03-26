@@ -20,6 +20,7 @@ let textWin = null;
 let textWinMode = 'desktop';
 let textOverlayClients = []; // SSE clients
 let songWin = null;
+let songOverlayWin = null;
 let songQueue = [];
 let songCurrent = null;
 
@@ -1699,6 +1700,10 @@ server.get('/dashboard/presets.html', (req, res) => {
         res.sendFile(path.join(appDir, 'dashboard', 'song-player.html'));
     });
 
+    server.get('/song-overlay.html', (req, res) => {
+        res.sendFile(path.join(appDir, 'dashboard', 'song-overlay.html'));
+    });
+
     server.get('/api/overlay/status', (req, res) => {
         const overlayRunning = !!(overlayProcess || (videoWin && !videoWin.isDestroyed()) || (textWin && !textWin.isDestroyed()));
         res.json({ running: overlayRunning, mode: overlayCurrentMode });
@@ -2379,6 +2384,55 @@ Write-Output $sb.ToString().Trim()
         res.json({ ok: true });
     });
 
+    // ---- SONG OVERLAY (in-app transparent window) ----
+
+    function launchSongOverlay() {
+        if (songOverlayWin && !songOverlayWin.isDestroyed()) return;
+        const { screen } = require('electron');
+        const _sDisplays = screen.getAllDisplays();
+        const _sCfg = (() => { try { return JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8')); } catch(e) { return {}; } })();
+        const _sDisplay = _sDisplays[_sCfg.overlayDisplay ?? 0] || screen.getPrimaryDisplay();
+        const { width, height } = _sDisplay.size;
+        const winW = 380, winH = 80;
+        songOverlayWin = new BrowserWindow({
+            width: winW,
+            height: winH,
+            x: _sDisplay.bounds.x + 24,
+            y: _sDisplay.bounds.y + height - winH - 24,
+            frame: false,
+            transparent: true,
+            alwaysOnTop: true,
+            type: 'toolbar',
+            skipTaskbar: true,
+            resizable: false,
+            focusable: true,
+            webPreferences: {
+                nodeIntegration: false,
+                contextIsolation: true,
+                offscreen: false
+            }
+        });
+        songOverlayWin.setAlwaysOnTop(true, 'screen-saver');
+        songOverlayWin.setVisibleOnAllWorkspaces(true);
+        songOverlayWin.loadURL('http://localhost:3000/song-overlay.html');
+        songOverlayWin.on('closed', () => { songOverlayWin = null; });
+    }
+
+    server.get('/api/song-overlay/status', (req, res) => {
+        res.json({ running: !!(songOverlayWin && !songOverlayWin.isDestroyed()) });
+    });
+
+    server.post('/api/song-overlay/launch', (req, res) => {
+        launchSongOverlay();
+        res.json({ ok: true });
+    });
+
+    server.post('/api/song-overlay/stop', (req, res) => {
+        if (songOverlayWin && !songOverlayWin.isDestroyed()) songOverlayWin.destroy();
+        songOverlayWin = null;
+        res.json({ ok: true });
+    });
+
     server.get('/api/text-overlay/stream', (req, res) => {
         res.setHeader('Content-Type', 'text/event-stream');
         res.setHeader('Cache-Control', 'no-cache');
@@ -2711,6 +2765,7 @@ Write-Output $sb.ToString().Trim()
             if (!overlayProcess) launchOverlay('desktop');
             launchVideoOverlay('desktop');
             launchTextOverlay('desktop');
+            launchSongOverlay();
         }, 1500);
         // Start EventSub if streamer is already authed
         setTimeout(() => {
@@ -2954,6 +3009,7 @@ function createWindow() {
         if (modWin && !modWin.isDestroyed()) modWin.destroy();
         if (videoWin && !videoWin.isDestroyed()) videoWin.destroy();
         if (songWin && !songWin.isDestroyed()) songWin.destroy();
+        if (songOverlayWin && !songOverlayWin.isDestroyed()) songOverlayWin.destroy();
         mainWindow = null;
     });
 }
