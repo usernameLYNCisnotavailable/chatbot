@@ -1699,14 +1699,10 @@ server.get('/dashboard/presets.html', (req, res) => {
         res.sendFile(path.join(appDir, 'dashboard', 'song-player.html'));
     });
 
-    // Auto-launch overlays shortly after startup
-    setTimeout(() => {
-        if (!overlayProcess) launchOverlay('desktop');
-        launchVideoOverlay('desktop');
-        launchTextOverlay('desktop');
-    }, 3000);
-
-    server.get('/api/overlay/status', (req, res) => { res.json({ running: !!overlayProcess, mode: overlayCurrentMode }); });
+    server.get('/api/overlay/status', (req, res) => {
+        const overlayRunning = !!(overlayProcess || (videoWin && !videoWin.isDestroyed()) || (textWin && !textWin.isDestroyed()));
+        res.json({ running: overlayRunning, mode: overlayCurrentMode });
+    });
 
     server.get('/stream-overlay.html', (req, res) => {
         res.sendFile(path.join(appDir, 'dashboard/stream-overlay.html'));
@@ -2710,6 +2706,12 @@ Write-Output $sb.ToString().Trim()
         global.broadcastChat = server.broadcastChat;
         if (mainWindow) mainWindow.loadURL('http://localhost:3000');
         registerHotkeys();
+        // Auto-launch overlays once server is confirmed listening
+        setTimeout(() => {
+            if (!overlayProcess) launchOverlay('desktop');
+            launchVideoOverlay('desktop');
+            launchTextOverlay('desktop');
+        }, 1500);
         // Start EventSub if streamer is already authed
         setTimeout(() => {
             try {

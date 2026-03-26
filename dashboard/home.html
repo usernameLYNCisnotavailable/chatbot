@@ -685,6 +685,123 @@ body {
 .clip-add-btn:hover { background: var(--surface-hover); border-color: var(--accent); color: var(--accent); }
 .clip-list { max-height: 500px; overflow-y: auto; }
 
+/* ── STREAM BOOK CARD ── */
+.s-book {
+  position: relative;
+  border-radius: 10px;
+  width: 180px;
+  height: 250px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 1px 1px 5px #000;
+  transform: preserve-3d;
+  perspective: 600px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  transition-duration: 0.5s;
+  flex-shrink: 0;
+}
+.s-cover,
+.s-inner {
+  top: 0;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.5s;
+  transform-origin: 0;
+  box-shadow: 1px 1px 5px #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.s-cover {
+  background: linear-gradient(145deg, #6441a5 0%, #9147ff 60%, #bf94ff 100%);
+  flex-direction: column;
+  justify-content: space-evenly;
+  padding: 18px 16px;
+  align-items: flex-start;
+}
+.s-inner {
+  background: #1e1832;
+  color: rgba(255,255,255,0.5);
+  font-size: 13px;
+  font-style: italic;
+}
+.s-book:hover .s-cover {
+  transform: rotateY(-70deg);
+}
+.s-book:hover .s-inner {
+  transform: rotateZ(10deg) rotateX(-3deg) rotateY(-10deg) translateX(140px);
+  box-shadow: 1px 1px 20px rgba(0,0,0,0.65);
+}
+.s-book:hover {
+  transform: rotateZ(-10deg);
+}
+.book-cover-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted-2);
+}
+.book-cover-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.book-cover-stat-val {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: -1px;
+  line-height: 1;
+}
+.book-cover-stat-val.loading {
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: 0;
+  font-family: 'Inter', sans-serif;
+  color: var(--muted-2);
+}
+.book-cover-stat-label {
+  font-size: 10px;
+  color: var(--muted-2);
+  font-weight: 500;
+}
+/* book background stat content */
+.s-book-bg-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 16px;
+  width: 100%;
+}
+.s-book-bg-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.s-book-bg-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(255,255,255,0.5);
+}
+.s-book-bg-val {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: -1px;
+  line-height: 1;
+}
+
 /* ── SCROLLBAR ── */
 * { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.08) transparent; }
 *::-webkit-scrollbar { width: 4px; }
@@ -716,30 +833,6 @@ body {
     <div class="stream-badge" id="streamBadge">
       <div class="live-dot" id="liveDot"></div>
       <span id="streamBadgeText">Checking...</span>
-    </div>
-  </div>
-
-  <!-- STAT STRIP -->
-  <div class="stat-strip">
-    <div class="stat-card">
-      <div class="stat-label">Viewers</div>
-      <div class="stat-value loading" id="statViewers">—</div>
-      <div class="stat-sub" id="statViewersSub">live now</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Uptime</div>
-      <div class="stat-value loading" id="statUptime">—</div>
-      <div class="stat-sub" id="statUptimeSub">stream duration</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Commands Today</div>
-      <div class="stat-value loading" id="statCmds">—</div>
-      <div class="stat-sub" id="statCmdsSub">total fired</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Active Chatters</div>
-      <div class="stat-value loading" id="statChatters">—</div>
-      <div class="stat-sub" id="statChattersSub">this session</div>
     </div>
   </div>
 
@@ -787,59 +880,7 @@ body {
 
     </div>
 
-    <!-- RIGHT: STREAM INFO + TOP CHATTERS + QUICK ACTIONS -->
-    <div style="display:flex;flex-direction:column;gap:14px;">
-
-      <!-- STREAM INFO -->
-      <div class="stream-info-card">
-        <div class="section-head">
-          <div class="section-title">
-            <div class="section-title-dot" style="background:var(--yellow)"></div>
-            Stream Info
-          </div>
-        </div>
-        <div class="stream-info-body">
-          <div class="stream-info-row">
-            <div class="stream-info-label">Title</div>
-            <div class="stream-info-val" id="siTitle" style="color:var(--muted-2)">—</div>
-          </div>
-          <div class="stream-divider"></div>
-          <div class="stream-info-row">
-            <div class="stream-info-label">Category</div>
-            <div class="stream-info-val" id="siGame">—</div>
-          </div>
-          <div class="stream-divider"></div>
-          <div class="stream-info-row">
-            <div class="stream-info-label">Started</div>
-            <div class="stream-info-val mono" id="siStarted">—</div>
-          </div>
-          <div class="stream-divider"></div>
-          <div class="stream-info-row">
-            <div class="stream-info-label">Channel</div>
-            <div class="stream-info-val mono" id="siChannel">—</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- QUICK ACTIONS RADIAL HUB -->
-      <div style="display:flex;align-items:center;justify-content:center;padding:32px 0 20px;">
-        <div class="tooltip-container">
-          <span class="text">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 16 16" fill="currentColor"><path d="M6.5 14.5v-3.505c0-.245.25-.495.5-.495h2c.25 0 .5.25.5.5v3.5a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5Z"/></svg>
-          </span>
-          <span class="tooltip1" onclick="parentNav('commands')">⌨️</span>
-          <span class="tooltip2" onclick="parentNav('giveaway')">🎁</span>
-          <span class="tooltip3" onclick="parentNav('songs')">🎵</span>
-          <span class="tooltip4" onclick="parentNav('overlay')">🖼️</span>
-          <span class="tooltip5" onclick="parentNav('giflibrary')">🎞️</span>
-          <span class="tooltip6" onclick="parentNav('obs')">📡</span>
-          <span class="tooltip9"> </span>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- THIRD COL: TOP CHATTERS + TOP COMMANDS -->
+    <!-- MIDDLE: TOP CHATTERS + TOP COMMANDS -->
     <div style="display:flex;flex-direction:column;gap:14px;">
 
       <!-- TOP CHATTERS -->
@@ -867,6 +908,82 @@ body {
         </div>
         <div id="cmdStatList">
           <div class="cmd-stat-empty">No commands fired yet today</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: STREAM BOOK CARD + HUB -->
+    <div style="display:flex;flex-direction:column;gap:20px;align-items:flex-start;padding-top:20px;padding-left:8px;overflow:visible;">
+
+      <div class="s-book">
+
+        <!-- CARD 1 (background): hello :) -->
+        <div class="s-book-bg-content" style="align-items:center;justify-content:center;">
+          <span style="font-size:13px;font-style:italic;color:rgba(255,255,255,0.5);">hello :)</span>
+        </div>
+
+        <!-- CARD 2 (inner): stream info — slides out to the right on hover -->
+        <div class="s-inner" style="flex-direction:column;justify-content:space-evenly;align-items:flex-start;padding:18px 16px;">
+          <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:2px;">Stream Info</div>
+          <div class="stream-info-row">
+            <div class="stream-info-label">Title</div>
+            <div class="stream-info-val" id="siTitle" style="color:var(--muted-2)">—</div>
+          </div>
+          <div class="stream-divider"></div>
+          <div class="stream-info-row">
+            <div class="stream-info-label">Category</div>
+            <div class="stream-info-val" id="siGame">—</div>
+          </div>
+          <div class="stream-divider"></div>
+          <div class="stream-info-row">
+            <div class="stream-info-label">Started</div>
+            <div class="stream-info-val mono" id="siStarted">—</div>
+          </div>
+          <div class="stream-divider"></div>
+          <div class="stream-info-row">
+            <div class="stream-info-label">Channel</div>
+            <div class="stream-info-val mono" id="siChannel">—</div>
+          </div>
+        </div>
+
+        <!-- CARD 3 (cover/front): purple stats — first thing you see -->
+        <div class="s-cover">
+          <div class="s-book-bg-stat">
+            <div class="s-book-bg-label">Viewers</div>
+            <div class="s-book-bg-val" id="statViewers">—</div>
+          </div>
+          <div class="s-book-bg-stat">
+            <div class="s-book-bg-label">Active Chatters</div>
+            <div class="s-book-bg-val" id="statChatters">—</div>
+          </div>
+          <div class="s-book-bg-stat">
+            <div class="s-book-bg-label">Commands Today</div>
+            <div class="s-book-bg-val" id="statCmds">—</div>
+          </div>
+        </div>
+
+        <!-- hidden uptime so JS doesn't error -->
+        <span id="statUptime" style="display:none"></span>
+        <span id="statUptimeSub" style="display:none"></span>
+        <span id="statViewersSub" style="display:none"></span>
+        <span id="statChattersSub" style="display:none"></span>
+        <span id="statCmdsSub" style="display:none"></span>
+      </div>
+
+      <!-- QUICK ACTIONS RADIAL HUB -->
+      <div style="display:flex;align-items:center;justify-content:center;padding:24px 0 0;width:180px;">
+        <div class="tooltip-container">
+          <span class="text">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 16 16" fill="currentColor"><path d="M6.5 14.5v-3.505c0-.245.25-.495.5-.495h2c.25 0 .5.25.5.5v3.5a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5Z"/></svg>
+          </span>
+          <span class="tooltip1" onclick="parentNav('commands')">⌨️</span>
+          <span class="tooltip2" onclick="parentNav('giveaway')">🎁</span>
+          <span class="tooltip3" onclick="parentNav('songs')">🎵</span>
+          <span class="tooltip4" onclick="parentNav('overlay')">🖼️</span>
+          <span class="tooltip5" onclick="parentNav('giflibrary')">🎞️</span>
+          <span class="tooltip6" onclick="parentNav('obs')">📡</span>
+          <span class="tooltip9"> </span>
         </div>
       </div>
 
