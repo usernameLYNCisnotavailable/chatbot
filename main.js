@@ -523,12 +523,24 @@ server.get('/dashboard/presets.html', (req, res) => {
 
     // Logout streamer
     server.post('/api/logout', (req, res) => {
-        // Full wipe — clear all auth and restart setup flow
+        // Full wipe — clear all auth and restart setup flow, but preserve OBS settings
+        let obsFields = {};
+        try {
+            const existing = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
+            obsFields = {
+                obsPath: existing.obsPath || '',
+                obsPort: existing.obsPort || '4455',
+                obsPassword: existing.obsPassword || '',
+                obsAutoConnect: existing.obsAutoConnect || false,
+                obsSourceName: existing.obsSourceName || ''
+            };
+        } catch(e) {}
         const fresh = {
             loggedIn: false, setupComplete: false,
             streamerUsername: '', streamerDisplayName: '', streamerAvatar: '',
             streamerToken: '', botUsername: '', token: '',
-            usingMainAccount: false, channel: '', admins: []
+            usingMainAccount: false, channel: '', admins: [],
+            ...obsFields
         };
         fs.writeFileSync(getDataPath('config.json'), JSON.stringify(fresh, null, 4));
         if (eventsubWs) { try { eventsubWs.close(); } catch(e) {} eventsubWs = null; }
@@ -877,6 +889,133 @@ server.get('/dashboard/presets.html', (req, res) => {
         config.obsAutoConnect = true;
         fs.writeFileSync(getDataPath('config.json'), JSON.stringify(config, null, 4));
         res.json({ success: true });
+    });
+
+    // ---- OBS CONTROL API ----
+    server.get('/api/obs/status', (req, res) => {
+        const obsPath = scanObsPath();
+        res.json({
+            connected: obsConnected,
+            connecting: obsConnecting,
+            error: obsLastError,
+            running: !!(obsProcess && !obsProcess.killed),
+            obsPath
+        });
+    });
+
+    server.get('/api/obs/status-stream', (req, res) => {
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.flushHeaders();
+        const obsPath = scanObsPath();
+        res.write(`data: ${JSON.stringify({ connected: obsConnected, connecting: obsConnecting, error: obsLastError, running: !!(obsProcess && !obsProcess.killed), obsPath })}\n\n`);
+        obsStatusClients.push(res);
+        req.on('close', () => { obsStatusClients = obsStatusClients.filter(r => r !== res); });
+    });
+
+    server.get('/api/obs/find', (req, res) => {
+        const found = scanObsPath();
+        res.json({ found, path: found });
+    });
+
+    server.get('/api/obs/browse', async (req, res) => {
+        try {
+            const result = await dialog.showOpenDialog(mainWindow, {
+                title: 'Locate OBS Studio',
+                filters: [{ name: 'OBS Executable', extensions: ['exe'] }, { name: 'All Files', extensions: ['*'] }],
+                properties: ['openFile'],
+                defaultPath: 'C:\\Program Files'
+            });
+            if (result.canceled || !result.filePaths.length) return res.json({ path: null, canceled: true });
+            const chosenPath = result.filePaths[0];
+            // Save to config
+            const cfg = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
+            cfg.obsPath = chosenPath;
+            fs.writeFileSync(getDataPath('config.json'), JSON.stringify(cfg, null, 4));
+            res.json({ path: chosenPath, canceled: false });
+        } catch(e) { res.json({ path: null, error: e.message }); }
+    });
+
+    server.post('/api/obs/launch', async (req, res) => {
+        try {
+            const obsPath = req.body.obsPath || scanObsPath();
+            if (!obsPath) return res.json({ success: false, error: 'OBS not found. Please install OBS Studio.' });
+            if (!fs.existsSync(obsPath)) return res.json({ success: false, error: 'OBS path not found: ' + obsPath });
+            // Save path to config
+            const cfg = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
+            cfg.obsPath = obsPath;
+            fs.writeFileSync(getDataPath('config.json'), JSON.stringify(cfg, null, 4));
+            const launchPort = req.body.port || cfg.obsPort || 4455;
+            await obsLaunch(obsPath, launchPort);
+            res.json({ success: true });
+        } catch(e) { res.json({ success: false, error: e.message }); }
+    });
+
+    server.post('/api/obs/connect', async (req, res) => {
+        try {
+            const cfg = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
+            const port = req.body.port || cfg.obsPort || 4455;
+            const password = req.body.password !== undefined ? req.body.password : (cfg.obsPassword || '');
+            obsConnecting = true; obsLastError = null;
+            obsBroadcastStatus();
+            await obsWsConnect(port, password);
+            // Save working credentials
+            cfg.obsPort = String(port); cfg.obsPassword = password; cfg.obsAutoConnect = true;
+            fs.writeFileSync(getDataPath('config.json'), JSON.stringify(cfg, null, 4));
+            res.json({ success: true });
+        } catch(e) {
+            obsConnecting = false;
+            const errMsg = e.message || '';
+            let hint = null;
+            if (errMsg.includes('ECONNREFUSED') || errMsg.includes('timed out')) hint = 'websocket_disabled';
+            else if (errMsg.includes('Authentication failed') || errMsg.includes('wrong password') || errMsg.includes('Connection closed before auth')) hint = 'wrong_password';
+            obsLastError = errMsg;
+            obsBroadcastStatus();
+            res.json({ success: false, error: errMsg, hint });
+        }
+    });
+
+    server.post('/api/obs/setup', async (req, res) => {
+        // Patch ini, restart OBS, reconnect — responds immediately then works async
+        res.json({ success: true, message: 'Configuring OBS… this may take a few seconds.' });
+        try {
+            const { port = 4455, password = '' } = req.body;
+            patchObsIni(port, password);
+            await obsKill();
+            const cfg = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
+            const obsPath = cfg.obsPath || scanObsPath();
+            if (!obsPath) { obsLastError = 'OBS path not found'; obsBroadcastStatus(); return; }
+            await obsLaunch(obsPath, port);
+            obsConnecting = true; obsLastError = null; obsBroadcastStatus();
+            try {
+                await obsWsConnect(port, password);
+                cfg.obsPort = String(port); cfg.obsPassword = password; cfg.obsAutoConnect = true;
+                fs.writeFileSync(getDataPath('config.json'), JSON.stringify(cfg, null, 4));
+            } catch(e) {
+                obsConnecting = false; obsLastError = e.message; obsBroadcastStatus();
+            }
+        } catch(e) { obsConnecting = false; obsLastError = e.message; obsBroadcastStatus(); }
+    });
+
+    server.post('/api/obs/create-source', async (req, res) => {
+        try {
+            if (!obsConnected) return res.json({ success: false, error: 'Not connected to OBS' });
+            const result = await obsCreateBrowserSource();
+            res.json({ success: result.ok, ...result });
+        } catch(e) { res.json({ success: false, error: e.message }); }
+    });
+
+    server.post('/api/obs/disconnect', async (req, res) => {
+        try {
+            if (obsWsClient) { try { obsWsClient.terminate(); } catch(e) {} obsWsClient = null; }
+            obsConnected = false; obsConnecting = false;
+            const cfg = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
+            cfg.obsAutoConnect = false;
+            fs.writeFileSync(getDataPath('config.json'), JSON.stringify(cfg, null, 4));
+            obsBroadcastStatus();
+            res.json({ success: true });
+        } catch(e) { res.json({ success: false, error: e.message }); }
     });
 
     // ---- COMMANDS ----
@@ -2776,7 +2915,226 @@ Write-Output $sb.ToString().Trim()
                 if (cfg.streamerToken && cfg.setupComplete) startEventSub();
             } catch(e) {}
         }, 3000);
+        // Auto-connect OBS if configured
+        setTimeout(async () => {
+            try {
+                const cfg = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
+                if (!cfg.obsAutoConnect || !cfg.obsPath) return;
+                if (!fs.existsSync(cfg.obsPath)) return;
+                await obsLaunch(cfg.obsPath, cfg.obsPort || 4455);
+                obsConnecting = true; obsBroadcastStatus();
+                await obsWsConnect(cfg.obsPort || 4455, cfg.obsPassword || '');
+            } catch(e) {
+                obsConnecting = false;
+                obsLastError = e.message;
+                obsBroadcastStatus();
+            }
+        }, 5000);
     });
+}
+
+// ── OBS Integration ───────────────────────────────────────────────────────────
+const crypto = require('crypto');
+const WebSocketNode = require('ws');
+
+let obsProcess      = null;
+let obsWsClient     = null;
+let obsConnected    = false;
+let obsConnecting   = false;
+let obsLastError    = null;
+let obsReqId        = 1;
+const obsPending    = new Map();
+let obsStatusClients = [];
+
+const OBS_PATHS = [
+    'C:\\Program Files\\obs-studio\\bin\\64bit\\obs64.exe',
+    'C:\\Program Files (x86)\\obs-studio\\bin\\64bit\\obs64.exe',
+    'C:\\Program Files\\OBS Studio\\bin\\64bit\\obs64.exe',
+    'C:\\Program Files (x86)\\Steam\\steamapps\\common\\OBS Studio\\bin\\64bit\\obs64.exe'
+];
+
+function scanObsPath() {
+    try {
+        const cfg = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
+        if (cfg.obsPath && fs.existsSync(cfg.obsPath)) return cfg.obsPath;
+    } catch(e) {}
+    for (const p of OBS_PATHS) { if (fs.existsSync(p)) return p; }
+    return null;
+}
+
+function obsBroadcastStatus() {
+    const payload = `data: ${JSON.stringify({ connected: obsConnected, connecting: obsConnecting, error: obsLastError })}\n\n`;
+    obsStatusClients = obsStatusClients.filter(r => !r.writableEnded);
+    obsStatusClients.forEach(r => r.write(payload));
+}
+
+function obsWsConnect(port, password) {
+    return new Promise((resolve, reject) => {
+        if (obsWsClient) { try { obsWsClient.terminate(); } catch(e) {} obsWsClient = null; }
+        const ws = new WebSocketNode(`ws://localhost:${port || 4455}`);
+        let identified = false;
+        const timer = setTimeout(() => { if (!identified) { ws.terminate(); reject(new Error('Connection timed out')); } }, 8000);
+
+        ws.on('message', raw => {
+            let msg; try { msg = JSON.parse(raw.toString()); } catch(e) { return; }
+            const { op, d } = msg;
+            if (op === 0) { // Hello — send Identify
+                const payload = { rpcVersion: 1, eventSubscriptions: 33 };
+                if (d.authentication && password) {
+                    const secret = crypto.createHash('sha256').update(password + d.authentication.salt).digest('base64');
+                    payload.authentication = crypto.createHash('sha256').update(secret + d.authentication.challenge).digest('base64');
+                }
+                ws.send(JSON.stringify({ op: 1, d: payload }));
+            } else if (op === 2) { // Identified — success
+                clearTimeout(timer);
+                identified = true;
+                obsWsClient = ws;
+                obsConnected = true; obsConnecting = false; obsLastError = null;
+                obsBroadcastStatus();
+                resolve();
+            } else if (op === 7) { // RequestResponse
+                const cb = obsPending.get(d.requestId);
+                if (cb) { obsPending.delete(d.requestId); cb(d); }
+            }
+        });
+
+        ws.on('close', (code) => {
+            if (!identified) {
+                clearTimeout(timer);
+                // OBS closes with code 4009 on auth failure
+                const authFailed = (code === 4009);
+                reject(new Error(authFailed ? 'Authentication failed: wrong password' : 'Connection closed before auth'));
+            }
+            obsWsClient = null; obsConnected = false; obsConnecting = false;
+            obsLastError = obsLastError || 'OBS disconnected';
+            obsBroadcastStatus();
+        });
+
+        ws.on('error', err => {
+            clearTimeout(timer);
+            obsConnected = false; obsConnecting = false; obsLastError = err.message;
+            obsBroadcastStatus();
+            if (!identified) reject(err);
+        });
+    });
+}
+
+function obsSendRequest(type, data) {
+    return new Promise((resolve, reject) => {
+        if (!obsWsClient || obsWsClient.readyState !== 1) return reject(new Error('Not connected to OBS'));
+        const requestId = String(obsReqId++);
+        const t = setTimeout(() => { obsPending.delete(requestId); reject(new Error('OBS request timed out')); }, 8000);
+        obsPending.set(requestId, d => { clearTimeout(t); resolve(d); });
+        obsWsClient.send(JSON.stringify({ op: 6, d: { requestType: type, requestId, requestData: data || {} } }));
+    });
+}
+
+function patchObsIni(port, password) {
+    try {
+        const iniPath = path.join(process.env.APPDATA || '', 'obs-studio', 'global.ini');
+        if (!fs.existsSync(iniPath)) return false;
+        let ini = fs.readFileSync(iniPath, 'utf8');
+        if (!ini.includes('[OBSWebSocket]')) ini += '\n[OBSWebSocket]\n';
+        const set = (k, v) => {
+            const re = new RegExp(`^${k}=.*$`, 'm');
+            return re.test(ini) ? ini.replace(re, `${k}=${v}`) : ini.replace('[OBSWebSocket]', `[OBSWebSocket]\n${k}=${v}`);
+        };
+        ini = set('ServerEnabled', 'true');
+        ini = set('ServerPort', String(port || 4455));
+        ini = set('AuthRequired', password ? 'true' : 'false');
+        ini = set('ServerPassword', password || '');
+        fs.writeFileSync(iniPath, ini, 'utf8');
+        return true;
+    } catch(e) { return false; }
+}
+
+function isObsRunning() {
+    return new Promise(resolve => {
+        const { exec } = require('child_process');
+        exec('tasklist /FI "IMAGENAME eq obs64.exe" /NH', (err, stdout) => {
+            resolve(!err && stdout.toLowerCase().includes('obs64.exe'));
+        });
+    });
+}
+
+function obsWaitForWebSocket(port, timeoutMs = 20000) {
+    // Poll ws port until OBS WebSocket server responds, or timeout
+    return new Promise(resolve => {
+        const start = Date.now();
+        const interval = setInterval(() => {
+            const ws = new WebSocketNode(`ws://localhost:${port}`);
+            ws.on('open', () => { ws.terminate(); clearInterval(interval); resolve(true); });
+            ws.on('error', () => {
+                ws.terminate();
+                if (Date.now() - start >= timeoutMs) { clearInterval(interval); resolve(false); }
+            });
+        }, 500);
+    });
+}
+
+function obsLaunch(obsPath, port = 4455) {
+    return new Promise(async resolve => {
+        // Check if our tracked process is still alive
+        if (obsProcess && !obsProcess.killed) { resolve(); return; }
+        // Check if OBS is already running externally (user opened it manually)
+        const alreadyRunning = await isObsRunning();
+        if (alreadyRunning) { resolve(); return; }
+        try {
+            // --disable-shutdown-check prevents OBS from showing the Normal/Safe mode dialog
+            obsProcess = spawn(obsPath, ['--minimize-to-tray', '--disable-shutdown-check'], { detached: true, stdio: 'ignore', cwd: path.dirname(obsPath) });
+            obsProcess.unref();
+            obsProcess.on('exit', () => {
+                obsProcess = null; obsConnected = false; obsConnecting = false;
+                obsLastError = 'OBS closed or crashed';
+                obsBroadcastStatus();
+            });
+        } catch(e) {}
+        // Poll until WebSocket is up instead of flat wait
+        await obsWaitForWebSocket(port, 20000);
+        resolve();
+    });
+}
+
+function obsKill() {
+    return new Promise(resolve => {
+        if (obsWsClient) { try { obsWsClient.terminate(); } catch(e) {} obsWsClient = null; }
+        obsConnected = false;
+        const { exec } = require('child_process');
+        // Kill by PID if we spawned it, otherwise kill all obs64.exe instances
+        if (obsProcess && !obsProcess.killed) {
+            exec('taskkill /f /pid ' + obsProcess.pid, () => {});
+            obsProcess = null;
+        } else {
+            exec('taskkill /f /im obs64.exe', () => {});
+        }
+        setTimeout(resolve, 1500);
+    });
+}
+
+async function obsCreateBrowserSource() {
+    try {
+        const scenesResp = await obsSendRequest('GetSceneList');
+        if (scenesResp.requestStatus?.code !== 100) return { ok: false, error: 'Could not list OBS scenes' };
+        const scenes = scenesResp.responseData?.scenes || [];
+        if (!scenes.length) return { ok: false, error: 'No scenes in OBS — create at least one scene first' };
+        const sceneName = scenesResp.responseData.currentProgramSceneName || scenes[0].sceneName;
+        const cfg = JSON.parse(fs.readFileSync(getDataPath('config.json'), 'utf8'));
+        const sourceName = cfg.obsSourceName || 'ChatCommander Overlay';
+        const overlayUrl = 'http://localhost:3000/stream-overlay.html';
+        // Check if source already exists
+        try {
+            await obsSendRequest('GetInputSettings', { inputName: sourceName });
+            await obsSendRequest('SetInputSettings', { inputName: sourceName, inputSettings: { url: overlayUrl } });
+            return { ok: true, existed: true, sceneName, sourceName };
+        } catch(e) { /* doesn't exist yet */ }
+        await obsSendRequest('CreateInput', {
+            sceneName, inputName: sourceName, inputKind: 'browser_source',
+            inputSettings: { url: overlayUrl, width: 1920, height: 1080, reroute_audio: false }
+        });
+        cfg.obsSourceName = sourceName;
+        fs.writeFileSync(getDataPath('config.json'), JSON.stringify(cfg, null, 4));
+        return { ok: true, existed: false, sceneName, sourceName };
+    } catch(e) { return { ok: false, error: e.message }; }
 }
 
 // ── EventSub WebSocket Engine ─────────────────────────────────────────────────

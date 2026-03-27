@@ -336,14 +336,13 @@
             <div class="cmd-sub">Manage your chat commands</div>
           </div>
           <div id="addCmdBtnWrap">
-            <button class="cmd-add-btn" onclick="openAddCmd()">+ Add Command</button>
+            <button class="cta-btn" onclick="openAddCmd()"><span class="cta-span">Add Command</span><span class="cta-second"><svg width="30px" height="12px" viewBox="0 0 66 43" xmlns="http://www.w3.org/2000/svg"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd"><path class="cta-one" d="M40.1543933,3.89485454 L43.9763149,0.139296592 C44.1708311,-0.0518420739 44.4826329,-0.0518571125 44.6771675,0.139262789 L65.6916134,20.7848311 C66.0855801,21.1718824 66.0911863,21.8050225 65.704135,22.1989893 C65.7000188,22.2031791 65.6958657,22.2073326 65.6916762,22.2114492 L44.677098,42.8607841 C44.4825957,43.0519059 44.1708242,43.0519358 43.9762853,42.8608513 L40.1545186,39.1069479 C39.9575152,38.9134427 39.9546793,38.5968729 40.1481845,38.3998695 C40.1502893,38.3977268 40.1524132,38.395603 40.1545562,38.3934985 L56.9937789,21.8567812 C57.1908028,21.6632968 57.193672,21.3467273 57.0001876,21.1497035 C56.9980647,21.1475418 56.9959223,21.1453995 56.9937605,21.1432767 L40.1545208,4.60825197 C39.9574869,4.41477773 39.9546013,4.09820839 40.1480756,3.90117456 C40.1501626,3.89904911 40.1522686,3.89694235 40.1543933,3.89485454 Z" fill="#FFFFFF"></path><path class="cta-two" d="M20.1543933,3.89485454 L23.9763149,0.139296592 C24.1708311,-0.0518420739 24.4826329,-0.0518571125 24.6771675,0.139262789 L45.6916134,20.7848311 C46.0855801,21.1718824 46.0911863,21.8050225 45.704135,22.1989893 C45.7000188,22.2031791 45.6958657,22.2073326 45.6916762,22.2114492 L24.677098,42.8607841 C24.4825957,43.0519059 24.1708242,43.0519358 23.9762853,42.8608513 L20.1545186,39.1069479 C19.9575152,38.9134427 19.9546793,38.5968729 20.1481845,38.3998695 C20.1502893,38.3977268 20.1524132,38.395603 20.1545562,38.3934985 L36.9937789,21.8567812 C37.1908028,21.6632968 37.193672,21.3467273 37.0001876,21.1497035 C36.9980647,21.1475418 36.9959223,21.1453995 36.9937605,21.1432767 L20.1545208,4.60825197 C19.9574869,4.41477773 19.9546013,4.09820839 20.1480756,3.90117456 C20.1501626,3.89904911 20.1522686,3.89694235 20.1543933,3.89485454 Z" fill="#FFFFFF"></path><path class="cta-three" d="M0.154393339,3.89485454 L3.97631488,0.139296592 C4.17083111,-0.0518420739 4.48263286,-0.0518571125 4.67716753,0.139262789 L25.6916134,20.7848311 C26.0855801,21.1718824 26.0911863,21.8050225 25.704135,22.1989893 C25.7000188,22.2031791 25.6958657,22.2073326 25.6916762,22.2114492 L4.67709797,42.8607841 C4.48259567,43.0519059 4.17082418,43.0519358 3.97628526,42.8608513 L0.154518591,39.1069479 C-0.0424848215,38.9134427 -0.0453206733,38.5968729 0.148184538,38.3998695 C0.150289256,38.3977268 0.152413239,38.395603 0.154556228,38.3934985 L16.9937789,21.8567812 C17.1908028,21.6632968 17.193672,21.3467273 17.0001876,21.1497035 C16.9980647,21.1475418 16.9959223,21.1453995 16.9937605,21.1432767 L0.15452076,4.60825197 C-0.0425130651,4.41477773 -0.0453986756,4.09820839 0.148075568,3.90117456 C0.150162624,3.89904911 0.152268631,3.89694235 0.154393339,3.89485454 Z" fill="#FFFFFF"></path></g></svg></span></button>
           </div>
         </div>
 
         <div class="cmd-tabs-bar">
           <div class="cmd-tab active" id="tab-custom" onclick="switchTab('custom')">Custom</div>
           <div class="cmd-tab" id="tab-default" onclick="switchTab('default')">Default</div>
-          <div class="cmd-tab" id="tab-alerts" onclick="switchTab('alerts')">Alerts</div>
         </div>
 
         <div class="cmd-toolbar">
@@ -765,23 +764,83 @@
     <!-- GROUPS PAGE -->
     <div class="page" id="page-obs">
 
-  <!-- SETUP SCREEN — shown when not connected and no saved credentials -->
+  <!-- SETUP SCREEN — shown when not connected -->
   <div id="obsSetupScreen" style="display:none;height:100%;align-items:center;justify-content:center;flex-direction:column;">
     <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;letter-spacing:4px;text-transform:uppercase;margin-bottom:6px;background:linear-gradient(135deg,#fff 0%,rgba(255,255,255,0.5) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">OBS Control</div>
-    <div style="font-size:0.55rem;letter-spacing:5px;color:rgba(255,255,255,0.15);text-transform:uppercase;margin-bottom:40px;">WebSocket Setup</div>
-    <div style="width:100%;max-width:380px;background:rgba(12,12,12,0.8);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:36px;position:relative;overflow:hidden;backdrop-filter:blur(40px);">
+    <div style="font-size:0.55rem;letter-spacing:5px;color:rgba(255,255,255,0.15);text-transform:uppercase;margin-bottom:40px;">Auto Setup</div>
+    <div style="width:100%;max-width:400px;background:rgba(12,12,12,0.8);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:36px;position:relative;overflow:hidden;backdrop-filter:blur(40px);">
       <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 0%,rgba(232,224,255,0.3) 25%,rgba(255,214,240,0.3) 50%,rgba(208,240,255,0.3) 75%,transparent 100%);background-size:200%;animation:shimmer-line 4s linear infinite;"></div>
-      <div style="font-size:0.55rem;letter-spacing:4px;color:rgba(255,255,255,0.2);text-transform:uppercase;margin-bottom:8px;">One-time setup</div>
-      <div style="font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:8px;background:linear-gradient(135deg,#fff,rgba(255,255,255,0.6));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Connect OBS</div>
-      <div style="font-size:0.65rem;color:rgba(255,255,255,0.25);line-height:1.7;margin-bottom:28px;">In OBS, go to <span style="color:rgba(208,240,255,0.6);">Tools → WebSocket Server Settings</span>, enable it, and copy the password here. You only need to do this once.</div>
-      <label style="display:block;font-size:0.55rem;letter-spacing:3px;color:rgba(255,255,255,0.2);text-transform:uppercase;margin-bottom:8px;">Host</label>
-      <input class="form-input" type="text" id="obsHost" placeholder="localhost" value="localhost" style="margin-bottom:16px;" />
-      <label style="display:block;font-size:0.55rem;letter-spacing:3px;color:rgba(255,255,255,0.2);text-transform:uppercase;margin-bottom:8px;">Port</label>
-      <input class="form-input" type="text" id="obsPort" placeholder="4455" value="4455" style="margin-bottom:16px;" />
-      <label style="display:block;font-size:0.55rem;letter-spacing:3px;color:rgba(255,255,255,0.2);text-transform:uppercase;margin-bottom:8px;">Password</label>
-      <input class="form-input" type="password" id="obsPassword" placeholder="Leave blank if no password set" style="margin-bottom:24px;" />
-      <div id="obsSetupError" style="display:none;font-size:0.6rem;letter-spacing:2px;color:rgba(255,100,100,0.7);margin-bottom:16px;"></div>
-      <button onclick="obsConnect()" style="width:100%;padding:14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:var(--text);font-family:'DM Mono',monospace;font-size:0.72rem;letter-spacing:3px;text-transform:uppercase;cursor:pointer;transition:all 0.3s;" onmouseover="this.style.borderColor='rgba(255,255,255,0.2)';this.style.transform='translateY(-1px)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.12)';this.style.transform=''">Connect to OBS</button>
+
+      <!-- STATE: start -->
+      <div id="obs-flow-start">
+        <div style="font-size:0.55rem;letter-spacing:4px;color:rgba(255,255,255,0.2);text-transform:uppercase;margin-bottom:8px;">One-time setup</div>
+        <div style="font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:8px;background:linear-gradient(135deg,#fff,rgba(255,255,255,0.6));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Connect OBS</div>
+        <div style="font-size:0.65rem;color:rgba(255,255,255,0.25);line-height:1.7;margin-bottom:28px;">ChatCommander will find OBS on your computer, launch it, and set up the WebSocket connection automatically.</div>
+        <button onclick="obsStartFlow()" style="width:100%;padding:14px;background:var(--accent);border:none;border-radius:8px;color:white;font-family:'DM Mono',monospace;font-size:0.72rem;letter-spacing:3px;text-transform:uppercase;cursor:pointer;transition:all 0.3s;box-shadow:4px 4px 0 #000;" onmouseover="this.style.boxShadow='6px 6px 0 #fbc638'" onmouseout="this.style.boxShadow='4px 4px 0 #000'">Connect OBS Automatically</button>
+        <button onclick="obsShowManualSetup()" style="width:100%;margin-top:10px;padding:10px;background:none;border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:rgba(255,255,255,0.3);font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:2px;cursor:pointer;transition:all 0.3s;" onmouseover="this.style.borderColor='rgba(255,255,255,0.2)';this.style.color='rgba(255,255,255,0.5)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.1)';this.style.color='rgba(255,255,255,0.3)'">Manual Setup</button>
+      </div>
+
+      <!-- STATE: progress/connecting -->
+      <div id="obs-flow-progress" style="display:none;text-align:center;">
+        <div id="obs-flow-spinner" style="width:40px;height:40px;border:2px solid rgba(255,255,255,0.1);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 20px;"></div>
+        <div id="obs-flow-title" style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:8px;">Locating OBS…</div>
+        <div id="obs-flow-sub" style="font-size:0.62rem;color:rgba(255,255,255,0.3);letter-spacing:1px;line-height:1.6;"></div>
+        <div id="obs-flow-steps" style="margin-top:24px;display:flex;flex-direction:column;gap:6px;text-align:left;"></div>
+      </div>
+
+      <!-- STATE: not found -->
+      <div id="obs-flow-not-found" style="display:none;text-align:center;">
+        <div style="font-size:2.2rem;margin-bottom:12px;">🔍</div>
+        <div style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:8px;">OBS Not Found</div>
+        <div style="font-size:0.62rem;color:rgba(255,255,255,0.3);line-height:1.7;margin-bottom:24px;">OBS Studio doesn't appear to be installed, or it's in a custom location.</div>
+        <a href="https://obsproject.com/download" target="_blank" style="display:block;width:100%;box-sizing:border-box;padding:13px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:var(--text);font-family:'DM Mono',monospace;font-size:0.7rem;letter-spacing:2px;text-transform:uppercase;cursor:pointer;text-decoration:none;margin-bottom:10px;transition:all 0.3s;" onmouseover="this.style.borderColor='rgba(255,255,255,0.25)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.12)'">Download OBS Studio ↗</a>
+        <button onclick="obsFlowBrowse()" style="width:100%;padding:13px;background:none;border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:rgba(255,255,255,0.4);font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:2px;cursor:pointer;transition:all 0.3s;" onmouseover="this.style.borderColor='rgba(255,255,255,0.2)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'">Browse for OBS…</button>
+      </div>
+
+      <!-- STATE: manual WebSocket config (first-time or wrong password) -->
+      <div id="obs-flow-ws-config" style="display:none;">
+        <div id="obs-flow-ws-icon" style="font-size:1.6rem;margin-bottom:12px;"></div>
+        <div id="obs-flow-ws-title" style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:8px;"></div>
+        <div id="obs-flow-ws-desc" style="font-size:0.62rem;color:rgba(255,255,255,0.3);line-height:1.7;margin-bottom:22px;"></div>
+        <label style="display:block;font-size:0.55rem;letter-spacing:3px;color:rgba(255,255,255,0.2);text-transform:uppercase;margin-bottom:8px;">Port</label>
+        <input class="form-input" type="text" id="obsFlowPort" placeholder="4455" value="4455" style="margin-bottom:16px;" />
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <label style="font-size:0.55rem;letter-spacing:3px;color:rgba(255,255,255,0.2);text-transform:uppercase;">Password</label>
+          <button onclick="obsFlowGeneratePassword()" style="font-size:0.55rem;letter-spacing:1px;color:var(--accent);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px;">Auto-generate</button>
+        </div>
+        <input class="form-input" type="text" id="obsFlowPassword" placeholder="Leave blank if no password" style="margin-bottom:8px;" />
+        <div id="obs-flow-ws-error" style="display:none;font-size:0.6rem;letter-spacing:2px;color:rgba(255,100,100,0.7);margin-bottom:16px;margin-top:8px;"></div>
+        <div style="display:flex;gap:10px;margin-top:16px;">
+          <button onclick="obsFlowApplyWsSetup()" style="flex:1;padding:13px;background:var(--accent);border:none;border-radius:8px;color:white;font-family:'DM Mono',monospace;font-size:0.68rem;letter-spacing:2px;cursor:pointer;transition:all 0.3s;">Apply &amp; Connect</button>
+          <button onclick="obsFlowShowState('start')" style="padding:13px 16px;background:none;border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:rgba(255,255,255,0.4);font-family:'DM Mono',monospace;font-size:0.68rem;cursor:pointer;">Back</button>
+        </div>
+      </div>
+
+      <!-- STATE: OBS crashed -->
+      <div id="obs-flow-crashed" style="display:none;text-align:center;">
+        <div style="font-size:2rem;margin-bottom:12px;">💥</div>
+        <div style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:8px;">OBS Disconnected</div>
+        <div id="obs-flow-crashed-msg" style="font-size:0.62rem;color:rgba(255,255,255,0.3);line-height:1.7;margin-bottom:24px;">OBS closed or crashed.</div>
+        <button onclick="obsStartFlow()" style="width:100%;padding:13px;background:var(--accent);border:none;border-radius:8px;color:white;font-family:'DM Mono',monospace;font-size:0.7rem;letter-spacing:3px;cursor:pointer;margin-bottom:10px;">Reconnect</button>
+        <button onclick="obsFlowShowState('start')" style="width:100%;padding:11px;background:none;border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:rgba(255,255,255,0.35);font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:2px;cursor:pointer;">Back</button>
+      </div>
+
+    </div>
+
+    <!-- Hidden host/port/password kept for legacy compat -->
+    <input type="hidden" id="obsHost" value="localhost" />
+    <input type="hidden" id="obsPort" value="4455" />
+    <input type="hidden" id="obsPassword" value="" />
+    <div id="obsSetupError" style="display:none;"></div>
+  </div>
+
+  <!-- WS SETUP MODAL — used by auto-flow when WS is disabled in OBS -->
+  <div id="obsWsSetupModal" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);align-items:center;justify-content:center;flex-direction:column;">
+    <div style="width:100%;max-width:380px;background:rgba(12,12,12,0.95);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:32px;position:relative;">
+      <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(191,148,255,0.4),transparent);"></div>
+      <div id="obsWsModalSpinner" style="display:none;width:32px;height:32px;border:2px solid rgba(255,255,255,0.1);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 16px;"></div>
+      <div id="obsWsModalTitle" style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:8px;">Setting up OBS WebSocket…</div>
+      <div id="obsWsModalMsg" style="font-size:0.62rem;color:rgba(255,255,255,0.35);line-height:1.7;"></div>
     </div>
   </div>
 
@@ -877,6 +936,7 @@
                 OBS browser source URL:
                 <span style="color:var(--accent);margin:0 4px;">http://localhost:3000/alert-overlay</span>
                 <button class="btn btn-sm" style="padding:2px 8px;font-size:0.6rem;" onclick="navigator.clipboard.writeText('http://localhost:3000/alert-overlay').then(()=>showToast('URL copied'))">Copy</button>
+                <button class="btn btn-sm" style="padding:2px 8px;font-size:0.6rem;margin-left:4px;" onclick="obsAddBrowserSource()" title="Auto-add overlay as a browser source in OBS">＋ Add to OBS</button>
                 &nbsp;· trigger with <span style="color:var(--accent);">!alertname</span>
               </div>
             </div>
@@ -3963,8 +4023,10 @@ async function overlayConfirmEdit(id) {
   <div class="add-cmd-box">
     <div class="add-cmd-title" id="addCmdTitle">Add Command</div>
     <div class="form-group">
-      <label class="form-label">Command</label>
-      <input class="form-input" type="text" id="commandInput" placeholder="!yourcommand" />
+      <div class="bc-container">
+        <input class="bc-input smooth-type" type="text" id="commandInput" placeholder="!yourcommand" />
+        <label class="bc-label" for="commandInput">Command</label>
+      </div>
     </div>
     <div class="form-group">
       <label class="form-label">Response</label>
@@ -3972,17 +4034,34 @@ async function overlayConfirmEdit(id) {
     </div>
     <div class="form-group">
       <label class="form-label">Cooldown (seconds)</label>
-      <input class="form-input" type="number" id="newCmdCooldown" placeholder="5" value="5" min="0" />
+      <div class="cd-stepper">
+        <div class="cd-left" onclick="cdStep(this.closest('.cd-stepper').querySelector('.cd-input'),-1)"></div>
+        <input class="cd-input" type="number" id="newCmdCooldown" value="5" min="0" />
+        <div class="cd-right" onclick="cdStep(this.closest('.cd-stepper').querySelector('.cd-input'),1)"></div>
+      </div>
     </div>
     <div class="form-group">
       <label class="form-label">Access Level</label>
-      <select class="form-input" id="newCmdAccess">
+      <select id="newCmdAccess" style="display:none;">
         <option value="everyone">Everyone</option>
         <option value="subscriber">Subscriber</option>
         <option value="moderator">Moderator</option>
-        <option value="lead mod">Lead Mod</option>
+        <option value="admin">Admin</option>
         <option value="broadcaster">Broadcaster</option>
       </select>
+      <div class="cc-select" id="addCmdAccessSelect">
+        <div class="cc-selected" onclick="ccToggle(this.closest('.cc-select'))">
+          <span class="cc-selected-text">Everyone</span>
+          <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" class="cc-arrow"><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path></svg>
+        </div>
+        <div class="cc-options">
+          <div><input type="radio" id="addacc-everyone" name="addCmdAccess" value="everyone" checked onchange="setAddCmdAccess('everyone')"/><label class="cc-option" for="addacc-everyone" data-txt="Everyone"></label></div>
+          <div><input type="radio" id="addacc-subscriber" name="addCmdAccess" value="subscriber" onchange="setAddCmdAccess('subscriber')"/><label class="cc-option" for="addacc-subscriber" data-txt="Subscriber"></label></div>
+          <div><input type="radio" id="addacc-moderator" name="addCmdAccess" value="moderator" onchange="setAddCmdAccess('moderator')"/><label class="cc-option" for="addacc-moderator" data-txt="Moderator"></label></div>
+          <div><input type="radio" id="addacc-admin" name="addCmdAccess" value="admin" onchange="setAddCmdAccess('admin')"/><label class="cc-option" for="addacc-admin" data-txt="Admin"></label></div>
+          <div><input type="radio" id="addacc-broadcaster" name="addCmdAccess" value="broadcaster" onchange="setAddCmdAccess('broadcaster')"/><label class="cc-option" for="addacc-broadcaster" data-txt="Broadcaster"></label></div>
+        </div>
+      </div>
     </div>
     <input type="hidden" id="editingCmdName" value="" />
     <div class="add-cmd-footer">
@@ -4019,7 +4098,7 @@ async function overlayConfirmEdit(id) {
           <option value="everyone">Everyone</option>
           <option value="subscriber">Subscriber</option>
           <option value="moderator">Moderator</option>
-          <option value="lead mod">Lead Mod</option>
+          <option value="admin">Admin</option>
           <option value="broadcaster">Broadcaster</option>
         </select>
       </div>
@@ -4266,6 +4345,34 @@ async function overlayConfirmEdit(id) {
     }
   }
 
+  function setAddCmdAccess(val) {
+    document.getElementById('newCmdAccess').value = val;
+    const label = val.charAt(0).toUpperCase() + val.slice(1);
+    const sel = document.getElementById('addCmdAccessSelect');
+    if (sel) {
+      sel.querySelector('.cc-selected-text').textContent = label;
+      sel.classList.remove('open');
+      const radio = sel.querySelector(`input[value="${val}"]`);
+      if (radio) radio.checked = true;
+    }
+  }
+
+  function cdStep(input, dir) {
+    input.value = Math.max(0, parseInt(input.value || 0) + dir);
+    input.dispatchEvent(new Event('blur'));
+  }
+
+  function ccToggle(el) {
+    const isOpen = el.classList.contains('open');
+    document.querySelectorAll('.cc-select.open').forEach(s => s.classList.remove('open'));
+    if (!isOpen) el.classList.add('open');
+  }
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.cc-select')) {
+      document.querySelectorAll('.cc-select.open').forEach(s => s.classList.remove('open'));
+    }
+  });
+
   function showToast(msg) {
     const t = document.getElementById('toast');
     t.textContent = msg;
@@ -4323,26 +4430,26 @@ async function overlayConfirmEdit(id) {
     currentTab = tab;
     document.getElementById('tab-custom').classList.toggle('active', tab === 'custom');
     document.getElementById('tab-default').classList.toggle('active', tab === 'default');
-    document.getElementById('tab-alerts').classList.toggle('active', tab === 'alerts');
     document.getElementById('cmdSearch').value = '';
-    document.getElementById('addCmdBtnWrap').style.display = tab === 'custom' ? '' : 'none';
-    if (tab === 'alerts') {
-      // Show a New Alert button in the topbar area
-      document.getElementById('addCmdBtnWrap').innerHTML = '<button class="cmd-add-btn" onclick="openAddAlert()">+ New Alert</button>';
+    if (tab === 'custom') {
+      document.getElementById('addCmdBtnWrap').innerHTML = makeCTABtn('Add Command', 'openAddCmd()');
       document.getElementById('addCmdBtnWrap').style.display = '';
-      // Load overlay sources so app alerts show up, then render
-      overlayLoadSources().then(() => renderAlertsTab()).catch(() => renderAlertsTab());
-    } else {
-      document.getElementById('addCmdBtnWrap').innerHTML = '<button class="cmd-add-btn" onclick="openAddCmd()">+ Add Command</button>';
-      document.getElementById('addCmdBtnWrap').style.display = tab === 'custom' ? '' : 'none';
       renderCommandTable();
+    } else {
+      document.getElementById('addCmdBtnWrap').innerHTML = makeCTABtn('New Alert', 'openAddAlert()');
+      document.getElementById('addCmdBtnWrap').style.display = '';
+      Promise.all([overlayLoadSources().catch(()=>{}), loadMentionConfig().catch(()=>{})]).then(() => renderCommandTable());
     }
   }
 
   function filterCommands() { renderCommandTable(); }
 
+  const CTA_ARROW_SVG = `<svg width="30px" height="12px" viewBox="0 0 66 43" xmlns="http://www.w3.org/2000/svg"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd"><path class="cta-one" d="M40.1543933,3.89485454 L43.9763149,0.139296592 C44.1708311,-0.0518420739 44.4826329,-0.0518571125 44.6771675,0.139262789 L65.6916134,20.7848311 C66.0855801,21.1718824 66.0911863,21.8050225 65.704135,22.1989893 C65.7000188,22.2031791 65.6958657,22.2073326 65.6916762,22.2114492 L44.677098,42.8607841 C44.4825957,43.0519059 44.1708242,43.0519358 43.9762853,42.8608513 L40.1545186,39.1069479 C39.9575152,38.9134427 39.9546793,38.5968729 40.1481845,38.3998695 C40.1502893,38.3977268 40.1524132,38.395603 40.1545562,38.3934985 L56.9937789,21.8567812 C57.1908028,21.6632968 57.193672,21.3467273 57.0001876,21.1497035 C56.9980647,21.1475418 56.9959223,21.1453995 56.9937605,21.1432767 L40.1545208,4.60825197 C39.9574869,4.41477773 39.9546013,4.09820839 40.1480756,3.90117456 C40.1501626,3.89904911 40.1522686,3.89694235 40.1543933,3.89485454 Z" fill="#FFFFFF"></path><path class="cta-two" d="M20.1543933,3.89485454 L23.9763149,0.139296592 C24.1708311,-0.0518420739 24.4826329,-0.0518571125 24.6771675,0.139262789 L45.6916134,20.7848311 C46.0855801,21.1718824 46.0911863,21.8050225 45.704135,22.1989893 C45.7000188,22.2031791 45.6958657,22.2073326 45.6916762,22.2114492 L24.677098,42.8607841 C24.4825957,43.0519059 24.1708242,43.0519358 23.9762853,42.8608513 L20.1545186,39.1069479 C19.9575152,38.9134427 19.9546793,38.5968729 20.1481845,38.3998695 C20.1502893,38.3977268 20.1524132,38.395603 20.1545562,38.3934985 L36.9937789,21.8567812 C37.1908028,21.6632968 37.193672,21.3467273 37.0001876,21.1497035 C36.9980647,21.1475418 36.9959223,21.1453995 36.9937605,21.1432767 L20.1545208,4.60825197 C19.9574869,4.41477773 19.9546013,4.09820839 20.1480756,3.90117456 C20.1501626,3.89904911 20.1522686,3.89694235 20.1543933,3.89485454 Z" fill="#FFFFFF"></path><path class="cta-three" d="M0.154393339,3.89485454 L3.97631488,0.139296592 C4.17083111,-0.0518420739 4.48263286,-0.0518571125 4.67716753,0.139262789 L25.6916134,20.7848311 C26.0855801,21.1718824 26.0911863,21.8050225 25.704135,22.1989893 C25.7000188,22.2031791 25.6958657,22.2073326 25.6916762,22.2114492 L4.67709797,42.8607841 C4.48259567,43.0519059 4.17082418,43.0519358 3.97628526,42.8608513 L0.154518591,39.1069479 C-0.0424848215,38.9134427 -0.0453206733,38.5968729 0.148184538,38.3998695 C0.150289256,38.3977268 0.152413239,38.395603 0.154556228,38.3934985 L16.9937789,21.8567812 C17.1908028,21.6632968 17.193672,21.3467273 17.0001876,21.1497035 C16.9980647,21.1475418 16.9959223,21.1453995 16.9937605,21.1432767 L0.15452076,4.60825197 C-0.0425130651,4.41477773 -0.0453986756,4.09820839 0.148075568,3.90117456 C0.150162624,3.89904911 0.152268631,3.89694235 0.154393339,3.89485454 Z" fill="#FFFFFF"></path></g></svg>`;
+  function makeCTABtn(label, onclickStr) {
+    return `<button class="cta-btn" onclick="${onclickStr}"><span class="cta-span">${label}</span><span class="cta-second">${CTA_ARROW_SVG}</span></button>`;
+  }
+
   function renderCommandTable() {
-    if (currentTab === 'alerts') { renderAlertsTab(); return; }
     const search = document.getElementById('cmdSearch').value.toLowerCase();
     const tbody = document.getElementById('cmdTableBody');
     let rows = [];
@@ -4369,8 +4476,76 @@ async function overlayConfirmEdit(id) {
       DEFAULT_COMMANDS.filter(d => d.cmd.toLowerCase().includes(search)).forEach(d => {
         rows.push(renderDefaultRow(d));
       });
+
+      // OBS alert rows
+      Object.keys(alertsCache).forEach(name => {
+        if (search && !('!'+name).toLowerCase().includes(search) && !name.toLowerCase().includes(search)) return;
+        const a = alertsCache[name];
+        const rowId = 'row-alert-' + name;
+        const alertAccess = a.access || 'moderator';
+        const alertAccessOpts = ['everyone','subscriber','moderator','broadcaster'].map(av => {
+          const avLabel = av.charAt(0).toUpperCase() + av.slice(1);
+          const avId = `acc-alert-${name}-${av}`;
+          return `<div><input type="radio" id="${avId}" name="acc-alert-${name}" value="${av}" ${alertAccess===av?'checked':''} onchange="this.closest('.cc-select').querySelector('.cc-selected-text').textContent='${avLabel}';this.closest('.cc-select').classList.remove('open');saveAlertField('${name}','access','${av}')"/><label class="cc-option" for="${avId}" data-txt="${avLabel}"></label></div>`;
+        }).join('');
+        const alertExpandRow = `<tr class="cmd-expand-row" id="${rowId}-expand"><td colspan="5"><div class="cmd-expand-panel"><div class="expand-grid">
+          <div class="expand-field"><div class="expand-label">Duration</div><div class="cd-stepper"><div class="cd-left" onclick="cdStep(this.closest('.cd-stepper').querySelector('.cd-input'),-1)"></div><input class="cd-input" type="number" value="${a.duration || 5}" min="1" onblur="saveAlertField('${name}','duration',this.value)" /><div class="cd-right" onclick="cdStep(this.closest('.cd-stepper').querySelector('.cd-input'),1)"></div></div></div>
+          <div class="expand-field"><div class="expand-label">Access</div><div class="cc-select"><div class="cc-selected" onclick="ccToggle(this.closest('.cc-select'))"><span class="cc-selected-text">${alertAccess.charAt(0).toUpperCase()+alertAccess.slice(1)}</span><svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" class="cc-arrow"><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path></svg></div><div class="cc-options">${alertAccessOpts}</div></div></div>
+          <div class="expand-field"><div class="expand-label">Volume</div><input class="cmd-cd-input" type="number" value="${a.volume ?? 1.0}" min="0" max="1" step="0.1" onblur="saveAlertField('${name}','volume',this.value)" /></div>
+          <div class="expand-field" style="display:flex;align-items:flex-end;gap:8px;"><button class="expand-delete-btn" style="background:rgba(100,60,200,0.15);color:rgba(180,140,255,0.8);border-color:rgba(140,80,255,0.2);" onclick="editAlert('${name}')">Edit alert</button><button class="expand-delete-btn" onclick="deleteAlert('${name}')">Delete alert</button></div>
+        </div></div></td></tr>`;
+        rows.push(`<tr class="cmd-row" onclick="toggleExpand('${rowId}')"><td><div class="cmd-name">!${name}</div></td><td><span class="cmd-response-text">${a.image ? '🖼 ' : ''}${a.sound ? '🔊 ' : ''}${a.duration || 5}s · ${alertAccess}</span></td><td><span class="cmd-type-badge obs-alert">OBS Alert</span></td><td></td><td><div class="cmd-actions-cell"><span class="cmd-chevron">›</span><label class="toggle" onclick="event.stopPropagation()"><input type="checkbox" ${a.enabled !== false ? 'checked' : ''} onchange="toggleAlert('${name}', this.checked)" /><span class="toggle-slider"></span></label></div></td></tr>${alertExpandRow}`);
+      });
+
+      // App overlay rows
+      overlayState.sources.filter(s => s.assignedCommand && s.assignedCommand.trim()).forEach(src => {
+        const cmd = src.assignedCommand;
+        if (search && !cmd.toLowerCase().includes(search)) return;
+        const rowId = 'row-appalert-' + src.id;
+        const cmdData = commandsCache[cmd] || {};
+        const cooldown = cmdData.cooldown || 10;
+        const access = cmdData.access || 'everyone';
+        const parts = [];
+        if (src.speak) parts.push('🔊 TTS');
+        if (src.path || src.videoPath) parts.push(src.videoPath ? '🎬 Video' : '🖼 Media');
+        if (src.soundPath) parts.push('🎵 Sound');
+        const desc = parts.join(' · ') || 'Overlay';
+        const appAccessOpts = ['everyone','subscriber','moderator','admin','broadcaster'].map(a => {
+          const aLabel = a.charAt(0).toUpperCase() + a.slice(1);
+          const aId = `acc-app-${src.id}-${a}`;
+          return `<div><input type="radio" id="${aId}" name="acc-app-${rowId}" value="${a}" ${access===a?'checked':''} onchange="this.closest('.cc-select').querySelector('.cc-selected-text').textContent='${aLabel}';this.closest('.cc-select').classList.remove('open');saveCommandAccess('${encodeURIComponent(cmd)}', '${a}')"/><label class="cc-option" for="${aId}" data-txt="${aLabel}"></label></div>`;
+        }).join('');
+        const appExpandRow = `<tr class="cmd-expand-row" id="${rowId}-expand"><td colspan="5"><div class="cmd-expand-panel"><div class="expand-grid">
+          <div class="expand-field"><div class="expand-label">Cooldown</div><div class="cd-stepper"><div class="cd-left" onclick="cdStep(this.closest('.cd-stepper').querySelector('.cd-input'),-1)"></div><input class="cd-input" type="number" value="${cooldown}" min="0" onblur="saveCommandCooldown('${encodeURIComponent(cmd)}', this.value)" /><div class="cd-right" onclick="cdStep(this.closest('.cd-stepper').querySelector('.cd-input'),1)"></div></div></div>
+          <div class="expand-field"><div class="expand-label">Access</div><div class="cc-select"><div class="cc-selected" onclick="ccToggle(this.closest('.cc-select'))"><span class="cc-selected-text">${access.charAt(0).toUpperCase()+access.slice(1)}</span><svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" class="cc-arrow"><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path></svg></div><div class="cc-options">${appAccessOpts}</div></div></div>
+          <div class="expand-field" style="display:flex;align-items:flex-end;"><button class="expand-delete-btn" style="background:rgba(100,60,200,0.15);color:rgba(180,140,255,0.8);border-color:rgba(140,80,255,0.2);" onclick="showPage('overlay');overlayEditSource(${src.id})">Edit on Overlay page</button></div>
+        </div></div></td></tr>`;
+        rows.push(`<tr class="cmd-row" onclick="toggleExpand('${rowId}')"><td><div class="cmd-name">${cmd}</div></td><td><span class="cmd-response-text">${desc}</span></td><td><span class="cmd-type-badge custom">Alert</span></td><td></td><td><div class="cmd-actions-cell"><span class="cmd-chevron">›</span><label class="toggle" onclick="event.stopPropagation()"><input type="checkbox" ${cmdData.enabled !== false ? 'checked' : ''} onchange="toggleCommand('${encodeURIComponent(cmd)}', this.checked)" /><span class="toggle-slider"></span></label></div></td></tr>${appExpandRow}`);
+      });
+
+      // @mention system row
+      const mEnabled  = mentionCfg.enabled;
+      const mAccess   = mentionCfg.access || 'everyone';
+      const mCooldown = mentionCfg.cooldown ?? 300;
+      const mWebhook  = (mentionCfg.webhook || '').replace(/"/g, '&quot;');
+      const mMessage  = (mentionCfg.message || '').replace(/"/g, '&quot;');
+      const mAccessOpts = ['everyone','subscriber','moderator','broadcaster'].map(a => {
+        const aLabel = a.charAt(0).toUpperCase() + a.slice(1);
+        const aId = `acc-mention-${a}`;
+        return `<div><input type="radio" id="${aId}" name="acc-mention" value="${a}" ${mAccess===a?'checked':''} onchange="this.closest('.cc-select').querySelector('.cc-selected-text').textContent='${aLabel}';this.closest('.cc-select').classList.remove('open');saveMentionConfig({ access: '${a}' })"/><label class="cc-option" for="${aId}" data-txt="${aLabel}"></label></div>`;
+      }).join('');
+      const mExpandRow = `<tr class="cmd-expand-row" id="sys-mentions-expand"><td colspan="5"><div class="cmd-expand-panel"><div class="expand-grid">
+        <div class="expand-field"><div class="expand-label">Cooldown (per user)</div><div class="cd-stepper"><div class="cd-left" onclick="cdStep(this.closest('.cd-stepper').querySelector('.cd-input'),-1)"></div><input class="cd-input" type="number" value="${mCooldown}" min="0" onblur="saveMentionConfig({ cooldown: parseInt(this.value) || 300 })" /><div class="cd-right" onclick="cdStep(this.closest('.cd-stepper').querySelector('.cd-input'),1)"></div></div></div>
+        <div class="expand-field"><div class="expand-label">Access</div><div class="cc-select"><div class="cc-selected" onclick="ccToggle(this.closest('.cc-select'))"><span class="cc-selected-text">${mAccess.charAt(0).toUpperCase()+mAccess.slice(1)}</span><svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" class="cc-arrow"><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path></svg></div><div class="cc-options">${mAccessOpts}</div></div></div>
+      </div>
+      <div class="expand-field" style="margin-top:10px;"><div class="expand-label">Discord Webhook URL</div><input class="form-input" type="text" value="${mWebhook}" placeholder="https://discord.com/api/webhooks/..." style="width:100%;margin-top:4px;" onblur="saveMentionConfig({ webhook: this.value })" /></div>
+      <div class="expand-field" style="margin-top:10px;width:100%;"><label class="resp-label" style="width:100%;"><span class="resp-label-title">Message — use {mentioned} for the username</span><textarea class="resp-input" style="min-height:80px;resize:vertical;" onblur="saveMentionConfig({ message: this.value })">${mMessage}</textarea></label></div>
+      </div></td></tr>`;
+      rows.push(`<tr class="cmd-row" onclick="toggleExpand('sys-mentions')"><td><div class="cmd-name">@user mentions</div></td><td><span class="cmd-response-text">Discord webhook notification</span></td><td><span class="cmd-type-badge custom">System</span></td><td></td><td><div class="cmd-actions-cell"><span class="cmd-chevron">›</span><label class="toggle" onclick="event.stopPropagation()"><input type="checkbox" ${mEnabled ? 'checked' : ''} onchange="saveMentionConfig({ enabled: this.checked })" /><span class="toggle-slider"></span></label></div></td></tr>${mExpandRow}`);
+
       if (rows.length === 0) rows.push(`<tr><td colspan="5"><div class="empty-table">No default commands found</div></td></tr>`);
-      document.getElementById('cmdCount').textContent = DEFAULT_COMMANDS.length + ' default commands';
+      const alertCount = Object.keys(alertsCache).length + overlayState.sources.filter(s => s.assignedCommand && s.assignedCommand.trim()).length;
+      document.getElementById('cmdCount').textContent = DEFAULT_COMMANDS.length + ' built-in · ' + alertCount + ' alert' + (alertCount !== 1 ? 's' : '');
     }
 
     tbody.innerHTML = rows.join('');
@@ -4405,6 +4580,13 @@ async function overlayConfirmEdit(id) {
         </div>
       </div>` : '';
 
+    const accessOptions = ['everyone','subscriber','moderator','admin','broadcaster'].map(a => {
+      const aLabel = a.charAt(0).toUpperCase() + a.slice(1);
+      const aId = `acc-${rowId}-${a.replace(' ', '-')}`;
+      const saveCall = isAction ? `saveActionAccess('${key}', '${a}')` : `saveCommandAccess('${encodeURIComponent(cmd)}', '${a}')`;
+      return `<div><input type="radio" id="${aId}" name="access-${rowId}" value="${a}" ${access === a ? 'checked' : ''} onchange="this.closest('.cc-select').querySelector('.cc-selected-text').textContent='${aLabel}';this.closest('.cc-select').classList.remove('open');${saveCall}"/><label class="cc-option" for="${aId}" data-txt="${aLabel}"></label></div>`;
+    }).join('');
+
     const expandRow = `
       <tr class="cmd-expand-row" id="${rowId}-expand">
         <td colspan="5">
@@ -4412,27 +4594,39 @@ async function overlayConfirmEdit(id) {
             <div class="expand-grid">
               <div class="expand-field">
                 <div class="expand-label">Cooldown</div>
-                <div style="display:flex;align-items:center;gap:6px">
-                  <input class="cmd-cd-input" type="number" value="${cooldown}" min="0"
+                <div class="cd-stepper">
+                  <div class="cd-left" onclick="cdStep(this.closest('.cd-stepper').querySelector('.cd-input'),-1)"></div>
+                  <input class="cd-input" type="number" value="${cooldown}" min="0"
                     onblur="${isAction ? `saveActionCooldown('${key}', this.value)` : `saveCommandCooldown('${encodeURIComponent(cmd)}', this.value)`}" />
-                  <span style="font-size:0.65rem;color:rgba(255,255,255,0.35);font-weight:500">sec</span>
+                  <div class="cd-right" onclick="cdStep(this.closest('.cd-stepper').querySelector('.cd-input'),1)"></div>
                 </div>
               </div>
               <div class="expand-field">
                 <div class="expand-label">Access</div>
-                <select class="cmd-access" onchange="${isAction ? `saveActionAccess('${key}', this.value)` : `saveCommandAccess('${encodeURIComponent(cmd)}', this.value)`}">
-                  ${['everyone','subscriber','moderator','lead mod','broadcaster'].map(a => `<option value="${a}" ${access===a?'selected':''}>${a.charAt(0).toUpperCase()+a.slice(1)}</option>`).join('')}
-                </select>
+                <div class="cc-select">
+                  <div class="cc-selected" onclick="ccToggle(this.closest('.cc-select'))">
+                    <span class="cc-selected-text">${access.charAt(0).toUpperCase()+access.slice(1)}</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" class="cc-arrow"><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path></svg>
+                  </div>
+                  <div class="cc-options">
+                    ${accessOptions}
+                  </div>
+                </div>
               </div>
               ${!isAction ? `
               <div class="expand-field" style="width:100%;">
-                <div class="expand-label">Response</div>
                 <div style="display:flex;align-items:center;gap:10px;">
-                  <input class="cmd-cd-input" type="text" value="${response.replace(/"/g, '&quot;')}"
-                    style="flex:1;text-align:left;"
-                    onchange="saveCommandResponse('${encodeURIComponent(cmd)}', this.value)" />
+                  <label class="resp-label" style="flex:1;">
+                    <span class="resp-label-title">Response</span>
+                    <input class="resp-input" type="text" value="${response.replace(/"/g, '&quot;')}"
+                      onchange="saveCommandResponse('${encodeURIComponent(cmd)}', this.value)" />
+                  </label>
                   <button class="cmd-setting-btn" title="Edit command" onclick="openEditCmd('${cmd.replace(/'/g, "\\'")}')"><span class="bar bar1"></span><span class="bar bar2"></span><span class="bar bar1"></span></button>
-                  <button class="expand-delete-btn" style="margin-left:auto;" onclick="deleteCommand('${encodeURIComponent(cmd)}')">Delete</button>
+                  <button class="expand-delete-btn" style="margin-left:auto;" onclick="deleteCommand('${encodeURIComponent(cmd)}')">
+                    <svg viewBox="0 0 15 17.5" height="17.5" width="15" xmlns="http://www.w3.org/2000/svg" class="del-icon">
+                      <path transform="translate(-2.5 -1.25)" d="M15,18.75H5A1.251,1.251,0,0,1,3.75,17.5V5H2.5V3.75h15V5H16.25V17.5A1.251,1.251,0,0,1,15,18.75ZM5,5V17.5H15V5Zm7.5,10H11.25V7.5H12.5V15ZM8.75,15H7.5V7.5H8.75V15ZM12.5,2.5h-5V1.25h5V2.5Z" fill="currentColor"></path>
+                    </svg>
+                  </button>
                 </div>
               </div>` : ''}
             </div>
@@ -4506,6 +4700,13 @@ async function overlayConfirmEdit(id) {
         </div>
       </div>` : '';
 
+    const defAccess = defaultsCache[d.cmd + '_access'] || 'everyone';
+    const defaultAccessOptions = ['everyone','subscriber','moderator','admin','broadcaster'].map(a => {
+      const aLabel = a.charAt(0).toUpperCase() + a.slice(1);
+      const aId = `acc-def-${rowId}-${a}`;
+      return `<div><input type="radio" id="${aId}" name="acc-def-${rowId}" value="${a}" ${defAccess === a ? 'checked' : ''} onchange="this.closest('.cc-select').querySelector('.cc-selected-text').textContent='${aLabel}';this.closest('.cc-select').classList.remove('open');saveDefaultAccess('${d.cmd}', '${a}')"/><label class="cc-option" for="${aId}" data-txt="${aLabel}"></label></div>`;
+    }).join('');
+
     const expandRow = `
       <tr class="cmd-expand-row" id="${rowId}-expand">
         <td colspan="5">
@@ -4513,20 +4714,23 @@ async function overlayConfirmEdit(id) {
             <div class="expand-grid">
               <div class="expand-field">
                 <div class="expand-label">Cooldown</div>
-                <div style="display:flex;align-items:center;gap:6px">
-                  <input class="cmd-cd-input" type="number" min="0"
+                <div class="cd-stepper">
+                  <div class="cd-left" onclick="cdStep(this.closest('.cd-stepper').querySelector('.cd-input'),-1)"></div>
+                  <input class="cd-input" type="number" min="0"
                     value="${defaultsCache[d.cmd + '_cd'] ?? 5}"
                     onblur="saveDefaultCooldown('${d.cmd}', this.value)" />
-                  <span style="font-size:0.65rem;color:rgba(255,255,255,0.35);font-weight:500">sec</span>
+                  <div class="cd-right" onclick="cdStep(this.closest('.cd-stepper').querySelector('.cd-input'),1)"></div>
                 </div>
               </div>
               <div class="expand-field">
                 <div class="expand-label">Access</div>
-                <select class="cmd-access" onchange="saveDefaultAccess('${d.cmd}', this.value)">
-                  ${['everyone','subscriber','moderator','lead mod','broadcaster'].map(a =>
-                    `<option value="${a}" ${(defaultsCache[d.cmd + '_access'] || 'everyone') === a ? 'selected' : ''}>${a.charAt(0).toUpperCase()+a.slice(1)}</option>`
-                  ).join('')}
-                </select>
+                <div class="cc-select">
+                  <div class="cc-selected" onclick="ccToggle(this.closest('.cc-select'))">
+                    <span class="cc-selected-text">${defAccess.charAt(0).toUpperCase()+defAccess.slice(1)}</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" class="cc-arrow"><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path></svg>
+                  </div>
+                  <div class="cc-options">${defaultAccessOptions}</div>
+                </div>
               </div>
             </div>
             ${subCooldownsSection}
@@ -4613,7 +4817,7 @@ async function overlayConfirmEdit(id) {
     document.getElementById('commandInput').readOnly = false;
     document.getElementById('responseInput').value = '';
     document.getElementById('newCmdCooldown').value = '5';
-    document.getElementById('newCmdAccess').value = 'everyone';
+    setAddCmdAccess('everyone');
     document.getElementById('editingCmdName').value = '';
     document.getElementById('addCmdModal').classList.add('open');
   }
@@ -4626,7 +4830,7 @@ async function overlayConfirmEdit(id) {
     document.getElementById('commandInput').readOnly = true;
     document.getElementById('responseInput').value = data.response || '';
     document.getElementById('newCmdCooldown').value = data.cooldown ?? 5;
-    document.getElementById('newCmdAccess').value = data.access || 'everyone';
+    setAddCmdAccess(data.access || 'everyone');
     document.getElementById('editingCmdName').value = cmd;
     document.getElementById('addCmdModal').classList.add('open');
   }
@@ -5199,7 +5403,7 @@ async function overlayConfirmEdit(id) {
   }
 
   // ============================================================
-  // OBS WEBSOCKET
+  // OBS INTEGRATION
   // ============================================================
   let obsWs = null;
   let obsConnected = false;
@@ -5212,22 +5416,321 @@ async function overlayConfirmEdit(id) {
   let obsSavedHost = 'localhost';
   let obsSavedPort = '4455';
   let obsSavedPassword = '';
+  let obsStatusSse = null;
 
-  // Save OBS connection settings to config via API
-  function obsSaveSettings(host, port, password) {
-    obsSavedHost = host;
-    obsSavedPort = port;
-    obsSavedPassword = password;
-    fetch('/api/obs-settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ obsHost: host, obsPort: port, obsPassword: password })
-    }).catch(() => {});
+  // ── Flow state helpers ────────────────────────────────────────
+  function obsFlowShowState(state) {
+    ['obs-flow-start','obs-flow-progress','obs-flow-not-found','obs-flow-ws-config','obs-flow-crashed'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = (id === 'obs-flow-' + state) ? '' : 'none';
+    });
   }
 
-  // Which screen to show
+  function obsFlowSetProgress(title, sub) {
+    obsFlowShowState('progress');
+    document.getElementById('obs-flow-title').textContent = title;
+    document.getElementById('obs-flow-sub').textContent = sub || '';
+  }
+
+  function obsFlowAddStep(text, status) {
+    const list = document.getElementById('obs-flow-steps');
+    if (!list) return;
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:0.6rem;letter-spacing:1px;color:rgba(255,255,255,0.4);padding:3px 0;';
+    const icon = status === 'ok' ? '✓' : status === 'err' ? '✗' : '◌';
+    const color = status === 'ok' ? 'var(--green)' : status === 'err' ? 'rgba(255,80,80,0.8)' : 'rgba(255,255,255,0.25)';
+    row.innerHTML = `<span style="color:${color};font-size:0.75rem;">${icon}</span><span>${text}</span>`;
+    list.appendChild(row);
+  }
+
+  function obsFlowClearSteps() {
+    const list = document.getElementById('obs-flow-steps');
+    if (list) list.innerHTML = '';
+  }
+
+  function obsShowManualSetup() {
+    document.getElementById('obs-flow-ws-icon').textContent = '🔌';
+    document.getElementById('obs-flow-ws-title').textContent = 'WebSocket Setup';
+    document.getElementById('obs-flow-ws-desc').textContent = 'Enter the port and password set in OBS → Tools → WebSocket Server Settings.';
+    document.getElementById('obs-flow-ws-error').style.display = 'none';
+    obsFlowShowState('ws-config');
+  }
+
+  async function obsFlowBrowse() {
+    // Open native Electron file picker to locate obs64.exe
+    obsFlowSetProgress('Waiting for file selection…', 'Select obs64.exe in the dialog that opened');
+    try {
+      const r = await fetch('/api/obs/browse').then(x => x.json());
+      if (r.canceled || !r.path) {
+        // User cancelled — go back to not-found state
+        obsFlowShowState('not-found');
+        return;
+      }
+      obsFlowClearSteps();
+      obsFlowAddStep('Located: ' + r.path, 'ok');
+      await obsFlowLaunchAndConnect(r.path);
+    } catch(e) {
+      obsFlowShowState('not-found');
+    }
+  }
+
+  async function obsFlowApplyWsSetup() {
+    const port = document.getElementById('obsFlowPort').value.trim() || '4455';
+    const password = document.getElementById('obsFlowPassword').value.trim();
+    const errEl = document.getElementById('obs-flow-ws-error');
+    errEl.style.display = 'none';
+    // Show the patching modal
+    const modal = document.getElementById('obsWsSetupModal');
+    const modalTitle = document.getElementById('obsWsModalTitle');
+    const modalMsg = document.getElementById('obsWsModalMsg');
+    const modalSpinner = document.getElementById('obsWsModalSpinner');
+    modal.style.display = 'flex';
+    modalSpinner.style.display = 'block';
+    modalTitle.textContent = 'Configuring OBS…';
+    modalMsg.textContent = 'Patching WebSocket settings and restarting OBS. This may take a few seconds.';
+    try {
+      await fetch('/api/obs/setup', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ port, password }) });
+      // Wait for SSE to confirm connected (up to 15s)
+      let waited = 0;
+      await new Promise(resolve => {
+        const poll = setInterval(async () => {
+          waited += 1000;
+          const st = await fetch('/api/obs/status').then(r => r.json()).catch(() => ({}));
+          if (st.connected) { clearInterval(poll); resolve(); }
+          else if (waited >= 15000) { clearInterval(poll); resolve(); }
+        }, 1000);
+      });
+      modal.style.display = 'none';
+      const st = await fetch('/api/obs/status').then(r => r.json()).catch(() => ({}));
+      if (st.connected) {
+        obsSavedPort = port; obsSavedPassword = password;
+        await obsFrontendConnect(port, password);
+      } else {
+        errEl.textContent = 'Setup failed. Please enable WebSocket in OBS manually.';
+        errEl.style.display = 'block';
+      }
+    } catch(e) {
+      modal.style.display = 'none';
+      errEl.textContent = e.message || 'Setup failed';
+      errEl.style.display = 'block';
+    }
+  }
+
+  // ── Main auto-connect flow ─────────────────────────────────────
+  async function obsStartFlow() {
+    obsFlowClearSteps();
+    const cfg = await fetch('/api/config').then(r => r.json()).catch(() => ({}));
+    const port = cfg.obsPort || '4455';
+    const password = cfg.obsPassword || '';
+
+    // ── Step 1: Try connecting to OBS WebSocket directly ──────────
+    // OBS may already be running — don't look for the exe first
+    obsFlowSetProgress('Connecting to OBS…', 'Checking if OBS is already running');
+    try {
+      const conn = await fetch('/api/obs/connect', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ port, password })
+      }).then(r => r.json());
+
+      if (conn.success) {
+        obsFlowAddStep('Connected to OBS', 'ok');
+        obsSavedPort = port; obsSavedPassword = password;
+        await obsFrontendConnect(port, password);
+        return;
+      }
+
+      // ── Step 2: Connection refused → OBS isn't running, find & launch it ──
+      if (conn.hint === 'websocket_disabled') {
+        obsFlowAddStep('OBS not running — looking for it…', 'pending');
+        await obsFlowFindAndLaunch(port);
+        return;
+      }
+
+      // ── Step 3: Wrong password → offer auto-generate ──────────────
+      if (conn.hint === 'wrong_password') {
+        obsFlowShowPasswordPrompt(port);
+        return;
+      }
+
+      // Generic failure — retry once (OBS might be mid-startup), then try find+launch
+      obsFlowSetProgress('Retrying…', 'Giving OBS a moment to start');
+      await new Promise(r => setTimeout(r, 2500));
+      const retry = await fetch('/api/obs/connect', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ port, password })
+      }).then(r => r.json()).catch(() => ({ success: false, hint: 'websocket_disabled' }));
+      if (retry.success) {
+        obsSavedPort = port; obsSavedPassword = password;
+        await obsFrontendConnect(port, password);
+        return;
+      }
+      if (retry.hint === 'wrong_password') { obsFlowShowPasswordPrompt(port); return; }
+      // Still failing — OBS probably isn't running, find and launch it
+      obsFlowAddStep('OBS not reachable — looking for it…', 'pending');
+      await obsFlowFindAndLaunch(port);
+
+    } catch(e) {
+      obsFlowShowState('crashed');
+      document.getElementById('obs-flow-crashed-msg').textContent = e.message || 'Unexpected error';
+    }
+  }
+
+  // Try to find the exe, launch, and connect — called when WebSocket is unreachable
+  async function obsFlowFindAndLaunch(port) {
+    const found = await fetch('/api/obs/find').then(r => r.json()).catch(() => ({}));
+    if (!found.found) {
+      obsFlowShowState('not-found');
+      return;
+    }
+    obsFlowAddStep('Found OBS at ' + found.path, 'ok');
+    obsFlowSetProgress('Launching OBS…', 'Starting OBS Studio');
+
+    const launched = await fetch('/api/obs/launch', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ obsPath: found.path })
+    }).then(r => r.json());
+    if (!launched.success) {
+      obsFlowShowState('not-found');
+      return;
+    }
+    obsFlowAddStep('OBS launched', 'ok');
+
+    // Try connecting after launch
+    obsFlowSetProgress('Connecting…', 'Waiting for OBS WebSocket');
+    const conn2 = await fetch('/api/obs/connect', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ port, password: '' })
+    }).then(r => r.json());
+
+    if (conn2.success) {
+      obsSavedPort = port; obsSavedPassword = '';
+      await obsFrontendConnect(port, '');
+      return;
+    }
+
+    // WebSocket still refused → auto-enable it via ini patch
+    if (conn2.hint === 'websocket_disabled') {
+      await obsFlowAutoSetupWs(port);
+      return;
+    }
+
+    if (conn2.hint === 'wrong_password') {
+      obsFlowShowPasswordPrompt(port);
+      return;
+    }
+
+    obsFlowShowState('crashed');
+    document.getElementById('obs-flow-crashed-msg').textContent = conn2.error || 'OBS launched but WebSocket did not respond.';
+  }
+
+  // Auto-patch ini, restart OBS, reconnect — shown as inline progress (no modal needed)
+  async function obsFlowAutoSetupWs(port) {
+    obsFlowSetProgress('Enabling OBS WebSocket…', 'Patching settings and restarting OBS — this takes a few seconds');
+    await fetch('/api/obs/setup', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ port, password: '' })
+    });
+    // Poll for connection up to 15s
+    let waited = 0;
+    await new Promise(resolve => {
+      const poll = setInterval(async () => {
+        waited += 1000;
+        const st = await fetch('/api/obs/status').then(r => r.json()).catch(() => ({}));
+        if (st.connected || waited >= 15000) { clearInterval(poll); resolve(); }
+      }, 1000);
+    });
+    const st = await fetch('/api/obs/status').then(r => r.json()).catch(() => ({}));
+    if (st.connected) {
+      obsSavedPort = port; obsSavedPassword = '';
+      await obsFrontendConnect(port, '');
+    } else {
+      // Manual fallback
+      document.getElementById('obs-flow-ws-icon').textContent = '⚙️';
+      document.getElementById('obs-flow-ws-title').textContent = 'Enable WebSocket Manually';
+      document.getElementById('obs-flow-ws-desc').textContent = 'Auto-setup didn\'t work. In OBS go to Tools → WebSocket Server Settings, enable it, then click Apply & Connect.';
+      document.getElementById('obsFlowPort').value = port;
+      document.getElementById('obsFlowPassword').value = '';
+      document.getElementById('obs-flow-ws-error').style.display = 'none';
+      obsFlowShowState('ws-config');
+    }
+  }
+
+  // Show password prompt with auto-generate option
+  function obsFlowShowPasswordPrompt(port) {
+    document.getElementById('obs-flow-ws-icon').textContent = '🔐';
+    document.getElementById('obs-flow-ws-title').textContent = 'OBS Password Required';
+    document.getElementById('obs-flow-ws-desc').textContent = 'OBS has a WebSocket password set. Enter it below, or click Auto-Generate to let ChatCommander set a new one for you automatically.';
+    document.getElementById('obsFlowPort').value = port;
+    document.getElementById('obsFlowPassword').value = '';
+    document.getElementById('obs-flow-ws-error').style.display = 'none';
+    obsFlowShowState('ws-config');
+  }
+
+  // Generate a random password and fill it into the field
+  function obsFlowGeneratePassword() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    const pw = Array.from({ length: 16 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    document.getElementById('obsFlowPassword').value = pw;
+    document.getElementById('obsFlowPassword').type = 'text'; // show it so they can see what was generated
+  }
+
+  // Connect the browser-side WebSocket to OBS for real-time ops
+  async function obsFrontendConnect(port, password) {
+    obsFlowSetProgress('Finalising…', '');
+    return new Promise((resolve) => {
+      if (obsWs) { try { obsWs.close(); } catch(e) {} obsWs = null; }
+      obsSavedPort = port; obsSavedPassword = password;
+      let done = false;
+      try { obsWs = new WebSocket(`ws://localhost:${port}`); } catch(e) { resolve(); return; }
+      const failTimer = setTimeout(() => { if (!done) { resolve(); } }, 8000);
+      obsWs.onopen = () => {};
+      obsWs.onmessage = async (event) => {
+        const msg = JSON.parse(event.data);
+        // Resolve the promise on op 2 (identified) — obsHandleMessage handles the rest
+        if (msg.op === 2) { done = true; clearTimeout(failTimer); resolve(); }
+        obsHandleMessage(event, password);
+      };
+      obsWs.onerror = () => { clearTimeout(failTimer); obsSetStatus(false); resolve(); };
+      obsWs.onclose = () => { if (done) obsSetStatus(false); };
+    });
+  }
+
+  // ── SSE status subscription ───────────────────────────────────
+  function obsSubscribeSse() {
+    if (obsStatusSse) { obsStatusSse.close(); obsStatusSse = null; }
+    obsStatusSse = new EventSource('/api/obs/status-stream');
+    obsStatusSse.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        const navDot = document.getElementById('obsNavDot');
+        if (data.connected && !obsConnected) {
+          // Backend connected but frontend WS not yet — connect frontend WS
+          if (!obsWs || obsWs.readyState > 1) {
+            obsFrontendConnect(obsSavedPort || '4455', obsSavedPassword || '');
+          }
+        }
+        if (!data.connected && !data.connecting && obsConnected) {
+          obsSetStatus(false);
+          // If we were in connected view, show crashed state
+          const setupEl = document.getElementById('obsSetupScreen');
+          if (setupEl && setupEl.style.display !== 'flex') {
+            obsFlowShowState('crashed');
+            const msg = data.error || 'OBS disconnected';
+            document.getElementById('obs-flow-crashed-msg').textContent = msg;
+            obsShowScreen('setup');
+          }
+        }
+        if (navDot) {
+          navDot.style.background = data.connected ? 'var(--green)' : data.connecting ? 'var(--accent)' : 'rgba(255,255,255,0.15)';
+          navDot.style.boxShadow = data.connected ? '0 0 8px var(--green)' : '';
+        }
+      } catch(e) {}
+    };
+    obsStatusSse.onerror = () => { /* silently retry */ };
+  }
+
+  // ── Screen switcher ───────────────────────────────────────────
   function obsShowScreen(screen) {
-    // screen: 'setup' | 'connected' | 'reconnect'
     const setup = document.getElementById('obsSetupScreen');
     const connected = document.getElementById('obsConnectedView');
     const reconnect = document.getElementById('obsReconnectScreen');
@@ -5239,7 +5742,6 @@ async function overlayConfirmEdit(id) {
     if (screen === 'reconnect') { reconnect.style.display = 'flex'; }
   }
 
-  // Show reconnect/settings form (from the ΓÜÖ Settings button or on failure)
   function obsShowReconnectForm() {
     document.getElementById('obsHostRetry').value = obsSavedHost;
     document.getElementById('obsPortRetry').value = obsSavedPort;
@@ -5256,36 +5758,43 @@ async function overlayConfirmEdit(id) {
     errEl.style.display = 'none';
     obsSavedHost = host; obsSavedPort = port; obsSavedPassword = password;
     obsAutoReconnect = true;
-    obsSaveSettings(host, port, password);
-    // Sync main form fields too
-    if (document.getElementById('obsHost')) document.getElementById('obsHost').value = host;
-    if (document.getElementById('obsPort')) document.getElementById('obsPort').value = port;
-    if (document.getElementById('obsPassword')) document.getElementById('obsPassword').value = password;
+    fetch('/api/obs-settings', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ obsHost: host, obsPort: port, obsPassword: password }) }).catch(()=>{});
     obsConnectWithErrorEl(host, port, password, errEl);
   }
 
-  // Load saved OBS settings and decide which screen to show
-  function obsLoadSettings() {
-    fetch('/api/obs-settings').then(r => r.json()).then(cfg => {
-      const host = cfg.obsHost || 'localhost';
-      const port = cfg.obsPort || '4455';
-      const password = cfg.obsPassword || '';
-      obsSavedHost = host; obsSavedPort = port; obsSavedPassword = password;
-      if (document.getElementById('obsHost')) document.getElementById('obsHost').value = host;
-      if (document.getElementById('obsPort')) document.getElementById('obsPort').value = port;
-      if (document.getElementById('obsPassword')) document.getElementById('obsPassword').value = password;
-      if (cfg.obsAutoConnect) {
-        // Has saved creds — try silently. On failure show reconnect screen.
-        obsConnectSilentWithFallback(host, port, password);
+  // ── Startup: load settings & decide flow ─────────────────────
+  async function obsLoadSettings() {
+    obsSubscribeSse();
+    try {
+      const st = await fetch('/api/obs/status').then(r => r.json());
+      obsSavedPort = st.obsPort || '4455';
+      obsSavedPassword = st.obsPassword || '';
+      const cfg = await fetch('/api/config').then(r => r.json()).catch(() => ({}));
+      obsSavedPort = cfg.obsPort || '4455';
+      obsSavedPassword = cfg.obsPassword || '';
+      obsSavedHost = 'localhost';
+      if (st.connected) {
+        // Backend already connected — hook up frontend WS
+        await obsFrontendConnect(obsSavedPort, obsSavedPassword);
+        return;
+      }
+      if (cfg.obsAutoConnect && cfg.obsPath) {
+        // Has saved path — run flow automatically
+        obsFlowShowState('start');
+        obsShowScreen('setup');
+        // Small delay then auto-flow
+        setTimeout(() => obsStartFlow(), 800);
       } else {
-        // First time — show setup screen
+        obsFlowShowState('start');
         obsShowScreen('setup');
       }
-    }).catch(() => {
+    } catch(e) {
+      obsFlowShowState('start');
       obsShowScreen('setup');
-    });
+    }
   }
 
+  // ── Status setter (called when browser WS connects/disconnects) ─
   function obsSetStatus(connected) {
     obsConnected = connected;
     const dot = document.getElementById('obsStatusDot');
@@ -5310,24 +5819,34 @@ async function overlayConfirmEdit(id) {
     }
   }
 
-  // Silent connect with fallback to reconnect screen on failure (used on startup)
+  // Legacy silent connect (kept for obsRetryConnect compatibility)
   function obsConnectSilentWithFallback(host, port, password) {
-    if (obsWs) { obsWs.close(); obsWs = null; }
-    let succeeded = false;
-    try { obsWs = new WebSocket(`ws://${host}:${port}`); } catch(e) { obsShowScreen('reconnect'); return; }
-    // Timeout: if no response in 4s, show reconnect screen
-    const failTimer = setTimeout(() => {
-      if (!succeeded) { obsWs && obsWs.close(); obsWs = null; obsShowReconnectForm(); }
-    }, 4000);
-    obsWs.onopen = () => {};
-    obsWs.onmessage = async (event) => {
-      const msg = JSON.parse(event.data);
-      if (msg.op === 2) { succeeded = true; clearTimeout(failTimer); }
-      obsHandleMessage(event, password);
-    };
-    obsWs.onerror = () => { clearTimeout(failTimer); if (!succeeded) obsShowReconnectForm(); };
-    obsWs.onclose = () => { if (succeeded) { obsSetStatus(false); } };
+    obsFrontendConnect(port, password).catch(() => obsShowReconnectForm());
   }
+
+  // Silent reconnect (auto-reconnect on drop)
+  function obsConnectSilent(host, port, password) {
+    obsFrontendConnect(port, password).catch(() => {});
+  }
+
+  // Connect with error element display
+  function obsConnectWithErrorEl(host, port, password, errEl) {
+    if (obsWs) { try { obsWs.close(); } catch(e) {} obsWs = null; }
+    try { obsWs = new WebSocket(`ws://${host}:${port}`); } catch(e) {
+      if (errEl) { errEl.textContent = 'Invalid host/port'; errEl.style.display = 'block'; }
+      return;
+    }
+    obsWs.onopen = () => {};
+    obsWs.onmessage = (event) => obsHandleMessage(event, password, errEl);
+    obsWs.onerror = () => {
+      if (errEl) { errEl.textContent = 'Could not connect — is OBS running with WebSocket enabled?'; errEl.style.display = 'block'; }
+      obsSetStatus(false);
+    };
+    obsWs.onclose = () => { obsSetStatus(false); };
+  }
+
+  // Legacy obsConnect (now delegates to the flow)
+  async function obsConnect() { await obsStartFlow(); }
 
   function obsSend(requestType, requestData = {}) {
     return new Promise((resolve, reject) => {
@@ -5434,11 +5953,24 @@ async function overlayConfirmEdit(id) {
   function obsDisconnect() {
     obsAutoReconnect = false;
     if (obsReconnectTimer) { clearTimeout(obsReconnectTimer); obsReconnectTimer = null; }
-    if (obsWs) { obsWs.close(); obsWs = null; }
+    if (obsWs) { try { obsWs.close(); } catch(e) {} obsWs = null; }
     obsConnected = false;
+    fetch('/api/obs/disconnect', { method:'POST' }).catch(() => {});
     const navDot = document.getElementById('obsNavDot');
     if (navDot) { navDot.style.background = 'rgba(255,255,255,0.15)'; navDot.style.boxShadow = ''; }
-    obsShowReconnectForm();
+    obsFlowShowState('start');
+    obsShowScreen('setup');
+  }
+
+  async function obsAddBrowserSource() {
+    try {
+      const r = await fetch('/api/obs/create-source', { method:'POST' }).then(x => x.json());
+      if (r.success) {
+        showToast(r.existed ? 'Overlay source updated in OBS' : 'Overlay added to OBS scene: ' + r.sceneName);
+      } else {
+        showToast('Failed: ' + (r.error || 'Unknown error'));
+      }
+    } catch(e) { showToast('Failed to add source'); }
   }
 
   async function obsLoadScenes() {
@@ -5796,22 +6328,33 @@ checkBotStatus();
     const obsRows = Object.keys(alertsCache).map(name => {
       const a = alertsCache[name];
       const rowId = 'row-alert-' + name;
+      const alertAccess = a.access || 'moderator';
+      const alertAccessOpts = ['everyone','subscriber','moderator','broadcaster'].map(av => {
+        const avLabel = av.charAt(0).toUpperCase() + av.slice(1);
+        const avId = `acc-alert-${name}-${av}`;
+        return `<div><input type="radio" id="${avId}" name="acc-alert-${name}" value="${av}" ${alertAccess===av?'checked':''} onchange="this.closest('.cc-select').querySelector('.cc-selected-text').textContent='${avLabel}';this.closest('.cc-select').classList.remove('open');saveAlertField('${name}','access','${av}')"/><label class="cc-option" for="${avId}" data-txt="${avLabel}"></label></div>`;
+      }).join('');
       const expandRow = `<tr class="cmd-expand-row" id="${rowId}-expand">
         <td colspan="5">
           <div class="cmd-expand-panel">
             <div class="expand-grid">
               <div class="expand-field">
                 <div class="expand-label">Duration</div>
-                <div style="display:flex;align-items:center;gap:6px">
-                  <input class="cmd-cd-input" type="number" value="${a.duration || 5}" min="1" onblur="saveAlertField('${name}','duration',this.value)" />
-                  <span style="font-size:0.65rem;color:rgba(255,255,255,0.35);font-weight:500">sec</span>
+                <div class="cd-stepper">
+                  <div class="cd-left" onclick="cdStep(this.closest('.cd-stepper').querySelector('.cd-input'),-1)"></div>
+                  <input class="cd-input" type="number" value="${a.duration || 5}" min="1" onblur="saveAlertField('${name}','duration',this.value)" />
+                  <div class="cd-right" onclick="cdStep(this.closest('.cd-stepper').querySelector('.cd-input'),1)"></div>
                 </div>
               </div>
               <div class="expand-field">
                 <div class="expand-label">Access</div>
-                <select class="cmd-access" onchange="saveAlertField('${name}','access',this.value)">
-                  ${['everyone','subscriber','moderator','broadcaster'].map(av => `<option value="${av}" ${(a.access||'moderator')===av?'selected':''}>${av.charAt(0).toUpperCase()+av.slice(1)}</option>`).join('')}
-                </select>
+                <div class="cc-select">
+                  <div class="cc-selected" onclick="ccToggle(this.closest('.cc-select'))">
+                    <span class="cc-selected-text">${alertAccess.charAt(0).toUpperCase()+alertAccess.slice(1)}</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" class="cc-arrow"><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path></svg>
+                  </div>
+                  <div class="cc-options">${alertAccessOpts}</div>
+                </div>
               </div>
               <div class="expand-field">
                 <div class="expand-label">Volume</div>
@@ -5828,7 +6371,7 @@ checkBotStatus();
       return `<tr class="cmd-row" onclick="toggleExpand('${rowId}')">
         <td><div class="cmd-name">!${name}</div></td>
         <td><span class="cmd-response-text">${a.image ? '🖼 ' : ''}${a.sound ? '🔊 ' : ''}${a.duration || 5}s · ${a.access || 'moderator'}</span></td>
-        <td></td><td></td>
+        <td><span class="cmd-type-badge obs-alert">OBS Alert</span></td><td></td>
         <td>
           <div class="cmd-actions-cell">
             <span class="cmd-chevron">›</span>
@@ -5855,23 +6398,33 @@ checkBotStatus();
       if (src.path || src.videoPath) parts.push(src.videoPath ? '🎬 Video' : '🖼 Media');
       if (src.soundPath) parts.push('🎵 Sound');
       const desc = parts.join(' · ') || 'Overlay';
+      const appAccessOpts = ['everyone','subscriber','moderator','admin','broadcaster'].map(a => {
+        const aLabel = a.charAt(0).toUpperCase() + a.slice(1);
+        const aId = `acc-app-${src.id}-${a}`;
+        return `<div><input type="radio" id="${aId}" name="acc-app-${rowId}" value="${a}" ${access===a?'checked':''} onchange="this.closest('.cc-select').querySelector('.cc-selected-text').textContent='${aLabel}';this.closest('.cc-select').classList.remove('open');saveCommandAccess('${encodeURIComponent(cmd)}', '${a}')"/><label class="cc-option" for="${aId}" data-txt="${aLabel}"></label></div>`;
+      }).join('');
       const expandRow = `<tr class="cmd-expand-row" id="${rowId}-expand">
         <td colspan="5">
           <div class="cmd-expand-panel">
             <div class="expand-grid">
               <div class="expand-field">
                 <div class="expand-label">Cooldown</div>
-                <div style="display:flex;align-items:center;gap:6px">
-                  <input class="cmd-cd-input" type="number" value="${cooldown}" min="0"
+                <div class="cd-stepper">
+                  <div class="cd-left" onclick="cdStep(this.closest('.cd-stepper').querySelector('.cd-input'),-1)"></div>
+                  <input class="cd-input" type="number" value="${cooldown}" min="0"
                     onblur="saveCommandCooldown('${encodeURIComponent(cmd)}', this.value)" />
-                  <span style="font-size:0.65rem;color:rgba(255,255,255,0.35);font-weight:500">sec</span>
+                  <div class="cd-right" onclick="cdStep(this.closest('.cd-stepper').querySelector('.cd-input'),1)"></div>
                 </div>
               </div>
               <div class="expand-field">
                 <div class="expand-label">Access</div>
-                <select class="cmd-access" onchange="saveCommandAccess('${encodeURIComponent(cmd)}', this.value)">
-                  ${['everyone','subscriber','moderator','lead mod','broadcaster'].map(a => `<option value="${a}" ${access===a?'selected':''}>${a.charAt(0).toUpperCase()+a.slice(1)}</option>`).join('')}
-                </select>
+                <div class="cc-select">
+                  <div class="cc-selected" onclick="ccToggle(this.closest('.cc-select'))">
+                    <span class="cc-selected-text">${access.charAt(0).toUpperCase()+access.slice(1)}</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" class="cc-arrow"><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path></svg>
+                  </div>
+                  <div class="cc-options">${appAccessOpts}</div>
+                </div>
               </div>
               <div class="expand-field" style="display:flex;align-items:flex-end;">
                 <button class="expand-delete-btn" style="background:rgba(100,60,200,0.15);color:rgba(180,140,255,0.8);border-color:rgba(140,80,255,0.2);" onclick="showPage('overlay');overlayEditSource(${src.id})">Edit on Overlay page</button>
@@ -5883,7 +6436,7 @@ checkBotStatus();
       return `<tr class="cmd-row" onclick="toggleExpand('${rowId}')">
         <td><div class="cmd-name">${cmd}</div></td>
         <td><span class="cmd-response-text">${desc}</span></td>
-        <td></td><td></td>
+        <td><span class="cmd-type-badge custom">Alert</span></td><td></td>
         <td>
           <div class="cmd-actions-cell">
             <span class="cmd-chevron">›</span>
@@ -5902,6 +6455,11 @@ checkBotStatus();
     const mentionCooldown = mentionCfg.cooldown ?? 300;
     const mentionWebhook  = (mentionCfg.webhook || '').replace(/"/g, '&quot;');
     const mentionMessage  = (mentionCfg.message || '').replace(/"/g, '&quot;');
+    const mentionAccessOpts = ['everyone','subscriber','moderator','broadcaster'].map(a => {
+      const aLabel = a.charAt(0).toUpperCase() + a.slice(1);
+      const aId = `acc-mention-${a}`;
+      return `<div><input type="radio" id="${aId}" name="acc-mention" value="${a}" ${mentionAccess===a?'checked':''} onchange="this.closest('.cc-select').querySelector('.cc-selected-text').textContent='${aLabel}';this.closest('.cc-select').classList.remove('open');saveMentionConfig({ access: '${a}' })"/><label class="cc-option" for="${aId}" data-txt="${aLabel}"></label></div>`;
+    }).join('');
     const mentionExpandRow = `
       <tr class="cmd-expand-row" id="sys-mentions-expand">
         <td colspan="5">
@@ -5909,17 +6467,22 @@ checkBotStatus();
             <div class="expand-grid">
               <div class="expand-field">
                 <div class="expand-label">Cooldown (per user)</div>
-                <div style="display:flex;align-items:center;gap:6px">
-                  <input class="cmd-cd-input" type="number" value="${mentionCooldown}" min="0"
+                <div class="cd-stepper">
+                  <div class="cd-left" onclick="cdStep(this.closest('.cd-stepper').querySelector('.cd-input'),-1)"></div>
+                  <input class="cd-input" type="number" value="${mentionCooldown}" min="0"
                     onblur="saveMentionConfig({ cooldown: parseInt(this.value) || 300 })" />
-                  <span style="font-size:0.65rem;color:rgba(255,255,255,0.35);font-weight:500">sec</span>
+                  <div class="cd-right" onclick="cdStep(this.closest('.cd-stepper').querySelector('.cd-input'),1)"></div>
                 </div>
               </div>
               <div class="expand-field">
                 <div class="expand-label">Access</div>
-                <select class="cmd-access" onchange="saveMentionConfig({ access: this.value })">
-                  ${['everyone','subscriber','moderator','broadcaster'].map(a => `<option value="${a}" ${mentionAccess===a?'selected':''}>${a.charAt(0).toUpperCase()+a.slice(1)}</option>`).join('')}
-                </select>
+                <div class="cc-select">
+                  <div class="cc-selected" onclick="ccToggle(this.closest('.cc-select'))">
+                    <span class="cc-selected-text">${mentionAccess.charAt(0).toUpperCase()+mentionAccess.slice(1)}</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" class="cc-arrow"><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path></svg>
+                  </div>
+                  <div class="cc-options">${mentionAccessOpts}</div>
+                </div>
               </div>
             </div>
             <div class="expand-field" style="margin-top:10px;">
@@ -5928,11 +6491,12 @@ checkBotStatus();
                 style="width:100%;margin-top:4px;"
                 onblur="saveMentionConfig({ webhook: this.value })" />
             </div>
-            <div class="expand-field" style="margin-top:10px;">
-              <div class="expand-label" style="margin-bottom:6px;">Message <span style="color:var(--muted-2);font-weight:400;text-transform:none;letter-spacing:0">— use {mentioned} for the username</span></div>
-              <textarea style="width:100%;min-height:80px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;padding:8px 10px;outline:none;resize:vertical;transition:border-color 0.15s;"
-                onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)';saveMentionConfig({ message: this.value })"
-              >${mentionMessage}</textarea>
+            <div class="expand-field" style="margin-top:10px;width:100%;">
+              <label class="resp-label" style="width:100%;">
+                <span class="resp-label-title">Message — use {mentioned} for the username</span>
+                <textarea class="resp-input" style="min-height:80px;resize:vertical;"
+                  onblur="saveMentionConfig({ message: this.value })">${mentionMessage}</textarea>
+              </label>
             </div>
           </div>
         </td>
@@ -7448,6 +8012,45 @@ checkBotStatus();
     const dot = document.getElementById('gifPendingDot');
     if (dot && count > 0) dot.style.display = 'inline-block';
   }).catch(()=>{});
+</script>
+
+<!-- GLOBAL QUICK ACTIONS RADIAL HUB -->
+<div id="global-hub">
+  <div class="tooltip-container">
+    <span class="text">
+      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 16 16" fill="currentColor"><path d="M6.5 14.5v-3.505c0-.245.25-.495.5-.495h2c.25 0 .5.25.5.5v3.5a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5Z"/></svg>
+    </span>
+    <span class="tooltip1" onclick="showPage('commands')">⌨️</span>
+    <span class="tooltip2" onclick="showPage('giveaway')">🎁</span>
+    <span class="tooltip3" onclick="showPage('songs')">🎵</span>
+    <span class="tooltip4" onclick="showPage('overlay')">🖼️</span>
+    <span class="tooltip5" onclick="showPage('giflibrary')">🎞️</span>
+    <span class="tooltip6" onclick="showPage('obs')">📡</span>
+    <span class="tooltip9"> </span>
+  </div>
+</div>
+<script>
+(function() {
+  function initGlobalHub() {
+    var hub = document.querySelector('#global-hub .tooltip-container');
+    if (!hub) return;
+    var closeTimer;
+    hub.addEventListener('mouseover', function() {
+      clearTimeout(closeTimer);
+      hub.classList.add('open');
+    });
+    hub.addEventListener('mouseout', function(e) {
+      if (!hub.contains(e.relatedTarget)) {
+        closeTimer = setTimeout(function() { hub.classList.remove('open'); }, 400);
+      }
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initGlobalHub);
+  } else {
+    initGlobalHub();
+  }
+})();
 </script>
 
 </body>

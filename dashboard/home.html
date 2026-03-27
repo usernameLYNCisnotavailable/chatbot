@@ -438,84 +438,7 @@ body {
 }
 .quick-btn-icon { font-size: 14px; }
 
-/* === QUICK ACTIONS RADIAL HUB === */
-.tooltip-container {
-  background: linear-gradient(138deg, rgba(145,71,255,1) 15%, rgba(191,148,255,1) 65%);
-  position: relative;
-  cursor: pointer;
-  font-size: 17px;
-  padding: 0.7em 0.7em;
-  border-radius: 50px;
-  box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1);
-}
-.tooltip-container:hover, .tooltip-container.open {
-  background: #000000;
-  transition: all 0.6s;
-}
-.tooltip-container .text {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  fill: #fff;
-  transition: all 0.2s;
-}
-.tooltip-container:hover .text, .tooltip-container.open .text {
-  fill: #9147ff;
-  transition: all 0.6s;
-}
-/* All 6 bubbles share the same base — centered, hidden */
-.tooltip1,.tooltip2,.tooltip3,.tooltip4,.tooltip5,.tooltip6 {
-  position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  opacity: 0;
-  visibility: hidden;
-  background: #ffffff;
-  padding: 10px;
-  border-radius: 50%;
-  transition: opacity 0.3s, visibility 0.3s, transform 0.35s cubic-bezier(0.34,1.56,0.64,1), background 0.2s;
-  z-index: 10;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
-  font-size: 18px;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-/* Perfect hexagon — 68px radius, 60° steps starting from top */
-/* top    (270°): x=0,   y=-68  */
-.tooltip-container.open .tooltip2 { opacity:1; visibility:visible; transform: translate(calc(-50% +   0px), calc(-50% - 68px)); }
-/* upper-right (330°): x=+59, y=-34 */
-.tooltip-container.open .tooltip6 { opacity:1; visibility:visible; transform: translate(calc(-50% +  59px), calc(-50% - 34px)); }
-/* lower-right  (30°): x=+59, y=+34 */
-.tooltip-container.open .tooltip3 { opacity:1; visibility:visible; transform: translate(calc(-50% +  59px), calc(-50% + 34px)); }
-/* bottom       (90°): x=0,   y=+68 */
-.tooltip-container.open .tooltip1 { opacity:1; visibility:visible; transform: translate(calc(-50% +   0px), calc(-50% + 68px)); }
-/* lower-left  (150°): x=-59, y=+34 */
-.tooltip-container.open .tooltip5 { opacity:1; visibility:visible; transform: translate(calc(-50% -  59px), calc(-50% + 34px)); }
-/* upper-left  (210°): x=-59, y=-34 */
-.tooltip-container.open .tooltip4 { opacity:1; visibility:visible; transform: translate(calc(-50% -  59px), calc(-50% - 34px)); }
-
-.tooltip1:hover,.tooltip2:hover,.tooltip3:hover,.tooltip4:hover,.tooltip5:hover,.tooltip6:hover { background: #9147ff; }
-.tooltip9 {
-  position: absolute;
-  top: 0;
-  left: -115%;
-  opacity: 0;
-  visibility: hidden;
-  width: 150px;
-  height: 150px;
-  z-index: -1;
-}
-.tooltip-container.open .tooltip9 {
-  top: -110%;
-  opacity: 1;
-  visibility: visible;
-  border-radius: 50%;
-  z-index: -1;
-}
+/* QUICK ACTIONS HUB styles moved to dashboard.css (now global fixed button in index.html) */
 
 /* ── CLIP PANEL ── */
 .clip-entry {
@@ -838,21 +761,7 @@ body {
         <span id="statCmdsSub" style="display:none"></span>
       </div>
 
-      <!-- QUICK ACTIONS RADIAL HUB -->
-      <div style="display:flex;align-items:center;justify-content:center;padding:24px 0 0;width:180px;">
-        <div class="tooltip-container">
-          <span class="text">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 16 16" fill="currentColor"><path d="M6.5 14.5v-3.505c0-.245.25-.495.5-.495h2c.25 0 .5.25.5.5v3.5a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5Z"/></svg>
-          </span>
-          <span class="tooltip1" onclick="parentNav('commands')">⌨️</span>
-          <span class="tooltip2" onclick="parentNav('giveaway')">🎁</span>
-          <span class="tooltip3" onclick="parentNav('songs')">🎵</span>
-          <span class="tooltip4" onclick="parentNav('overlay')">🖼️</span>
-          <span class="tooltip5" onclick="parentNav('giflibrary')">🎞️</span>
-          <span class="tooltip6" onclick="parentNav('obs')">📡</span>
-          <span class="tooltip9"> </span>
-        </div>
-      </div>
+      <!-- QUICK ACTIONS HUB moved to index.html (fixed bottom-center) -->
 
     </div>
 
@@ -1180,28 +1089,7 @@ setInterval(fetchStreamStatus, 30000);
 loadClips();
 setInterval(loadClips, 15000);
 
-// Quick action hub — keep open while mouse is anywhere near it
-(function() {
-  function initQuickHub() {
-    var hub = document.querySelector('.tooltip-container');
-    if (!hub) return;
-    var closeTimer;
-    hub.addEventListener('mouseover', function() {
-      clearTimeout(closeTimer);
-      hub.classList.add('open');
-    });
-    hub.addEventListener('mouseout', function(e) {
-      if (!hub.contains(e.relatedTarget)) {
-        closeTimer = setTimeout(function() { hub.classList.remove('open'); }, 400);
-      }
-    });
-  }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initQuickHub);
-  } else {
-    initQuickHub();
-  }
-})();
+// Quick action hub moved to index.html as global fixed button
 </script>
 </body>
 </html>
