@@ -771,13 +771,12 @@
     <div style="width:100%;max-width:400px;background:rgba(12,12,12,0.8);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:36px;position:relative;overflow:hidden;backdrop-filter:blur(40px);">
       <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 0%,rgba(232,224,255,0.3) 25%,rgba(255,214,240,0.3) 50%,rgba(208,240,255,0.3) 75%,transparent 100%);background-size:200%;animation:shimmer-line 4s linear infinite;"></div>
 
-      <!-- STATE: start -->
-      <div id="obs-flow-start">
-        <div style="font-size:0.55rem;letter-spacing:4px;color:rgba(255,255,255,0.2);text-transform:uppercase;margin-bottom:8px;">One-time setup</div>
-        <div style="font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:8px;background:linear-gradient(135deg,#fff,rgba(255,255,255,0.6));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Connect OBS</div>
-        <div style="font-size:0.65rem;color:rgba(255,255,255,0.25);line-height:1.7;margin-bottom:28px;">ChatCommander will find OBS on your computer, launch it, and set up the WebSocket connection automatically.</div>
-        <button onclick="obsStartFlow()" style="width:100%;padding:14px;background:var(--accent);border:none;border-radius:8px;color:white;font-family:'DM Mono',monospace;font-size:0.72rem;letter-spacing:3px;text-transform:uppercase;cursor:pointer;transition:all 0.3s;box-shadow:4px 4px 0 #000;" onmouseover="this.style.boxShadow='6px 6px 0 #fbc638'" onmouseout="this.style.boxShadow='4px 4px 0 #000'">Connect OBS Automatically</button>
-        <button onclick="obsShowManualSetup()" style="width:100%;margin-top:10px;padding:10px;background:none;border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:rgba(255,255,255,0.3);font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:2px;cursor:pointer;transition:all 0.3s;" onmouseover="this.style.borderColor='rgba(255,255,255,0.2)';this.style.color='rgba(255,255,255,0.5)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.1)';this.style.color='rgba(255,255,255,0.3)'">Manual Setup</button>
+      <!-- STATE: start / waiting -->
+      <div id="obs-flow-start" style="text-align:center;">
+        <div id="obs-wait-icon" style="font-size:2rem;margin-bottom:16px;">📡</div>
+        <div id="obs-wait-title" style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:8px;">Waiting for OBS</div>
+        <div id="obs-wait-msg" style="font-size:0.62rem;color:rgba(255,255,255,0.3);line-height:1.7;margin-bottom:20px;">Open OBS Studio and ChatCommander will connect automatically.</div>
+        <button onclick="obsShowManualSetup()" style="padding:9px 18px;background:none;border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:rgba(255,255,255,0.3);font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:2px;cursor:pointer;">Manual Setup</button>
       </div>
 
       <!-- STATE: progress/connecting -->
@@ -5703,21 +5702,28 @@ async function overlayConfirmEdit(id) {
       try {
         const data = await fetch('/api/obs/status').then(r => r.json());
         const navDot = document.getElementById('obsNavDot');
+        // Backend connected but frontend WS not yet — connect frontend WS
         if (data.connected && !obsConnected) {
-          // Backend connected but frontend WS not yet — connect frontend WS
           if (!obsWs || obsWs.readyState > 1) {
             obsFrontendConnect(obsSavedPort || '4455', obsSavedPassword || '');
           }
         }
+        // OBS closed — go back to waiting screen (not crashed)
         if (!data.connected && !data.connecting && obsConnected) {
           obsSetStatus(false);
-          // If we were in connected view, show crashed state
-          const setupEl = document.getElementById('obsSetupScreen');
-          if (setupEl && setupEl.style.display !== 'flex') {
-            obsFlowShowState('crashed');
-            const msg = data.error || 'OBS disconnected';
-            document.getElementById('obs-flow-crashed-msg').textContent = msg;
-            obsShowScreen('setup');
+          obsFlowShowState('start');
+          obsShowScreen('setup');
+        }
+        // Update waiting screen message based on OBS process state
+        if (!data.connected) {
+          const title = document.getElementById('obs-wait-title');
+          const msg   = document.getElementById('obs-wait-msg');
+          if (data.connecting || (data.running && !data.connected)) {
+            if (title) title.textContent = 'Connecting to OBS…';
+            if (msg)   msg.textContent   = 'OBS detected — establishing connection.';
+          } else {
+            if (title) title.textContent = 'Waiting for OBS';
+            if (msg)   msg.textContent   = 'Open OBS Studio and ChatCommander will connect automatically.';
           }
         }
         if (navDot) {
@@ -5779,15 +5785,9 @@ async function overlayConfirmEdit(id) {
       }
       obsFlowShowState('start');
       obsShowScreen('setup');
-      // Auto-focus OBS window then auto-connect
-      fetch('/api/obs/focus', { method: 'POST' }).catch(() => {});
-      setTimeout(() => obsStartFlow(), 800);
     } catch(e) {
       obsFlowShowState('start');
       obsShowScreen('setup');
-      // Auto-focus OBS window then auto-connect
-      fetch('/api/obs/focus', { method: 'POST' }).catch(() => {});
-      setTimeout(() => obsStartFlow(), 800);
     }
   }
 
