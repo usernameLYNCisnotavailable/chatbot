@@ -1016,6 +1016,191 @@
   z-index: -1;
 }
 
+/* ── OBS Live Button ────────────────────────────────────────── */
+.obs-live-btn {
+  position: relative;
+  height: 36px;
+  min-width: 136px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #000;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+}
+.obs-live-btn-shimmer {
+  position: absolute;
+  z-index: 10;
+  left: -80px;
+  top: 0;
+  height: 100%;
+  width: 50px;
+  background: linear-gradient(to right, rgba(200,200,200,0.12), rgba(255,255,255,0.05));
+  transform: skewX(-12deg);
+  transition: left 0.7s ease-in;
+  pointer-events: none;
+}
+.obs-live-btn:hover .obs-live-btn-shimmer { left: calc(100% + 80px); }
+.obs-live-btn-inner {
+  position: absolute;
+  inset: 1.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0a0a0a;
+  border-radius: 8.5px;
+  color: #fff;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  z-index: 2;
+  white-space: nowrap;
+  padding: 0 18px;
+}
+.obs-live-btn-glow {
+  position: absolute;
+  bottom: -22px;
+  left: 0;
+  width: 100%;
+  height: 70px;
+  background: linear-gradient(90deg, var(--green), #c9a227);
+  filter: blur(22px);
+  pointer-events: none;
+  opacity: 0.85;
+  transform-origin: center;
+}
+.obs-live-btn:hover .obs-live-btn-glow { animation: spin 2s linear infinite; }
+.obs-live-btn.live .obs-live-btn-glow { background: linear-gradient(90deg, #ef4444, #f97316); }
+.obs-live-btn.live .obs-live-btn-inner { color: #fca5a5; }
+
+
+/* ── OBS Scene Buttons (slick black) ────────────────────────── */
+.obs-tmpl-btn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 14px 10px;
+  background: #111;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  cursor: pointer;
+  width: 100%;
+  transition: border-color 0.2s, background 0.2s;
+}
+.obs-tmpl-btn:hover { background: #1a1a1a; border-color: rgba(255,255,255,0.15); }
+.obs-tmpl-btn.obs-tmpl-active { border-color: var(--green); background: rgba(0,200,100,0.06); }
+
+/* ── OBS View Sources Button (slick black) ───────────────────── */
+.obs-sources-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 20px;
+  background: #111;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  cursor: pointer;
+  width: 100%;
+  margin-top: 14px;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  transition: border-color 0.2s, background 0.2s;
+}
+.obs-sources-btn:hover { background: #1a1a1a; border-color: rgba(255,255,255,0.15); }
+
+/* ── OBS Quick Template Buttons (black/silver 3D press + slide) ── */
+.obs-qt-btn {
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #2a2a2a;
+  letter-spacing: 1px;
+  padding: 0 12px;
+  text-align: center;
+  width: 100%;
+  height: 46px;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  font-weight: normal;
+  border-radius: 3px;
+  outline: none;
+  user-select: none;
+  cursor: pointer;
+  transform: translateY(0px);
+  position: relative;
+  box-shadow:
+    inset 0 30px 30px -15px rgba(255,255,255,0.06),
+    inset 0 0 0 1px rgba(255,255,255,0.12),
+    0 3px 0 #0a0a0a,
+    0 3px 2px rgba(0,0,0,0.5),
+    0 5px 10px rgba(0,0,0,0.3),
+    0 10px 20px rgba(0,0,0,0.2);
+  background: #1c1c1c;
+  color: #c8c8c8;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.6);
+  transition: 150ms all ease-in-out;
+}
+.obs-qt-btn:active {
+  transform: translateY(3px);
+  box-shadow:
+    inset 0 16px 2px -15px rgba(0,0,0,0),
+    inset 0 0 0 1px rgba(255,255,255,0.06),
+    inset 0 1px 20px rgba(0,0,0,0.3),
+    0 0 0 #0a0a0a,
+    0 0 0 2px rgba(255,255,255,0.08),
+    0 0 0 rgba(0,0,0,0),
+    0 0 0 rgba(0,0,0,0);
+}
+.obs-qt-icon {
+  margin-right: 8px;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: margin 0.5s ease-in-out;
+}
+.obs-qt-btn:hover .obs-qt-icon {
+  margin-right: 0;
+}
+.obs-qt-text {
+  white-space: nowrap;
+  overflow: hidden;
+  max-width: 200px;
+  opacity: 1;
+  transition: max-width 0.5s ease-in-out, opacity 0.4s ease-in-out, margin 0.5s ease-in-out;
+}
+.obs-qt-btn:hover .obs-qt-text,
+.obs-qt-btn.obs-qt-selected .obs-qt-text {
+  max-width: 0;
+  opacity: 0;
+  margin: 0;
+}
+.obs-qt-btn:hover .obs-qt-icon,
+.obs-qt-btn.obs-qt-selected .obs-qt-icon {
+  margin-right: 0;
+}
+.obs-qt-btn.obs-qt-selected {
+  box-shadow:
+    inset 0 16px 2px -15px rgba(0,0,0,0),
+    inset 0 0 0 1px rgba(255,255,255,0.14),
+    inset 0 1px 20px rgba(0,0,0,0.3),
+    0 0 0 #0a0a0a,
+    0 0 0 2px rgba(255,255,255,0.08),
+    0 0 0 rgba(0,0,0,0);
+  transform: translateY(2px);
+  border-color: rgba(255,255,255,0.2);
+}
+
 /* ── Utility animations ─────────────────────────────────────── */
 @keyframes spin {
   from { transform: rotate(0deg); }

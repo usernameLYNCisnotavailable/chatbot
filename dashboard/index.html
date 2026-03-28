@@ -855,7 +855,6 @@
         <div style="display:flex;align-items:center;gap:10px;">
           <span id="obsStatusDot" style="width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.15);display:inline-block;transition:all 0.3s;flex-shrink:0;"></span>
           <span id="obsStatusText" style="font-size:0.65rem;color:var(--muted);">Disconnected</span>
-          <button class="btn btn-sm" onclick="obsOpenWindow()">⬜ Open OBS</button>
         </div>
       </div>
       <div style="padding:0 28px;overflow-y:auto;flex:1;display:flex;flex-direction:column;">
@@ -869,7 +868,11 @@
                 <span id="obsStreamDot" style="width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.15);display:inline-block;transition:all 0.3s;flex-shrink:0;"></span>
                 <span id="obsStreamStatus" style="font-size:0.82rem;color:var(--text);">Stream Off</span>
               </div>
-              <button class="btn btn-sm" id="obsStreamBtn" onclick="obsStreamBtnClick()">Start Stream</button>
+              <button class="obs-live-btn" id="obsStreamBtn" onclick="obsStreamBtnClick()">
+                <div class="obs-live-btn-shimmer"></div>
+                <div class="obs-live-btn-inner"><span id="obsStreamBtnText">Start Stream</span></div>
+                <div class="obs-live-btn-glow"></div>
+              </button>
             </div>
             <div style="display:flex;align-items:center;padding:12px 0;gap:10px;">
               <span id="obsRecordDot" style="width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.15);display:inline-block;transition:all 0.3s;flex-shrink:0;"></span>
@@ -881,22 +884,18 @@
         <!-- Quick Templates -->
         <div id="obsTemplateCard" style="border-bottom:1px solid var(--border);padding:14px 0;">
           <div style="font-size:0.6rem;color:var(--muted-2);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">Quick Templates</div>
-          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
-            <button class="btn" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;" onclick="obsTemplate('Starting Soon')">
-              <span style="font-size:1.1rem;">▶</span>
-              <span style="font-size:0.65rem;">Starting Soon</span>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:50%;margin:0 auto;">
+            <button class="obs-qt-btn" onclick="obsSelectQt(this); obsConfirmStartingSoonYes()">
+              <span class="obs-qt-icon">▶</span>
+              <span class="obs-qt-text">Starting Soon</span>
             </button>
-            <button class="btn" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;" onclick="obsConfirmGoLive()">
-              <span style="font-size:1.1rem;">🔴</span>
-              <span style="font-size:0.65rem;">Go Live</span>
+            <button class="obs-qt-btn" onclick="obsSelectQt(this); obsTemplate('BRB')">
+              <span class="obs-qt-icon">⏸</span>
+              <span class="obs-qt-text">BRB</span>
             </button>
-            <button class="btn" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;" onclick="obsTemplate('BRB')">
-              <span style="font-size:1.1rem;">⏸</span>
-              <span style="font-size:0.65rem;">BRB</span>
-            </button>
-            <button class="btn" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;" onclick="obsTemplate('Ending')">
-              <span style="font-size:1.1rem;">⏹</span>
-              <span style="font-size:0.65rem;">Ending</span>
+            <button class="obs-qt-btn" onclick="obsSelectQt(this); obsTemplate('Ending')">
+              <span class="obs-qt-icon">⏹</span>
+              <span class="obs-qt-text">Ending</span>
             </button>
           </div>
         </div>
@@ -913,6 +912,8 @@
           <div id="obsSceneList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;">
             <div class="empty">No scenes loaded</div>
           </div>
+          <button class="obs-sources-btn" onclick="obsShowCurrentSources()">View Sources</button>
+
           <div id="obsSourcesPanel" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
               <div>
@@ -5886,7 +5887,7 @@ async function overlayConfirmEdit(id) {
     // op 2 = Identified (connected!)
     if (msg.op === 2) {
       obsSetStatus(true);
-      obsLoadScenes();
+      obsEnsureTemplateScenes().then(() => obsLoadScenes());
       obsLoadStreamStatus();
     }
     // op 5 = Event
@@ -5974,6 +5975,20 @@ async function overlayConfirmEdit(id) {
     await fetch('/api/obs/focus', { method: 'POST' }).catch(() => {});
   }
 
+  const OBS_TEMPLATE_SCENES = ['Starting Soon', 'Go Live', 'BRB', 'Ending'];
+
+  async function obsEnsureTemplateScenes() {
+    try {
+      const res = await obsSend('GetSceneList');
+      const existing = new Set(res.responseData.scenes.map(s => s.sceneName.toLowerCase()));
+      for (const name of OBS_TEMPLATE_SCENES) {
+        if (!existing.has(name.toLowerCase())) {
+          await obsSend('CreateScene', { sceneName: name });
+        }
+      }
+    } catch(e) {}
+  }
+
   async function obsLoadScenes() {
     try {
       const res = await obsSend('GetSceneList');
@@ -5984,10 +5999,9 @@ async function overlayConfirmEdit(id) {
       list.innerHTML = '';
       scenes.forEach(s => {
         const btn = document.createElement('button');
-        btn.style.cssText = 'display:flex;align-items:center;padding:10px 14px;text-align:left;';
-        btn.className = 'btn' + (s.sceneName === current ? ' btn-green' : '');
+        btn.className = 'obs-tmpl-btn' + (s.sceneName === current ? ' obs-tmpl-active' : '');
         btn.dataset.scene = s.sceneName;
-        btn.innerHTML = `<span style="font-size:0.65rem;letter-spacing:1px;">${s.sceneName}</span>`;
+        btn.innerHTML = `<span style="font-size:0.7rem;">${s.sceneName}</span>`;
         btn.onclick = () => obsSwitchScene(s.sceneName);
         btn.addEventListener('contextmenu', (e) => {
           e.preventDefault();
@@ -6061,6 +6075,12 @@ async function overlayConfirmEdit(id) {
     } catch(e) {}
   }
 
+  function obsShowCurrentSources() {
+    const currentText = document.getElementById('obsCurrentScene')?.textContent || '';
+    const sceneName = currentText.replace('Current: ', '').trim();
+    if (sceneName && sceneName !== '—') { obsLoadSources(sceneName); }
+  }
+
   function obsCloseSourcesPanel() {
     document.getElementById('obsSourcesPanel').style.display = 'none';
   }
@@ -6078,16 +6098,35 @@ async function overlayConfirmEdit(id) {
     } catch(e) {}
   }
 
-  function obsHighlightActiveScene(name) {
-    document.querySelectorAll('#obsSceneList .btn').forEach(btn => {
+  async function obsHighlightActiveScene(name) {
+    document.querySelectorAll('#obsSceneList .obs-tmpl-btn').forEach(btn => {
       const isActive = btn.dataset.scene === name;
-      btn.classList.remove('btn-green', 'obs-scene-flash');
+      btn.classList.remove('obs-tmpl-active', 'obs-scene-flash');
       if (isActive) {
-        btn.classList.add('btn-green');
+        btn.classList.add('obs-tmpl-active');
         void btn.offsetWidth;
         btn.classList.add('obs-scene-flash');
       }
     });
+    // Sync quick template selection
+    const nameLower = name.toLowerCase();
+    let matched = false;
+    document.querySelectorAll('.obs-qt-btn').forEach(btn => {
+      const label = btn.querySelector('.obs-qt-text');
+      if (label && label.textContent.trim().toLowerCase() === nameLower) {
+        btn.classList.add('obs-qt-selected');
+        matched = true;
+      } else {
+        btn.classList.remove('obs-qt-selected');
+      }
+    });
+    if (!matched) {
+      document.querySelectorAll('.obs-qt-btn').forEach(b => b.classList.remove('obs-qt-selected'));
+    }
+    // If Starting Soon scene is now active and stream isn't running, auto-start stream
+    if (nameLower === 'starting soon' && !obsStreamActive) {
+      try { await obsSend('StartStream'); } catch(e) {}
+    }
   }
 
   async function obsLoadStreamStatus() {
@@ -6106,16 +6145,19 @@ async function overlayConfirmEdit(id) {
     const rDot = document.getElementById('obsRecordDot');
     const rTxt = document.getElementById('obsRecordStatus');
     const sBtn = document.getElementById('obsStreamBtn');
+    const sBtnTxt = document.getElementById('obsStreamBtnText');
     if (streaming) {
       sDot.style.background = 'var(--red)'; sDot.style.boxShadow = '0 0 8px var(--red)';
       sTxt.textContent = 'Streaming Live';
       sTxt.style.color = 'var(--red)';
-      if (sBtn) sBtn.textContent = 'Stop Stream';
+      if (sBtnTxt) sBtnTxt.textContent = 'Stop Stream';
+      if (sBtn) sBtn.classList.add('live');
     } else {
       sDot.style.background = 'rgba(255,255,255,0.15)'; sDot.style.boxShadow = '';
       sTxt.textContent = 'Stream Off';
       sTxt.style.color = 'var(--muted)';
-      if (sBtn) sBtn.textContent = 'Start Stream';
+      if (sBtnTxt) sBtnTxt.textContent = 'Start Stream';
+      if (sBtn) sBtn.classList.remove('live');
     }
     if (recording) {
       rDot.style.background = 'var(--red)'; rDot.style.boxShadow = '0 0 8px var(--red)';
@@ -6136,8 +6178,17 @@ async function overlayConfirmEdit(id) {
     try { await obsSend('ToggleRecord'); } catch(e) {}
   }
 
+  function obsSelectQt(btn) {
+    document.querySelectorAll('.obs-qt-btn').forEach(b => b.classList.remove('obs-qt-selected'));
+    btn.classList.add('obs-qt-selected');
+  }
+
   async function obsTemplate(sceneName) {
-    try { await obsSwitchScene(sceneName); } catch(e) {}
+    try {
+      const res = await obsSend('GetSceneList');
+      const match = res.responseData.scenes.find(s => s.sceneName.toLowerCase() === sceneName.toLowerCase());
+      await obsSwitchScene(match ? match.sceneName : sceneName);
+    } catch(e) {}
   }
 
   async function obsConfirmGoLive() {
@@ -6174,6 +6225,25 @@ async function overlayConfirmEdit(id) {
   async function obsConfirmGoLiveYes() {
     obsGoLiveModalClose();
     await obsTemplate('Live');
+  }
+
+  async function obsConfirmStartingSoon() {
+    const modal = document.getElementById('obsGoLiveModal');
+    const icon = document.getElementById('obsGoLiveIcon');
+    const title = document.getElementById('obsGoLiveTitle');
+    const msg = document.getElementById('obsGoLiveMsg');
+    const actions = document.getElementById('obsGoLiveActions');
+    icon.textContent = '▶';
+    title.textContent = 'Start Stream?';
+    msg.innerHTML = 'This will switch to your <strong>Starting Soon</strong> scene and start the stream. Ready to go?';
+    actions.innerHTML = '<button class="btn btn-green" onclick="obsConfirmStartingSoonYes()">Yes, Start Stream</button><button class="btn" onclick="obsGoLiveModalClose()">Cancel</button>';
+    modal.style.display = 'flex';
+  }
+
+  async function obsConfirmStartingSoonYes() {
+    obsGoLiveModalClose();
+    await obsTemplate('Starting Soon');
+    try { await obsSend('StartStream'); } catch(e) {}
   }
 
   function obsStreamBtnClick() {

@@ -2986,7 +2986,7 @@ function obsWsConnect(port, password) {
             let msg; try { msg = JSON.parse(raw.toString()); } catch(e) { return; }
             const { op, d } = msg;
             if (op === 0) { // Hello — send Identify
-                const payload = { rpcVersion: 1, eventSubscriptions: 33 };
+                const payload = { rpcVersion: 1, eventSubscriptions: 101 };
                 if (d.authentication && password) {
                     const secret = crypto.createHash('sha256').update(password + d.authentication.salt).digest('base64');
                     payload.authentication = crypto.createHash('sha256').update(secret + d.authentication.challenge).digest('base64');
