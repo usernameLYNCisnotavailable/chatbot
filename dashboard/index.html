@@ -786,6 +786,7 @@
         <div id="obs-flow-title" style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:8px;">Locating OBS…</div>
         <div id="obs-flow-sub" style="font-size:0.62rem;color:rgba(255,255,255,0.3);letter-spacing:1px;line-height:1.6;"></div>
         <div id="obs-flow-steps" style="margin-top:24px;display:flex;flex-direction:column;gap:6px;text-align:left;"></div>
+        <button onclick="obsFlowShowState('start')" style="margin-top:20px;padding:9px 18px;background:none;border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:rgba(255,255,255,0.3);font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:2px;cursor:pointer;">Cancel</button>
       </div>
 
       <!-- STATE: not found -->
@@ -855,7 +856,7 @@
         <div style="display:flex;align-items:center;gap:10px;">
           <span id="obsStatusDot" style="width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.15);display:inline-block;transition:all 0.3s;flex-shrink:0;"></span>
           <span id="obsStatusText" style="font-size:0.65rem;color:var(--muted);">Disconnected</span>
-          <button class="btn btn-sm" onclick="obsShowReconnectForm()">⚙ Settings</button>
+          <button class="btn btn-sm" onclick="obsOpenWindow()">⬜ Open OBS</button>
         </div>
       </div>
       <div style="padding:0 28px;overflow-y:auto;flex:1;display:flex;flex-direction:column;">
@@ -5416,7 +5417,7 @@ async function overlayConfirmEdit(id) {
   let obsSavedHost = 'localhost';
   let obsSavedPort = '4455';
   let obsSavedPassword = '';
-  let obsStatusSse = null;
+  let obsStatusPoll = null;
 
   // ── Flow state helpers ────────────────────────────────────────
   function obsFlowShowState(state) {
@@ -5695,13 +5696,12 @@ async function overlayConfirmEdit(id) {
     });
   }
 
-  // ── SSE status subscription ───────────────────────────────────
-  function obsSubscribeSse() {
-    if (obsStatusSse) { obsStatusSse.close(); obsStatusSse = null; }
-    obsStatusSse = new EventSource('/api/obs/status-stream');
-    obsStatusSse.onmessage = (e) => {
+  // ── Polling status check (replaces SSE — SSE breaks Electron child windows per V15) ─
+  function obsStartPolling() {
+    if (obsStatusPoll) { clearInterval(obsStatusPoll); obsStatusPoll = null; }
+    obsStatusPoll = setInterval(async () => {
       try {
-        const data = JSON.parse(e.data);
+        const data = await fetch('/api/obs/status').then(r => r.json());
         const navDot = document.getElementById('obsNavDot');
         if (data.connected && !obsConnected) {
           // Backend connected but frontend WS not yet — connect frontend WS
@@ -5725,8 +5725,7 @@ async function overlayConfirmEdit(id) {
           navDot.style.boxShadow = data.connected ? '0 0 8px var(--green)' : '';
         }
       } catch(e) {}
-    };
-    obsStatusSse.onerror = () => { /* silently retry */ };
+    }, 2000);
   }
 
   // ── Screen switcher ───────────────────────────────────────────
@@ -5764,7 +5763,7 @@ async function overlayConfirmEdit(id) {
 
   // ── Startup: load settings & decide flow ─────────────────────
   async function obsLoadSettings() {
-    obsSubscribeSse();
+    obsStartPolling();
     try {
       const st = await fetch('/api/obs/status').then(r => r.json());
       obsSavedPort = st.obsPort || '4455';
@@ -5778,19 +5777,17 @@ async function overlayConfirmEdit(id) {
         await obsFrontendConnect(obsSavedPort, obsSavedPassword);
         return;
       }
-      if (cfg.obsAutoConnect && cfg.obsPath) {
-        // Has saved path — run flow automatically
-        obsFlowShowState('start');
-        obsShowScreen('setup');
-        // Small delay then auto-flow
-        setTimeout(() => obsStartFlow(), 800);
-      } else {
-        obsFlowShowState('start');
-        obsShowScreen('setup');
-      }
+      obsFlowShowState('start');
+      obsShowScreen('setup');
+      // Auto-focus OBS window then auto-connect
+      fetch('/api/obs/focus', { method: 'POST' }).catch(() => {});
+      setTimeout(() => obsStartFlow(), 800);
     } catch(e) {
       obsFlowShowState('start');
       obsShowScreen('setup');
+      // Auto-focus OBS window then auto-connect
+      fetch('/api/obs/focus', { method: 'POST' }).catch(() => {});
+      setTimeout(() => obsStartFlow(), 800);
     }
   }
 
@@ -5971,6 +5968,10 @@ async function overlayConfirmEdit(id) {
         showToast('Failed: ' + (r.error || 'Unknown error'));
       }
     } catch(e) { showToast('Failed to add source'); }
+  }
+
+  async function obsOpenWindow() {
+    await fetch('/api/obs/focus', { method: 'POST' }).catch(() => {});
   }
 
   async function obsLoadScenes() {
@@ -8054,4 +8055,4 @@ checkBotStatus();
 </script>
 
 </body>
-</html>
+</html>                                                                                                           
