@@ -225,13 +225,18 @@
   <aside class="sidebar">
 
     <!-- BOT -->
-    <div class="nav-item active" id="nav-home" onclick="showPage('home')"><span class="nav-icon">⌂</span> Home</div>
+    <div class="nav-item active" id="nav-home" onclick="showPage('home')">
+  <svg class="nav-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;margin-right:2px;">
+    <polygon points="7,1 13,7 11,7 11,13 8,13 8,9 6,9 6,13 3,13 3,7 1,7" fill="currentColor"/>
+  </svg>
+  Home
+</div>
     <div class="nav-section">Bot</div>
 
     <!-- Commands group -->
     <div class="nav-group">
       <div class="nav-group-header open" id="navg-commands" onclick="toggleNavGroup('commands')">
-        <span class="nav-icon">⌘</span> Commands
+        <svg class="nav-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;"><rect x="1" y="1" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M3 5l2 2-2 2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 9h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg> Commands
         <span class="nav-group-chevron">▶</span>
       </div>
       <div class="nav-group-children open" id="navgc-commands">
@@ -242,16 +247,16 @@
     </div>
 
     <div class="nav-item" id="nav-songs" onclick="showPage('songs')">
-      <span class="nav-icon">🎵</span> Song Requests
+      <svg class="nav-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;"><path d="M9 2v7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M9 2l-5 1v7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="4" cy="10" r="1.5" fill="currentColor"/><circle cx="9" cy="9" r="1.5" fill="currentColor"/></svg> Song Requests
     </div>
     <div class="nav-item" id="nav-giveaway" onclick="showPage('giveaway')">
-      <span class="nav-icon">🎡</span> Spin the Wheel
+      Spin the Wheel
     </div>
 
     <!-- Moderation group -->
     <div class="nav-group">
       <div class="nav-group-header" id="navg-moderation" onclick="toggleNavGroup('moderation')">
-        <span class="nav-icon">🛡</span> Moderation
+        <svg class="nav-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;"><path d="M7 1l5 2v4c0 3-2.5 5-5 6C4.5 12 2 10 2 7V3l5-2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M4.5 7l2 2 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg> Moderation
         <span class="nav-group-chevron">▶</span>
       </div>
       <div class="nav-group-children" id="navgc-moderation">
@@ -271,7 +276,7 @@
       <img src="/dashboard/580b57fcd9996e24bc43c289.png" class="nav-cutout" alt="">
     </div>
     <div class="nav-item" id="nav-info" onclick="showPage('info')">
-      <span class="nav-icon">📖</span> Info
+      Info
     </div>
 
     <!-- TOOLS -->
@@ -281,11 +286,11 @@
       <span id="obsNavDot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.15);display:inline-block;margin-left:auto;transition:all 0.3s;flex-shrink:0;"></span>
     </div>
     <div class="nav-item" id="nav-chat-toggle" onclick="openChatWindow()" title="Open Live Chat">
-      <span class="nav-icon">🖥</span> Live Chat
+      <svg class="nav-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;"><path d="M1 2h12v8H8l-2 2-2-2H1V2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M4 5.5h6M4 7.5h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg> Live Chat
       <span id="chatNavDot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.15);display:inline-block;margin-left:auto;transition:all 0.3s;flex-shrink:0;"></span>
     </div>
     <div class="nav-item" id="nav-overlay" onclick="showPage('overlay')">
-      <span class="nav-icon">🎬</span> Overlay
+      <svg class="nav-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;"><rect x="1" y="3" width="12" height="9" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M1 5h12" stroke="currentColor" stroke-width="1.2"/><path d="M4 1v4M7 1v4M10 1v4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg> Overlay
     </div>
     <div class="nav-item" id="nav-giflibrary" onclick="showPage('giflibrary')">
       <span class="nav-icon">🎭</span> GIF Library
@@ -309,7 +314,7 @@
     <!-- Bot Settings group -->
     <div class="nav-group">
       <div class="nav-group-header" id="navg-botsettings" onclick="toggleNavGroup('botsettings')">
-        <span class="nav-icon">⚙</span> Bot Settings
+        <svg class="nav-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;"><circle cx="7" cy="7" r="2" stroke="currentColor" stroke-width="1.3"/><path d="M7 1v1.5M7 11.5V13M1 7h1.5M11.5 7H13M2.93 2.93l1.06 1.06M10.01 10.01l1.06 1.06M11.07 2.93l-1.06 1.06M3.99 10.01l-1.06 1.06" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg> Bot Settings
         <span class="nav-group-chevron">▶</span>
       </div>
       <div class="nav-group-children" id="navgc-botsettings">
@@ -3878,7 +3883,12 @@ async function overlayConfirmEdit(id) {
 
 <!-- AUTOMOD PAGE -->
 <div class="page" id="page-automod">
-  <div class="cmd-page-wrap">
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;padding:40px;gap:16px;">
+    <div style="font-size:36px;">🔒</div>
+    <div style="font-size:18px;font-weight:600;color:var(--text,#efeff1);">Feature Locked</div>
+    <div style="font-size:14px;color:var(--muted,#9a9ab0);max-width:400px;line-height:1.7;">Unnecessary for now — this bot is not meant to replace your current bot, it's an add-on of new features.</div>
+  </div>
+  <div style="display:none"><div class="cmd-page-wrap">
     <div class="cmd-topbar">
       <div class="cmd-title-block">
         <div class="cmd-title">AutoMod</div>
@@ -3959,6 +3969,7 @@ async function overlayConfirmEdit(id) {
       </div>
     </div>
   </div>
+  </div></div>
 </div>
 
 <!-- BOT SETTINGS PAGE -->
@@ -5975,16 +5986,67 @@ async function overlayConfirmEdit(id) {
     await fetch('/api/obs/focus', { method: 'POST' }).catch(() => {});
   }
 
-  const OBS_TEMPLATE_SCENES = ['Starting Soon', 'Go Live', 'BRB', 'Ending'];
+  const OBS_TEMPLATE_SCENES = ['Starting Soon', 'BRB', 'Ending'];
+  const CC_OVERLAY_SCENE = 'CC Overlays';
+  const CC_ALERT_URL = 'http://localhost:3000/alert-overlay';
 
   async function obsEnsureTemplateScenes() {
     try {
       const res = await obsSend('GetSceneList');
-      const existing = new Set(res.responseData.scenes.map(s => s.sceneName.toLowerCase()));
+      const existingNames = res.responseData.scenes.map(s => s.sceneName);
+      const existingLower = new Set(existingNames.map(n => n.toLowerCase()));
+
+      // 1. Ensure CC Overlays scene exists with the alert browser source
+      if (!existingLower.has(CC_OVERLAY_SCENE.toLowerCase())) {
+        await obsSend('CreateScene', { sceneName: CC_OVERLAY_SCENE });
+      }
+      // Find exact name (may differ in casing)
+      const overlaySceneName = existingNames.find(n => n.toLowerCase() === CC_OVERLAY_SCENE.toLowerCase()) || CC_OVERLAY_SCENE;
+
+      // Add alert browser source to CC Overlays if not already there
+      try {
+        const items = await obsSend('GetSceneItemList', { sceneName: overlaySceneName });
+        const hasAlert = items.responseData.sceneItems.some(i => i.sourceName === 'CC Alert Overlay');
+        if (!hasAlert) {
+          await obsSend('CreateInput', {
+            sceneName: overlaySceneName,
+            inputName: 'CC Alert Overlay',
+            inputKind: 'browser_source',
+            inputSettings: {
+              url: CC_ALERT_URL,
+              width: 1920,
+              height: 1080,
+              reroute_audio: false,
+              restart_when_active: false
+            }
+          });
+        }
+      } catch(e) {}
+
+      // 2. Create missing template scenes
       for (const name of OBS_TEMPLATE_SCENES) {
-        if (!existing.has(name.toLowerCase())) {
+        if (!existingLower.has(name.toLowerCase())) {
           await obsSend('CreateScene', { sceneName: name });
         }
+      }
+
+      // 3. Nest CC Overlays into ALL scenes (existing + newly created), skip CC Overlays itself
+      const freshRes = await obsSend('GetSceneList');
+      const allScenes = freshRes.responseData.scenes.map(s => s.sceneName)
+        .filter(n => n.toLowerCase() !== overlaySceneName.toLowerCase());
+
+      for (const sceneName of allScenes) {
+        try {
+          const items = await obsSend('GetSceneItemList', { sceneName });
+          const hasOverlay = items.responseData.sceneItems.some(i => i.sourceName === overlaySceneName);
+          if (!hasOverlay) {
+            await obsSend('CreateSceneItem', {
+              sceneName,
+              sourceName: overlaySceneName,
+              sceneItemEnabled: true
+            });
+          }
+        } catch(e) {}
       }
     } catch(e) {}
   }
@@ -6009,6 +6071,9 @@ async function overlayConfirmEdit(id) {
         });
         list.appendChild(btn);
       });
+      // Cache scene list for flow builder config panel
+      fetch('/api/obs/cache', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ scenes: scenes.map(s => s.sceneName), currentScene: current }) }).catch(()=>{});
     } catch(e) {}
   }
 
@@ -6122,10 +6187,6 @@ async function overlayConfirmEdit(id) {
     });
     if (!matched) {
       document.querySelectorAll('.obs-qt-btn').forEach(b => b.classList.remove('obs-qt-selected'));
-    }
-    // If Starting Soon scene is now active and stream isn't running, auto-start stream
-    if (nameLower === 'starting soon' && !obsStreamActive) {
-      try { await obsSend('StartStream'); } catch(e) {}
     }
   }
 
@@ -8091,12 +8152,12 @@ checkBotStatus();
     <span class="text">
       <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 16 16" fill="currentColor"><path d="M6.5 14.5v-3.505c0-.245.25-.495.5-.495h2c.25 0 .5.25.5.5v3.5a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5Z"/></svg>
     </span>
-    <span class="tooltip1" onclick="showPage('commands')">⌨️</span>
-    <span class="tooltip2" onclick="showPage('giveaway')">🎁</span>
-    <span class="tooltip3" onclick="showPage('songs')">🎵</span>
-    <span class="tooltip4" onclick="showPage('overlay')">🖼️</span>
-    <span class="tooltip5" onclick="showPage('giflibrary')">🎞️</span>
-    <span class="tooltip6" onclick="showPage('obs')">📡</span>
+    <span class="tooltip1" onclick="showPage('commands')"><svg width="18" height="18" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M3 5l2 2-2 2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 9h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></span>
+    <span class="tooltip2" onclick="showPage('giveaway')"><svg width="18" height="18" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.4"/><path d="M7 2v5l3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="7" r="1" fill="currentColor"/></svg></span>
+    <span class="tooltip3" onclick="showPage('songs')"><svg width="18" height="18" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 2v7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M9 2l-5 1v7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="4" cy="10" r="1.5" fill="currentColor"/><circle cx="9" cy="9" r="1.5" fill="currentColor"/></svg></span>
+    <span class="tooltip4" onclick="showPage('overlay')"><svg width="18" height="18" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="3" width="12" height="9" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M1 5h12" stroke="currentColor" stroke-width="1.2"/><path d="M4 1v4M7 1v4M10 1v4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span>
+    <span class="tooltip5" onclick="showPage('giflibrary')"><svg width="18" height="18" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="2" width="12" height="10" rx="1.5" stroke="currentColor" stroke-width="1.4"/><circle cx="4.5" cy="5.5" r="1" fill="currentColor"/><path d="M1 9.5l3-3 2.5 2.5 2-2 3.5 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    <span class="tooltip6" onclick="showPage('obs')"><svg width="18" height="18" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="2" width="12" height="8" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M4 12h6M7 10v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="7" cy="6" r="2" stroke="currentColor" stroke-width="1.3"/></svg></span>
     <span class="tooltip9"> </span>
   </div>
 </div>
